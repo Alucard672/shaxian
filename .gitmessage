@@ -1,0 +1,48 @@
+# 提交信息规范
+
+## 提交类型（type）
+- feat: 新功能
+- fix: 修复bug
+- docs: 文档更新
+- style: 代码格式调整（不影响功能）
+- refactor: 代码重构
+- perf: 性能优化
+- test: 测试相关
+- chore: 构建/工具链相关
+- build: 构建系统相关
+- ci: CI配置相关
+
+## 提交格式
+```
+<type>(<scope>): <subject>
+
+<body>
+
+<footer>
+```
+
+## 示例
+```
+feat(商品管理): 实现商品列表和详情功能
+
+- 添加商品列表页面
+- 实现商品详情查看
+- 支持商品编辑和删除
+
+Closes #123
+```
+
+## Scope 可选范围
+- product: 商品管理
+- purchase: 进货管理
+- sales: 销售管理
+- inventory: 库存管理
+- account: 账款管理
+- contact: 客户与供应商
+- print: 打单管理
+- report: 统计报表
+- ui: UI组件
+- store: 状态管理
+- types: 类型定义
+- utils: 工具函数
+
