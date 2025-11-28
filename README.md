@@ -88,6 +88,81 @@ npm run preview
 - 样式使用 Tailwind CSS 类名
 - 遵循 ESLint 代码规范
 
+## 版本管理
+
+项目使用语义化版本（Semantic Versioning）进行版本管理。
+
+### 当前版本
+
+**v0.1.0** - 查看 [VERSION.md](./VERSION.md) 了解版本详情
+
+### 版本更新
+
+使用脚本更新版本号：
+
+```bash
+# 更新修订号 (0.1.0 -> 0.1.1)
+node scripts/version.js patch
+
+# 更新次版本号 (0.1.0 -> 0.2.0)
+node scripts/version.js minor
+
+# 更新主版本号 (0.1.0 -> 1.0.0)
+node scripts/version.js major
+```
+
+### Git 工作流
+
+项目使用 Git Flow 工作流：
+
+- `main` - 主分支（生产环境）
+- `develop` - 开发分支
+- `feature/*` - 功能分支
+- `fix/*` - 修复分支
+- `hotfix/*` - 热修复分支
+
+详细说明请查看 [CONTRIBUTING.md](./CONTRIBUTING.md)
+
+## 开发规范
+
+### 提交规范
+
+遵循约定式提交规范：
+
+```
+<type>(<scope>): <subject>
+
+<body>
+```
+
+**类型:**
+- `feat`: 新功能
+- `fix`: 修复bug
+- `docs`: 文档更新
+- `style`: 代码格式
+- `refactor`: 代码重构
+- `perf`: 性能优化
+- `test`: 测试相关
+- `chore`: 构建/工具链
+
+**范围:**
+- `product`: 商品管理
+- `purchase`: 进货管理
+- `sales`: 销售管理
+- `inventory`: 库存管理
+- `account`: 账款管理
+- `contact`: 客户与供应商
+- `ui`: UI组件
+- `store`: 状态管理
+
+### 代码规范
+
+- 使用 TypeScript 进行类型检查
+- 遵循 ESLint 规则
+- 使用 Prettier 格式化代码
+- 组件使用函数式组件 + Hooks
+- 样式使用 Tailwind CSS
+
 ## 许可证
 
 MIT
