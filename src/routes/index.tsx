@@ -24,6 +24,7 @@ import ProfitReport from '../pages/report/ProfitReport'
 import CustomerReport from '../pages/report/CustomerReport'
 import FundReport from '../pages/report/FundReport'
 import ProductManagement from '../pages/product/ProductManagement'
+import SettingsManagement from '../pages/settings/SettingsManagement'
 
 function AppRoutes() {
   return (
@@ -79,6 +80,9 @@ function AppRoutes() {
       
       {/* 商品管理 */}
       <Route path="/product" element={<ProductManagement />} />
+      
+      {/* 系统设置 */}
+      <Route path="/settings" element={<SettingsManagement />} />
     </Routes>
   )
 }
