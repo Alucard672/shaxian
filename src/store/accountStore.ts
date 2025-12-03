@@ -7,6 +7,7 @@ import {
   AccountStatus,
   PaymentMethod,
 } from '@/types/account'
+import { initAccountReceivables, initAccountPayables } from './initData'
 
 interface AccountState {
   receivables: AccountReceivable[]
@@ -64,13 +65,27 @@ interface AccountState {
 // 生成唯一ID
 const generateId = () => Date.now().toString(36) + Math.random().toString(36).substr(2)
 
-// 从localStorage加载数据
-const loadFromStorage = (key: string, defaultValue: any) => {
+// 从localStorage加载数据，如果为空则使用初始数据
+const loadFromStorage = (key: string, initData: any) => {
   try {
     const item = localStorage.getItem(key)
-    return item ? JSON.parse(item) : defaultValue
+    if (item) {
+      const data = JSON.parse(item)
+      if (Array.isArray(data) && data.length > 0) {
+        return data
+      }
+      if (Array.isArray(data) && data.length === 0) {
+        const initialized = localStorage.getItem(`${key}_initialized`)
+        if (initialized === 'true') {
+          return data
+        }
+      }
+    }
+    localStorage.setItem(key, JSON.stringify(initData))
+    localStorage.setItem(`${key}_initialized`, 'true')
+    return initData
   } catch {
-    return defaultValue
+    return initData
   }
 }
 
@@ -84,8 +99,8 @@ const saveToStorage = (key: string, value: any) => {
 }
 
 export const useAccountStore = create<AccountState>((set, get) => ({
-  receivables: loadFromStorage('accountReceivables', []),
-  payables: loadFromStorage('accountPayables', []),
+  receivables: loadFromStorage('accountReceivables', initAccountReceivables()),
+  payables: loadFromStorage('accountPayables', initAccountPayables()),
   receipts: loadFromStorage('receiptRecords', []),
   payments: loadFromStorage('paymentRecords', []),
 
@@ -213,5 +228,9 @@ export const useAccountStore = create<AccountState>((set, get) => ({
     return get().payments.filter((p) => p.accountPayableId === accountPayableId)
   },
 }))
+
+
+
+
 
 

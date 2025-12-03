@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { Product, Color, Batch, ProductFormData, ColorFormData, BatchFormData } from '@/types/product'
+import { initProducts, initColors, initBatches } from './initData'
 
 interface ProductState {
   products: Product[]
@@ -29,13 +30,30 @@ interface ProductState {
 // 生成唯一ID
 const generateId = () => Date.now().toString(36) + Math.random().toString(36).substr(2)
 
-// 从localStorage加载数据
-const loadFromStorage = (key: string, defaultValue: any) => {
+// 从localStorage加载数据，如果为空则使用初始数据
+const loadFromStorage = (key: string, initData: any) => {
   try {
     const item = localStorage.getItem(key)
-    return item ? JSON.parse(item) : defaultValue
+    if (item) {
+      const data = JSON.parse(item)
+      // 如果数据不为空，返回数据
+      if (Array.isArray(data) && data.length > 0) {
+        return data
+      }
+      // 如果数据为空数组，检查是否已初始化过
+      if (Array.isArray(data) && data.length === 0) {
+        const initialized = localStorage.getItem(`${key}_initialized`)
+        if (initialized === 'true') {
+          return data // 已初始化过，返回空数组
+        }
+      }
+    }
+    // 使用初始数据并标记为已初始化
+    localStorage.setItem(key, JSON.stringify(initData))
+    localStorage.setItem(`${key}_initialized`, 'true')
+    return initData
   } catch {
-    return defaultValue
+    return initData
   }
 }
 
@@ -49,9 +67,9 @@ const saveToStorage = (key: string, value: any) => {
 }
 
 export const useProductStore = create<ProductState>((set, get) => ({
-  products: loadFromStorage('products', []),
-  colors: loadFromStorage('colors', []),
-  batches: loadFromStorage('batches', []),
+  products: loadFromStorage('products', initProducts()),
+  colors: loadFromStorage('colors', initColors()),
+  batches: loadFromStorage('batches', initBatches()),
 
   // 商品操作
   addProduct: (data) => {
@@ -193,5 +211,9 @@ export const useProductStore = create<ProductState>((set, get) => ({
     })
   },
 }))
+
+
+
+
 
 

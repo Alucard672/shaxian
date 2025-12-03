@@ -20,13 +20,6 @@ function ProductModal({
 }: ProductModalProps) {
   if (!isOpen) return null
 
-  const sizeClasses = {
-    sm: 'max-w-md',
-    md: 'max-w-2xl',
-    lg: 'max-w-4xl',
-    xl: 'max-w-6xl',
-  }
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       {/* 遮罩层 */}
@@ -37,25 +30,25 @@ function ProductModal({
       
       {/* 弹窗内容 */}
       <div
-        className={cn(
-          'relative bg-white rounded-xl shadow-xl w-full mx-4',
-          sizeClasses[size]
-        )}
+        className="relative bg-white rounded-2xl shadow-xl w-[1152px] max-h-[90vh] flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
         {/* 标题栏 */}
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
-          <h2 className="text-xl font-semibold text-gray-900">{title}</h2>
+          <div>
+            <h2 className="text-xl font-semibold text-gray-900 mb-1">{title}</h2>
+            <p className="text-sm text-gray-600">填写商品基础信息，可选添加色号和缸号</p>
+          </div>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 transition-colors"
+            className="w-9 h-9 flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-xl transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
         
         {/* 内容区域 */}
-        <div className="p-6 max-h-[calc(100vh-200px)] overflow-y-auto">
+        <div className="flex-1 overflow-y-auto p-6">
           {children}
         </div>
       </div>
@@ -64,5 +57,9 @@ function ProductModal({
 }
 
 export default ProductModal
+
+
+
+
 
 

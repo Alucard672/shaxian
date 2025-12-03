@@ -7,16 +7,16 @@ import {
 } from '@/types/purchase'
 import { useProductStore } from './productStore'
 import { useAccountStore } from './accountStore'
+import { initPurchaseOrders } from './initData'
 
 interface PurchaseState {
   orders: PurchaseOrder[]
   
   // 进货单操作
-  addOrder: (data: PurchaseOrderFormData) => PurchaseOrder
-  updateOrder: (id: string, data: Partial<PurchaseOrderFormData>) => void
+  addOrder: (data: PurchaseOrderFormData, status?: PurchaseOrderStatus) => PurchaseOrder
+  updateOrder: (id: string, data: Partial<PurchaseOrderFormData & { status?: PurchaseOrderStatus }>) => void
   deleteOrder: (id: string) => void
   getOrder: (id: string) => PurchaseOrder | undefined
-  approveOrder: (id: string) => void // 审核通过
   cancelOrder: (id: string) => void // 作废
   generateOrderNumber: () => string
 }
@@ -31,20 +31,34 @@ const generateOrderNumber = (existingNumbers: string[]): string => {
     String(today.getMonth() + 1).padStart(2, '0') +
     String(today.getDate()).padStart(2, '0')
   
-  const prefix = `CG${dateStr}`
+  const prefix = `PO${dateStr}`
   const sameDayNumbers = existingNumbers.filter(n => n.startsWith(prefix))
   const sequence = String((sameDayNumbers.length + 1)).padStart(3, '0')
   
   return `${prefix}${sequence}`
 }
 
-// 从localStorage加载数据
-const loadFromStorage = (key: string, defaultValue: any) => {
+// 从localStorage加载数据，如果为空则使用初始数据
+const loadFromStorage = (key: string, initData: any) => {
   try {
     const item = localStorage.getItem(key)
-    return item ? JSON.parse(item) : defaultValue
+    if (item) {
+      const data = JSON.parse(item)
+      if (Array.isArray(data) && data.length > 0) {
+        return data
+      }
+      if (Array.isArray(data) && data.length === 0) {
+        const initialized = localStorage.getItem(`${key}_initialized`)
+        if (initialized === 'true') {
+          return data
+        }
+      }
+    }
+    localStorage.setItem(key, JSON.stringify(initData))
+    localStorage.setItem(`${key}_initialized`, 'true')
+    return initData
   } catch {
-    return defaultValue
+    return initData
   }
 }
 
@@ -58,14 +72,14 @@ const saveToStorage = (key: string, value: any) => {
 }
 
 export const usePurchaseStore = create<PurchaseState>((set, get) => ({
-  orders: loadFromStorage('purchaseOrders', []),
+  orders: loadFromStorage('purchaseOrders', initPurchaseOrders()),
 
   generateOrderNumber: () => {
     const existingNumbers = get().orders.map(o => o.orderNumber)
     return generateOrderNumber(existingNumbers)
   },
 
-  addOrder: (data) => {
+  addOrder: (data, status = '已入库') => {
     const orderNumber = get().generateOrderNumber()
     
     // 计算明细金额和总金额
@@ -85,10 +99,51 @@ export const usePurchaseStore = create<PurchaseState>((set, get) => ({
       items,
       totalAmount,
       unpaidAmount,
-      status: '待审核',
+      status: status,
       operator: '当前用户', // TODO: 从用户状态获取
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
+    }
+    
+    // 如果不是草稿状态，自动执行入库操作
+    if (status !== '草稿') {
+      const { addBatch } = useProductStore.getState()
+      const { addAccountPayable } = useAccountStore.getState()
+      
+      // 为每个明细创建缸号并增加库存
+      items.forEach((item) => {
+        // 查找商品和色号
+        const products = useProductStore.getState().products
+        const colors = useProductStore.getState().colors
+        const product = products.find((p) => p.id === item.productId)
+        const color = colors.find((c) => c.id === item.colorId)
+        
+        if (product && color) {
+          // 创建新缸号
+          addBatch(color.id, {
+            code: item.batchCode,
+            productionDate: item.productionDate || new Date().toISOString().split('T')[0],
+            supplierId: data.supplierId,
+            purchasePrice: item.price,
+            initialQuantity: item.quantity,
+            stockLocation: item.stockLocation,
+            remark: item.remark,
+          })
+        }
+      })
+      
+      // 如果有欠款，生成应付账款
+      if (unpaidAmount > 0) {
+        addAccountPayable({
+          supplierId: data.supplierId,
+          supplierName: data.supplierName,
+          purchaseOrderId: newOrder.id,
+          purchaseOrderNumber: orderNumber,
+          payableAmount: totalAmount,
+          paidAmount: data.paidAmount || 0,
+          accountDate: data.purchaseDate,
+        })
+      }
     }
     
     set((state) => {
@@ -149,58 +204,6 @@ export const usePurchaseStore = create<PurchaseState>((set, get) => ({
     return get().orders.find((o) => o.id === id)
   },
 
-  // 审核通过：增加库存并生成应付账款
-  approveOrder: (id) => {
-    const order = get().orders.find((o) => o.id === id)
-    if (!order || order.status !== '待审核') return
-    
-    const { addBatch } = useProductStore.getState()
-    const { addAccountPayable } = useAccountStore.getState()
-    
-    // 为每个明细创建缸号并增加库存
-    order.items.forEach((item) => {
-      // 查找商品和色号
-      const products = useProductStore.getState().products
-      const colors = useProductStore.getState().colors
-      const product = products.find((p) => p.id === item.productId)
-      const color = colors.find((c) => c.id === item.colorId)
-      
-      if (product && color) {
-        // 创建新缸号
-        addBatch(color.id, {
-          code: item.batchCode,
-          productionDate: item.productionDate || new Date().toISOString().split('T')[0],
-          supplierId: order.supplierId,
-          purchasePrice: item.price,
-          initialQuantity: item.quantity,
-          stockLocation: item.stockLocation,
-          remark: item.remark,
-        })
-      }
-    })
-    
-    // 如果有欠款，生成应付账款
-    if (order.unpaidAmount > 0) {
-      addAccountPayable({
-        supplierId: order.supplierId,
-        supplierName: order.supplierName,
-        purchaseOrderId: order.id,
-        purchaseOrderNumber: order.orderNumber,
-        payableAmount: order.totalAmount,
-        paidAmount: order.paidAmount,
-        accountDate: order.purchaseDate,
-      })
-    }
-    
-    // 更新订单状态
-    set((state) => {
-      const orders = state.orders.map((o) =>
-        o.id === id ? { ...o, status: '已审核', updatedAt: new Date().toISOString() } : o
-      )
-      saveToStorage('purchaseOrders', orders)
-      return { orders }
-    })
-  },
 
   // 作废订单
   cancelOrder: (id) => {

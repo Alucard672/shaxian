@@ -1,5 +1,5 @@
 // 销售单状态枚举
-export type SalesOrderStatus = '待审核' | '已审核' | '已出库' | '已作废'
+export type SalesOrderStatus = '草稿' | '待审核' | '已审核' | '已出库' | '已作废'
 
 // 销售单明细
 export interface SalesOrderItem {
@@ -48,5 +48,7 @@ export interface SalesOrderFormData {
   receivedAmount: number
   remark?: string
 }
+
+
 
 

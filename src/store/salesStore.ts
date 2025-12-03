@@ -7,16 +7,16 @@ import {
 } from '@/types/sales'
 import { useProductStore } from './productStore'
 import { useAccountStore } from './accountStore'
+import { initSalesOrders } from './initData'
 
 interface SalesState {
   orders: SalesOrder[]
   
   // 销售单操作
-  addOrder: (data: SalesOrderFormData) => SalesOrder
+  addOrder: (data: SalesOrderFormData, status?: SalesOrderStatus) => SalesOrder
   updateOrder: (id: string, data: Partial<SalesOrderFormData>) => void
   deleteOrder: (id: string) => void
   getOrder: (id: string) => SalesOrder | undefined
-  approveOrder: (id: string) => void // 审核通过
   cancelOrder: (id: string) => void // 作废
   generateOrderNumber: () => string
   checkStock: (batchId: string, quantity: number) => boolean // 检查库存
@@ -25,27 +25,41 @@ interface SalesState {
 // 生成唯一ID
 const generateId = () => Date.now().toString(36) + Math.random().toString(36).substr(2)
 
-// 生成销售单号：XS + 年月日 + 3位序号
+// 生成销售单号：SO + 年月日 + 3位序号
 const generateOrderNumber = (existingNumbers: string[]): string => {
   const today = new Date()
   const dateStr = today.getFullYear().toString() +
     String(today.getMonth() + 1).padStart(2, '0') +
     String(today.getDate()).padStart(2, '0')
   
-  const prefix = `XS${dateStr}`
+  const prefix = `SO${dateStr}`
   const sameDayNumbers = existingNumbers.filter(n => n.startsWith(prefix))
   const sequence = String((sameDayNumbers.length + 1)).padStart(3, '0')
   
   return `${prefix}${sequence}`
 }
 
-// 从localStorage加载数据
-const loadFromStorage = (key: string, defaultValue: any) => {
+// 从localStorage加载数据，如果为空则使用初始数据
+const loadFromStorage = (key: string, initData: any) => {
   try {
     const item = localStorage.getItem(key)
-    return item ? JSON.parse(item) : defaultValue
+    if (item) {
+      const data = JSON.parse(item)
+      if (Array.isArray(data) && data.length > 0) {
+        return data
+      }
+      if (Array.isArray(data) && data.length === 0) {
+        const initialized = localStorage.getItem(`${key}_initialized`)
+        if (initialized === 'true') {
+          return data
+        }
+      }
+    }
+    localStorage.setItem(key, JSON.stringify(initData))
+    localStorage.setItem(`${key}_initialized`, 'true')
+    return initData
   } catch {
-    return defaultValue
+    return initData
   }
 }
 
@@ -59,7 +73,7 @@ const saveToStorage = (key: string, value: any) => {
 }
 
 export const useSalesStore = create<SalesState>((set, get) => ({
-  orders: loadFromStorage('salesOrders', []),
+  orders: loadFromStorage('salesOrders', initSalesOrders()),
 
   generateOrderNumber: () => {
     const existingNumbers = get().orders.map(o => o.orderNumber)
@@ -72,7 +86,7 @@ export const useSalesStore = create<SalesState>((set, get) => ({
     return batch ? batch.stockQuantity >= quantity : false
   },
 
-  addOrder: (data) => {
+  addOrder: (data, status = '已出库') => {
     const orderNumber = get().generateOrderNumber()
     
     // 计算明细金额和总金额
@@ -92,10 +106,42 @@ export const useSalesStore = create<SalesState>((set, get) => ({
       items,
       totalAmount,
       unpaidAmount,
-      status: '待审核',
+      status: status,
       operator: '当前用户', // TODO: 从用户状态获取
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
+    }
+    
+    // 如果不是草稿状态，自动执行出库操作
+    if (status !== '草稿') {
+      const { updateBatchStock } = useProductStore.getState()
+      const { addAccountReceivable } = useAccountStore.getState()
+      
+      // 为每个明细减少库存
+      items.forEach((item) => {
+        const batches = useProductStore.getState().batches
+        const batch = batches.find((b) => b.id === item.batchId)
+        
+        if (batch) {
+          const newQuantity = batch.stockQuantity - item.quantity
+          if (newQuantity >= 0) {
+            updateBatchStock(batch.id, newQuantity)
+          }
+        }
+      })
+      
+      // 如果有欠款，生成应收账款
+      if (unpaidAmount > 0) {
+        addAccountReceivable({
+          customerId: data.customerId,
+          customerName: data.customerName,
+          salesOrderId: newOrder.id,
+          salesOrderNumber: orderNumber,
+          receivableAmount: totalAmount,
+          receivedAmount: data.receivedAmount || 0,
+          accountDate: data.salesDate,
+        })
+      }
     }
     
     set((state) => {
@@ -156,49 +202,6 @@ export const useSalesStore = create<SalesState>((set, get) => ({
     return get().orders.find((o) => o.id === id)
   },
 
-  // 审核通过：减少库存并生成应收账款
-  approveOrder: (id) => {
-    const order = get().orders.find((o) => o.id === id)
-    if (!order || order.status !== '待审核') return
-    
-    const { updateBatchStock } = useProductStore.getState()
-    const { addAccountReceivable } = useAccountStore.getState()
-    
-    // 为每个明细减少库存
-    order.items.forEach((item) => {
-      const batches = useProductStore.getState().batches
-      const batch = batches.find((b) => b.id === item.batchId)
-      
-      if (batch) {
-        const newQuantity = batch.stockQuantity - item.quantity
-        if (newQuantity >= 0) {
-          updateBatchStock(batch.id, newQuantity)
-        }
-      }
-    })
-    
-    // 如果有欠款，生成应收账款
-    if (order.unpaidAmount > 0) {
-      addAccountReceivable({
-        customerId: order.customerId,
-        customerName: order.customerName,
-        salesOrderId: order.id,
-        salesOrderNumber: order.orderNumber,
-        receivableAmount: order.totalAmount,
-        receivedAmount: order.receivedAmount,
-        accountDate: order.salesDate,
-      })
-    }
-    
-    // 更新订单状态
-    set((state) => {
-      const orders = state.orders.map((o) =>
-        o.id === id ? { ...o, status: '已审核', updatedAt: new Date().toISOString() } : o
-      )
-      saveToStorage('salesOrders', orders)
-      return { orders }
-    })
-  },
 
   // 作废订单
   cancelOrder: (id) => {

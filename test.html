@@ -1,0 +1,537 @@
+<html>
+<head>
+    <style type="text/css"> 
+        @page {
+            size: A4 portrait;
+            @bottom-center{
+                content:	""	counter(page)	"/"	counter(pages) "";
+            }
+
+            @top-center {
+                content: element(header)
+            }
+        }
+        body {
+            font-family: "Microsoft YaHei" ! important;
+            margin: 0;
+            padding: 0;
+        }
+
+        div.header {
+            display: block;
+            text-align: center;
+            position: running(header);
+        }
+
+        @media print {
+            table {
+                page-break-after: auto
+            }
+            tr {
+                page-break-inside: avoid;
+                page-break-after: auto
+            }
+            td {
+                page-break-inside: avoid;
+                page-break-after: auto
+            }
+            thead {
+                display: table-header-group
+            }
+            tfoot {
+                display: table-footer-group
+            }
+        }
+        table.plaintable {
+            color: #333333;
+            border-width: 1px;
+            border-color: #666666;
+            border-collapse: collapse;
+            table-layout: fixed;
+        }
+
+
+        table.plaintable th {
+            text-align:center;
+            border-width: 1px;
+            padding: 3px;
+            border-style: solid;
+            border-color: #666666;
+            word-wrap: break-word;
+        }
+
+        table.plaintable td {
+            border-width: 1px;
+            padding: 3px;
+            border-color: #666666;
+            vertical-align:bottom;
+            word-wrap: break-word;
+        }
+
+        table.gridtable {
+            border-collapse:collapse;
+            table-layout: fixed;
+            width: 100%;
+            margin: 0;
+            padding: 0;
+            border-spacing: 0;
+        }
+
+        table.gridtable th {
+            text-align: center;
+            border-width: 1px;
+            padding: 3px;
+            border-style: solid;
+            border-color: black;
+            word-wrap: break-word;
+            background-color: lightgrey;
+            min-width: 50px;
+        }
+
+        table.gridtable td {
+            border: 1px solid #000;
+            word-wrap: break-word;
+            padding: 3px;
+            vertical-align: middle;
+            min-width: 50px;
+        }
+        .label {
+            font-weight: 600;
+        }
+
+    </style>
+</head>
+<body style="font-size: 13px; margin: 0; padding: 0;">
+<h2 style="text-align: center; margin: 0 0 8px 0; padding: 0;">${manufacturer!}生产单</h2>
+<!-- 款式信息 -->
+<table class="gridtable" style="width: 100%;">
+    <tr>
+        <td align="left" colspan="8" style="padding-left: 15px"><span class="label">单号</span>：${billNo}</td>
+    </tr>
+    <tr>
+        <td class="label" align="center">款式名称</td>
+        <td align="center">${productName!}</td>
+        <td class="label" align="center">设计师</td>
+        <td align="center">${designer!}</td>
+        <td class="label" align="center">工艺师</td>
+        <td align="center">${technologist!}</td>
+        <td class="label" align="center">生产单位</td>
+        <td align="center">${manufacturer!}</td>
+    </tr>
+    <tr>
+        <td class="label" align="center">款式编号</td>
+        <td align="center">${productCode}</td>
+        <td class="label" align="center">样板师</td>
+        <td align="center">${patternMaker!}</td>
+        <td class="label" align="center">业务员</td>
+        <td align="center">${staffName}</td>
+        <td class="label" align="center">制单日期</td>
+        <td align="center">${preparationDate}</td>
+    </tr>
+    <tr>
+        <td class="label" align="center">样衣款号</td>
+        <td align="center">${sampleCode!}</td>
+        <#if typeOfProduction == 2>
+        <td class="label" align="center">针型</td>
+        <td align="center">${needleType!}</td>
+        </#if>
+        <td class="label" align="center">发生日期</td>
+        <td align="center">${planTime!}</td>
+        <td class="label" align="center">计划交期</td>
+        <td align="center">${plannedDeliveryDate!}</td>
+        <#if typeOfProduction != 2>
+        <td class="label" align="center"></td>
+        <td align="center"></td>
+        </#if>
+    </tr>
+    <tr>
+        <td class="label" align="center">备注</td>
+        <td colspan="7">${remark!}</td>
+    </tr>
+    <tr>
+        <td class="label" align="center">成分</td>
+        <td colspan="7">${ingredient!}</td>
+    </tr>
+</table>
+<!-- 颜色尺码 -->
+<table class="gridtable" style="width: 100%">
+    <thead>
+    <tr>
+        <td class="label" align="center" colspan="${3 + sizeList?size}">生产数量</td>
+    </tr>
+    </thead>
+    <tbody>
+    <tr>
+        <#assign overSize = 2 />
+        <#if typeOfProduction == 2>
+            <#assign overSize = 3 />
+        </#if>
+        <td rowspan="${productDetails?size + overSize}">
+            <#if productImgUrl??>
+                <img src="${productImgUrl}" width="150" height="220" />
+            </#if>
+        </td>
+        <td class="label" align="center">颜色</td>
+        <#list sizeList as size>
+            <td align="center">${size.sizeName}</td>
+        </#list>
+        <td class="label" align="center">合计</td>
+    </tr>
+    <#if typeOfProduction == 2>
+        <tr>
+            <td class="label" align="center">
+                单件克重
+            </td>
+            <#list sizeList as size>
+                <td align="center">${size.fabricWeight!}</td>
+            </#list>
+            <td></td>
+        </tr>
+    </#if>
+    <#function colorRowspan details start>
+        <#-- 防御：越界或空元素时返回1 -->
+        <#if !(details?size gt start) || !(details[start]??)>
+            <#return 1>
+        </#if>
+        <#assign c = (details[start].colorName)!>
+        <#assign count = 1>
+        <#list (start + 1)..(details?size - 1) as k>
+            <#if k gte details?size>
+                <#break>
+            </#if>
+            <#if !(details[k]??)>
+                <#break>
+            </#if>
+            <#assign nextColor = (details[k].colorName)!>
+            <#if nextColor == c>
+                <#assign count = count + 1>
+            <#else>
+                <#break>
+            </#if>
+        </#list>
+        <#return count>
+    </#function>
+    <#list 0..(productDetails?size - 1) as i>
+        <#assign det = productDetails[i]>
+        <tr>
+            <#if i == 0 || productDetails[i - 1].colorName! != det.colorName!>
+                <td align="center" rowspan="${colorRowspan(productDetails, i)}">${det.colorName}</td>
+            </#if>
+            <#list sizeList as size>
+                <td align="center">${(det.sizeNum[size.sizeName])!}</td>
+            </#list>
+            <td align="center">${det.totalNum!}</td>
+        </tr>
+    </#list>
+    <tr>
+            <td class="label" align="center">合计</td>
+            <#list sizeList as size>
+                <td align="center">${(sumRow.sizeNum[size.sizeName])!}</td>
+            </#list>
+            <td align="center">${sumRow.totalNum!}</td>
+    </tr>
+    </tbody>
+</table>
+
+<!-- 面料明细 -->
+<table class="gridtable" style="width: 100%">
+    <thead>
+        <tr>
+            <#if (enableFabricTakenBatchNoInput?? && enableFabricTakenBatchNoInput)>
+                <#if (enableHidePlanFabricAccessoriesBoomImg?? && enableHidePlanFabricAccessoriesBoomImg)>
+                    <td align="center" colspan="15" class="label">面料明细</td>
+                <#else>
+                    <td align="center" colspan="14" class="label">面料明细</td>
+                </#if>
+            <#else>
+                <#if (enableHidePlanFabricAccessoriesBoomImg?? && enableHidePlanFabricAccessoriesBoomImg)>
+                    <td align="center" colspan="13" class="label">面料明细</td>
+                <#else>
+                    <td align="center" colspan="12" class="label">面料明细</td>
+                </#if>
+            </#if>
+
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td align="center" class="label">颜色</td>
+            <td align="center" class="label">厂商</td>
+            <td align="center" class="label">面料编号</td>
+            <td align="center" class="label">面料名称</td>
+            <#if (enableHidePlanFabricAccessoriesBoomImg?? && enableHidePlanFabricAccessoriesBoomImg)>
+                <td align="center" class="label" style="width: 55px;">图片</td>
+            </#if>
+            <td align="center" class="label">部位</td>
+            <td align="center" class="label">色卡名称</td>
+            <td align="center" class="label">颜色</td>
+            <td align="center" class="label">平均用料</td>
+            <td align="center" class="label">损耗%</td>
+            <td align="center" class="label">已领</td>
+            <td align="center" class="label">差异</td>
+            <td align="center" class="label">损耗金额</td>
+            <td align="center" class="label">数量单位</td>
+            <td align="center" class="label">备注</td>
+        </tr>
+        <#function fabricColorRowspan list start>
+            <#-- 防御：越界或空元素时返回1 -->
+            <#if !(list?size gt start) || !(list[start]??)>
+                <#return 1>
+            </#if>
+            <#assign c = (list[start].productColorName)!>
+            <#assign count = 1>
+            <#list (start + 1)..(list?size - 1) as k>
+                <#if k gte list?size>
+                    <#break>
+                </#if>
+                <#if !(list[k]??)>
+                    <#break>
+                </#if>
+                <#assign nextColor = (list[k].productColorName)!>
+                <#if nextColor == c>
+                    <#assign count = count + 1>
+                <#else>
+                    <#break>
+                </#if>
+            </#list>
+            <#return count>
+        </#function>
+        <#function fabricProviderRowspan list start>
+            <#-- 计算同一颜色组内同一厂商的行数 -->
+            <#if !(list?size gt start) || !(list[start]??)>
+                <#return 1>
+            </#if>
+            <#assign currentColor = (list[start].productColorName)!>
+            <#assign currentProvider = (list[start].providerName)!>
+            <#assign count = 1>
+            <#list (start + 1)..(list?size - 1) as k>
+                <#if k gte list?size>
+                    <#break>
+                </#if>
+                <#if !(list[k]??)>
+                    <#break>
+                </#if>
+                <#assign nextColor = (list[k].productColorName)!>
+                <#assign nextProvider = (list[k].providerName)!>
+                <#-- 如果颜色不同，说明已经超出当前颜色组，停止计算 -->
+                <#if nextColor != currentColor>
+                    <#break>
+                </#if>
+                <#-- 如果厂商不同，说明已经超出当前厂商组，停止计算 -->
+                <#if nextProvider != currentProvider>
+                    <#break>
+                </#if>
+                <#assign count = count + 1>
+            </#list>
+            <#return count>
+        </#function>
+        <#if fabricDosageDetails??>
+        <#list 0..(fabricDosageDetails?size - 1) as i>
+            <#if fabricDosageDetails[i]??>
+                <#assign fabric = fabricDosageDetails[i]>
+                <#assign isNewColor = (i == 0 || !(fabricDosageDetails[i - 1]??) || fabricDosageDetails[i - 1].productColorName! != fabric.productColorName!)>
+                <#-- 新厂商的判断：如果是新颜色，或者是第一个元素，或者在同一个颜色组内厂商名不同 -->
+                <#if isNewColor>
+                    <#assign isNewProvider = true>
+                <#else>
+                    <#assign isNewProvider = !(fabricDosageDetails[i - 1]??) || (fabricDosageDetails[i - 1].providerName! != fabric.providerName!)>
+                </#if>
+                <#-- 计算厂商组的rowspan值 -->
+                <#assign providerRowspan = fabricProviderRowspan(fabricDosageDetails, i)>
+                <tr>
+                    <#-- 颜色列：只在颜色改变时输出，使用rowspan合并 -->
+                    <#if isNewColor>
+                        <td align="center" rowspan="${fabricColorRowspan(fabricDosageDetails, i)}" style="vertical-align: middle;">${fabric.productColorName!}</td>
+                    </#if>
+                    <#-- 厂商、面料编号、面料名称列：只在厂商改变时输出，使用计算出的rowspan合并 -->
+                    <#if isNewProvider>
+                        <td align="center" rowspan="${providerRowspan}" style="vertical-align: middle;">${fabric.providerName!}</td>
+                        <td align="center" rowspan="${providerRowspan}" style="vertical-align: middle;">${fabric.fabricCode!}</td>
+                        <td align="center" rowspan="${providerRowspan}" style="vertical-align: middle;">${fabric.fabricName!}</td>
+                        <#if (enableHidePlanFabricAccessoriesBoomImg?? && enableHidePlanFabricAccessoriesBoomImg)>
+                            <td align="center" rowspan="${providerRowspan}" style="vertical-align: middle;">
+                                <#if (fabric.fabricImgUrl?? && fabric.fabricImgUrl?length gt 0)>
+                                    <img src="${fabric.fabricImgUrl!}" width="45px" height="75px" />
+                                </#if>
+                            </td>
+                        </#if>
+                    </#if>
+                    <#-- 注意：当isNewProvider为false时，这些列已经被rowspan合并了，不输出td（这是HTML rowspan的标准行为） -->
+                    <#-- 以下列每行都显示，不合并 -->
+                    <td align="center">${fabric.dosageArea!}</td>
+                    <td align="center">${fabric.colorCardName!}</td>
+                    <td align="center">${fabric.colorNumName!}</td>
+                    <td align="center">${fabric.avgDosage!}</td>
+                    <td align="center">${fabric.attrition!}%</td>
+                    <td align="center">${fabric.takenNum!}</td>
+                    <td align="center">${fabric.takenDiffNum!}</td>
+                    <td align="center">${takenOverflowMoney!}</td>
+                    <td align="center">${fabric.numUnitName!}</td>
+                    <td align="center">${fabric.remark!}</td>
+                </tr>
+            </#if>
+        </#list>
+        </#if>
+    </tbody>
+</table>
+
+<!-- 辅料明细 -->
+<table class="gridtable" style="width: 100%">
+    <thead>
+        <tr>
+            <#if accessoriesSplitSpecs == 1>
+                <#if (enableHidePlanFabricAccessoriesBoomImg?? && enableHidePlanFabricAccessoriesBoomImg)>
+                    <td align="center" colspan="15" class="label">辅料明细</td>
+                <#else>
+                    <td align="center" colspan="14" class="label">辅料明细</td>
+                </#if>
+            <#else>
+                <#if (enableHidePlanFabricAccessoriesBoomImg?? && enableHidePlanFabricAccessoriesBoomImg)>
+                    <td align="center" colspan="12" class="label">辅料明细</td>
+                <#else>
+                    <td align="center" colspan="11" class="label">辅料明细</td>
+                </#if>
+            </#if>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <#if accessoriesSplitSpecs == 1>
+                <td align="center" class="label">成衣颜色</td>
+                <td align="center" class="label">成衣尺码</td>
+            </#if>
+            <td align="center" class="label">厂商</td>
+            <td align="center" class="label">辅料编号</td>
+            <td align="center" class="label">辅料名称</td>
+            <#if (enableHidePlanFabricAccessoriesBoomImg?? && enableHidePlanFabricAccessoriesBoomImg)>
+                <td align="center" class="label" width="55px">图片</td>
+            </#if>
+            <td align="center" class="label">单价</td>
+            <td align="center" class="label">颜色</td>
+            <td align="center" class="label">规格</td>
+            <td align="center" class="label">单件用料</td>
+            <td align="center" class="label">损耗%</td>
+            <td align="center" class="label">理论用料</td>
+            <td align="center" class="label">数量单位</td>
+            <#if accessoriesSplitSpecs == 1>
+                <td align="center" class="label">备注</td>
+            </#if>
+            <td align="center" class="label">领料用量</td>
+        </tr>
+        <#-- 按成衣颜色合并 + 列表清洗 -->
+        <#assign acc = []>
+        <#list (accessoriesDosageDetails)![] as x>
+            <#if x??>
+                <#assign acc = acc + [x]>
+            </#if>
+        </#list>
+        <#function accessoriesColorRowspan list start>
+            <#if !(list?size gt start) || !(list[start]??)>
+                <#return 1>
+            </#if>
+            <#assign c = (list[start].productSpec1Name)!>
+            <#assign count = 1>
+            <#list (start + 1)..(list?size - 1) as k>
+                <#if k gte list?size>
+                    <#break>
+                </#if>
+                <#if !(list[k]??)>
+                    <#break>
+                </#if>
+                <#assign nextColor = (list[k].productSpec1Name)!>
+                <#if nextColor == c>
+                    <#assign count = count + 1>
+                <#else>
+                    <#break>
+                </#if>
+            </#list>
+            <#return count>
+        </#function>
+        <#if acc?size gt 0>
+        <#list 0..(acc?size - 1) as i>
+            <#if !(acc[i]??)>
+                <#-- 跳过空项：用条件包裹整行，而不是使用 #continue（旧版FM不支持） -->
+            <#else>
+                <#assign accessories = acc[i]>
+            </#if>
+            <#if accessories??>
+            <tr>
+                <#if accessoriesSplitSpecs == 1>
+                    <#if i == 0 || !(acc[i - 1]??) || ((acc[i - 1].productSpec1Name)! != (accessories.productSpec1Name)!)>
+                        <td align="center" rowspan="${accessoriesColorRowspan(acc, i)}">${accessories.productSpec1Name!}</td>
+                    </#if>
+                    <td align="center">${accessories.productSpec2Name}</td>
+                </#if>
+                <td align="center">${accessories.providerName!}</td>
+                <td align="center">${accessories.accessoriesCode!}</td>
+                <td align="center">${accessories.accessoriesName!}</td>
+                <#if (enableHidePlanFabricAccessoriesBoomImg?? && enableHidePlanFabricAccessoriesBoomImg)>
+                    <td align="center">
+                        <#if (accessories.accessoriesImgUrl?? && accessories.accessoriesImgUrl?length gt 0)>
+                            <img src="${accessories.accessoriesImgUrl!}" width="45px" height="75px" />
+                        </#if>
+                    </td>
+                </#if>
+                <td align="center">${accessories.price!}</td>
+                <td align="center">${accessories.spec2Name!}</td>
+                <td align="center">${accessories.spec1Name!}</td>
+                <td align="center">${accessories.dosage!}</td>
+                <td align="center">${accessories.attrition!}%</td>
+                <td align="center">${accessories.stdDosage!}</td>
+                <td align="center">${accessories.numUnitName!}</td>
+                <#if accessoriesSplitSpecs == 1>
+                    <td align="center">${accessories.remark!}</td>
+                </#if>
+                <td align="center">${accessories.takenNum!}</td>
+            </tr>
+            </#if>
+        </#list>
+        </#if>
+    </tbody>
+</table>
+
+<#if typeOfProduction == 2 && fabricRateList??>
+    <table class="gridtable" style="width: 100%">
+        <tr>
+            <td align="center" class="label">多色/单色(按中码)</td>
+            <#list fabricRateList as fabricRate>
+                <td align="center">${fabricRate.fabricCodeName}</td>
+            </#list>
+            <td align="center" class="label">单件用量</td>
+        </tr>
+        <tr>
+            <td align="center" class="label">单件用纱比例/单件用量</td>
+            <#list fabricRateList as fabricRate>
+                <td align="center">${fabricRate.fabricRate}%</td>
+            </#list>
+            <td align="center">${costFabricWeight}</td>
+        </tr>
+    </table>
+    <table class="gridtable" style="width: 100%">
+        <tr>
+            <td align="left" colspan="9" style="padding: 8px 0; line-height: 1.6;">
+                <!-- 标题样式 -->
+                <p style="margin: 0 0 12px 0; font-weight: bold; line-height: 1.6;">发织条款</p>
+                
+                <!-- 条款内容（统一设置段落间距和行高） -->
+                <p style="margin: 0 0 10px 0; line-height: 1.6;">1. 每组颜色乙方必须复办，并经甲方确认批准方可投产。</p>
+                
+                <p style="margin: 0 0 10px 0; line-height: 1.6;">2. 用料由甲方先按初计配量发出，乙方当面交点，于领料之日起五天内报上各组颜色实际配量，方便补退；全批加工完成后，存料不予退料。</p>
+                
+                <p style="margin: 0 0 10px 0; line-height: 1.6;">3. 乙方必须确保加工完成的成品无污渍现象，如出现毛料有混缸、线仔毛、灰毛、退色等情况，切勿投产，须先请示甲方外发负责人。</p>
+                
+                <p style="margin: 0 0 10px 0; line-height: 1.6;">4. 毛料（领料单的预计重量）甲方分批发放，若有差距须先请示甲方外发负责人，否则责任由乙方承担；若甲方发清毛料时间延迟导致影响乙方生产，则延发部分的交货期可顺延相应时间。</p>
+                
+                <p style="margin: 0 0 10px 0; line-height: 1.6;">5. 乙方加工的毛衫，若质量达不到甲方规定要求或同件毛衫回头次超过2次以上则按规定附加条件处理；若交货时间超过规定期限，所有超期完成的毛衫，每超一天按其加工费扣除，以此类推；乙方误期完成导致该单未能按期出货，全单经济损失由乙方承担。</p>
+                
+                <p style="margin: 0 0 10px 0; line-height: 1.6;">6. 结算时若超过正常损耗，超过部分按毛料购买价格从乙方工款中扣除。</p>
+                
+                <p style="margin: 0 0 10px 0; line-height: 1.6;">7. 乙方按本合约按时按量加工完成并确保质量符合要求。</p>
+                
+                <p style="margin: 0; line-height: 1.6;">8. 甲方公司所在地为交货地。</p>
+            </td>
+        </tr>
+    </table>
+</#if>
+</body>
+</html>

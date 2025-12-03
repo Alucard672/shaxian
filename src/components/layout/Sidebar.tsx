@@ -3,33 +3,44 @@ import {
   LayoutDashboard,
   Package,
   ShoppingCart,
+  DollarSign,
+  Palette,
   BarChart3,
   CreditCard,
   Users,
   Printer,
   FileText,
   Settings,
+  ChevronRight,
 } from 'lucide-react'
 import { cn } from '@/utils/cn'
 
 const menuItems = [
   { path: '/', label: '工作台', icon: LayoutDashboard },
-  { path: '/purchase', label: '进货管理', icon: Package },
-  { path: '/sales', label: '销售管理', icon: ShoppingCart },
+  { path: '/product', label: '商品管理', icon: Package },
+  { path: '/purchase', label: '进货管理', icon: ShoppingCart },
+  { path: '/sales', label: '销售管理', icon: DollarSign },
+  { path: '/dyeing', label: '染色加工', icon: Palette },
   { path: '/inventory', label: '库存管理', icon: BarChart3 },
-  { path: '/account/receivable', label: '应收账款', icon: CreditCard },
-  { path: '/account/payable', label: '应付账款', icon: CreditCard },
-  { path: '/customer', label: '客户管理', icon: Users },
-  { path: '/supplier', label: '供应商管理', icon: Users },
-  { path: '/print', label: '打单管理', icon: Printer },
+  { path: '/print', label: '打印管理', icon: Printer },
+  { path: '/account/receivable', label: '账款管理', icon: CreditCard },
+  { path: '/customer', label: '往来单位', icon: Users },
   { path: '/report', label: '统计报表', icon: FileText },
-  { path: '/product', label: '商品管理', icon: Settings },
 ]
 
+const settingsItem = {
+  path: '/settings',
+  label: '系统设置',
+  icon: Settings,
+}
+
 function Sidebar() {
+  const SettingsIcon = settingsItem.icon
+
   return (
-    <aside className="w-64 bg-white border-r border-gray-200 min-h-[calc(100vh-4rem)]">
-      <nav className="p-4">
+    <aside className="w-64 bg-white/80 border-r border-gray-200/60 h-full flex flex-col">
+      {/* 主要导航区域 */}
+      <nav className="px-3 pt-3 flex-1">
         <ul className="space-y-1">
           {menuItems.map((item) => {
             const Icon = item.icon
@@ -39,21 +50,52 @@ function Sidebar() {
                   to={item.path}
                   className={({ isActive }) =>
                     cn(
-                      'flex items-center gap-3 px-4 py-2 rounded-lg text-sm font-medium transition-colors',
+                      'flex items-center justify-between px-3 h-[42px] rounded-xl text-sm font-medium transition-all duration-200 group',
                       isActive
-                        ? 'bg-primary-50 text-primary-600'
-                        : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
+                        ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-[0px_2px_4px_-2px_rgba(59,130,246,0.25),0px_4px_6px_-1px_rgba(59,130,246,0.25)]'
+                        : 'text-gray-700 hover:bg-gray-50'
                     )
                   }
                 >
-                  <Icon className="w-5 h-5" />
-                  <span>{item.label}</span>
+                  {({ isActive }) => (
+                    <>
+                      <div className="flex items-center gap-3">
+                        <Icon className={cn(
+                          'w-5 h-5 flex-shrink-0',
+                          'transition-colors'
+                        )} />
+                        <span className="leading-[1.5]">{item.label}</span>
+                      </div>
+                      <ChevronRight className={cn(
+                        'w-4 h-4 flex-shrink-0 transition-opacity',
+                        isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+                      )} />
+                    </>
+                  )}
                 </NavLink>
               </li>
             )
           })}
         </ul>
       </nav>
+
+      {/* 系统设置区域 - 底部带分隔线 */}
+      <div className="pt-[13px] px-3 pb-0 border-t border-gray-200">
+        <NavLink
+          to={settingsItem.path}
+          className={({ isActive }) =>
+            cn(
+              'flex items-center gap-3 px-3 h-[42px] rounded-xl text-sm font-medium transition-all duration-200',
+              isActive
+                ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-[0px_2px_4px_-2px_rgba(59,130,246,0.25),0px_4px_6px_-1px_rgba(59,130,246,0.25)]'
+                : 'text-gray-700 hover:bg-gray-50'
+            )
+          }
+        >
+          <SettingsIcon className="w-5 h-5 flex-shrink-0" />
+          <span className="leading-[1.5]">{settingsItem.label}</span>
+        </NavLink>
+      </div>
     </aside>
   )
 }

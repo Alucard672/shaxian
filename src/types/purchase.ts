@@ -1,5 +1,5 @@
 // 进货单状态枚举
-export type PurchaseOrderStatus = '待审核' | '已审核' | '已入库' | '已作废'
+export type PurchaseOrderStatus = '草稿' | '待审核' | '已审核' | '已入库' | '已作废'
 
 // 进货单明细
 export interface PurchaseOrderItem {
@@ -49,5 +49,7 @@ export interface PurchaseOrderFormData {
   paidAmount: number
   remark?: string
 }
+
+
 
 

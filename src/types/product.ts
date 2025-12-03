@@ -14,6 +14,8 @@ export interface Product {
   count?: string // 支数，如"32s"
   unit: string // 单位，如"公斤"
   type: ProductType
+  isWhiteYarn?: boolean // 是否为白坯纱线
+  description?: string // 商品描述
   createdAt: string
   updatedAt: string
   colors?: Color[] // 关联的色号列表
@@ -55,6 +57,8 @@ export interface ProductFormData {
   count?: string
   unit: string
   type: ProductType
+  description?: string
+  isWhiteYarn?: boolean
 }
 
 // 色号表单数据
@@ -76,5 +80,9 @@ export interface BatchFormData {
   stockLocation?: string
   remark?: string
 }
+
+
+
+
 
 
