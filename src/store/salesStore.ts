@@ -207,10 +207,10 @@ export const useSalesStore = create<SalesState>((set, get) => ({
   cancelOrder: (id) => {
     set((state) => {
       const orders = state.orders.map((o) =>
-        o.id === id ? { ...o, status: '已作废', updatedAt: new Date().toISOString() } : o
+        o.id === id ? { ...o, status: '已作废' as const, updatedAt: new Date().toISOString() } : o
       )
       saveToStorage('salesOrders', orders)
-      return { orders }
+      return { ...state, orders }
     })
   },
 }))

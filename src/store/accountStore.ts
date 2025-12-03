@@ -156,7 +156,7 @@ export const useAccountStore = create<AccountState>((set, get) => ({
       
       saveToStorage('accountReceivables', receivables)
       
-      return { receipts, receivables }
+      return { receipts, receivables } as Partial<AccountState>
     })
     
     return newReceipt
@@ -218,7 +218,7 @@ export const useAccountStore = create<AccountState>((set, get) => ({
       
       saveToStorage('accountPayables', payables)
       
-      return { payments, payables }
+      return { payments, payables } as Partial<AccountState>
     })
     
     return newPayment

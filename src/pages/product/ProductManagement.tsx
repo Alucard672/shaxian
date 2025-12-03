@@ -490,9 +490,6 @@ function ProductManagement() {
                       className="border-b border-gray-100 hover:bg-gray-50 transition-colors"
                     >
                       {productColumns.map((column) => {
-                        const value = column.dataIndex
-                          ? record[column.dataIndex]
-                          : null
                         return (
                           <td
                             key={column.key}
@@ -500,8 +497,8 @@ function ProductManagement() {
                             style={{ width: column.width }}
                           >
                             {column.render
-                              ? column.render(value, record, index)
-                              : value}
+                              ? (column.render as any)(null, record, index)
+                              : null}
                           </td>
                         )
                       })}

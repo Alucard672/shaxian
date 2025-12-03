@@ -1,7 +1,6 @@
 import { useState, useMemo } from 'react'
 import { useAccountStore } from '@/store/accountStore'
 import { useContactStore } from '@/store/contactStore'
-import { AccountReceivable, AccountPayable } from '@/types/account'
 import Card from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
 import Table from '../../components/ui/Table'
@@ -20,7 +19,7 @@ import {
   List,
   Users,
 } from 'lucide-react'
-import { format, differenceInDays } from 'date-fns'
+import { differenceInDays } from 'date-fns'
 import AccountStatement from '../../components/account/AccountStatement'
 import PaymentModal from '../../components/account/PaymentModal'
 import PaymentListModal from '../../components/account/PaymentListModal'
@@ -599,6 +598,10 @@ function AccountManagement() {
   const currentColumns = viewType === '流水' ? accountColumns : summaryColumns
   const currentPaginatedData = viewType === '流水' ? paginatedAccounts : paginatedSummary
 
+  // 类型兼容性处理
+  const tableColumns = currentColumns as any[]
+  const tableData = currentPaginatedData as any[]
+
   return (
     <div className="space-y-6">
       {/* 页面标题 */}
@@ -744,7 +747,7 @@ function AccountManagement() {
           </p>
         ) : (
           <>
-            <Table columns={currentColumns} data={currentPaginatedData} />
+            <Table columns={tableColumns} data={tableData} />
             <div className="flex items-center justify-between px-6 py-4 border-t border-gray-200">
               <span className="text-sm text-gray-600">共 {currentData.length} 条记录</span>
               <Pagination

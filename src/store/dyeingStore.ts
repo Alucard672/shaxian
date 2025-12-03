@@ -221,11 +221,9 @@ export const useDyeingStore = create<DyeingState>((set, get) => ({
       addBatch(targetColor.id, {
         code: `${order.greyBatchCode}-${item.targetColorCode}-${generateId().substring(0, 4)}`,
         productionDate: order.actualCompletionDate || new Date().toISOString().split('T')[0],
-        supplierId: order.factoryId, // 加工厂作为供应商
-        supplierName: order.factoryName,
+        supplierId: order.factoryId || '', // 加工厂作为供应商
         purchasePrice: order.processingPrice, // 加工单价作为采购价
         initialQuantity: item.quantity,
-        stockQuantity: item.quantity,
         stockLocation: stockLocation, // 使用传入的仓库位置
         remark: `由加工单 ${order.orderNumber} 染色加工`,
       })
@@ -234,10 +232,10 @@ export const useDyeingStore = create<DyeingState>((set, get) => ({
     // 更新订单状态为已入库
     set((state) => {
       const orders = state.orders.map((o) =>
-        o.id === id ? { ...o, status: '已入库', updatedAt: new Date().toISOString() } : o
+        o.id === id ? { ...o, status: '已入库' as const, updatedAt: new Date().toISOString() } : o
       )
       saveToStorage('dyeingOrders', orders)
-      return { orders }
+      return { ...state, orders }
     })
   },
 }))

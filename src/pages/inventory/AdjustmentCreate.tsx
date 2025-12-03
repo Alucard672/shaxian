@@ -12,12 +12,17 @@ import { X, Plus, FileText, Trash2, TrendingUp, TrendingDown, Package, AlertCirc
 import { format } from 'date-fns'
 import { cn } from '@/utils/cn'
 
-interface AdjustmentItemForm extends Omit<AdjustmentOrderFormData['items'][0], 'batchId'> {
+interface AdjustmentItemForm {
   batchId: string
   batchCode: string
+  productId: string
   productName: string
+  colorId: string
   colorName: string
+  colorCode: string
+  quantity: number
   unit: string
+  remark?: string
 }
 
 function AdjustmentCreate() {
@@ -41,8 +46,11 @@ function AdjustmentCreate() {
     existingOrder?.items.map(item => ({
       batchId: item.batchId,
       batchCode: item.batchCode,
+      productId: item.productId,
       productName: item.productName,
+      colorId: item.colorId,
       colorName: item.colorName,
+      colorCode: item.colorCode,
       quantity: item.quantity,
       unit: item.unit,
       remark: item.remark,
@@ -96,8 +104,11 @@ function AdjustmentCreate() {
         existingOrder.items.map(item => ({
           batchId: item.batchId,
           batchCode: item.batchCode,
+          productId: item.productId,
           productName: item.productName,
+          colorId: item.colorId,
           colorName: item.colorName,
+          colorCode: item.colorCode,
           quantity: item.quantity,
           unit: item.unit,
           remark: item.remark,
@@ -139,10 +150,13 @@ function AdjustmentCreate() {
         {
           batchId: inventoryItem.batch.id,
           batchCode: inventoryItem.batch.code,
+          productId: inventoryItem.productId,
           productName: inventoryItem.productName,
+          colorId: inventoryItem.colorId,
           colorName: inventoryItem.colorName,
+          colorCode: inventoryItem.colorCode,
           quantity,
-          unit: inventoryItem.batch.unit || 'kg',
+          unit: products.find(p => p.id === inventoryItem.productId)?.unit || 'kg',
           remark: currentItemForm.remark,
         },
       ])
@@ -180,16 +194,29 @@ function AdjustmentCreate() {
     const orderData: AdjustmentOrderFormData = {
       type: adjustmentType,
       adjustmentDate,
-      items: items.map((item) => ({
-        batchId: item.batchId,
-        quantity: item.quantity,
-        remark: item.remark,
-      })),
+      items: items.map((item) => {
+        const inventoryItem = inventoryDetails.find((inv) => inv.batch.id === item.batchId)
+        if (!inventoryItem) {
+          throw new Error(`未找到批次 ${item.batchId} 的库存信息`)
+        }
+        return {
+          batchId: item.batchId,
+          batchCode: item.batchCode,
+          productId: item.productId,
+          productName: item.productName,
+          colorId: item.colorId,
+          colorName: item.colorName,
+          colorCode: item.colorCode,
+          quantity: item.quantity,
+          unit: item.unit,
+          remark: item.remark || '',
+        }
+      }),
       remark,
     }
 
     if (isEditMode && existingOrder) {
-      updateOrder(existingOrder.id, { ...orderData, status })
+      updateOrder(existingOrder.id, orderData)
       if (status === '已完成') {
         completeOrder(existingOrder.id)
       }
@@ -412,7 +439,7 @@ function AdjustmentCreate() {
                     <option value="">请选择缸号</option>
                     {availableBatches.map(({ batch, inventoryItem }) => (
                       <option key={batch.id} value={batch.id}>
-                        {batch.code} (库存: {batch.stockQuantity} {batch.unit || 'kg'})
+                        {batch.code} (库存: {batch.stockQuantity} {products.find(p => p.id === inventoryItem?.productId)?.unit || 'kg'})
                       </option>
                     ))}
                   </select>

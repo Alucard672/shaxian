@@ -167,10 +167,10 @@ export const useAdjustmentStore = create<AdjustmentState>((set, get) => ({
     
     set((state) => {
       const orders = state.orders.map((o) =>
-        o.id === id ? { ...o, status: '已完成', updatedAt: new Date().toISOString() } : o
+        o.id === id ? { ...o, status: '已完成' as const, updatedAt: new Date().toISOString() } : o
       )
       saveToStorage('adjustmentOrders', orders)
-      return { orders }
+      return { ...state, orders }
     })
   },
 }))

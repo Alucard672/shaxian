@@ -265,7 +265,7 @@ function SalesList() {
               <FileText className="w-3.5 h-3.5 text-gray-600" />
             )}
             <Badge
-              variant={isCompleted ? 'success' : 'default'}
+              variant={isCompleted ? 'success' : 'gray'}
               className={isCompleted 
                 ? 'bg-green-100 text-green-700' 
                 : 'bg-gray-100 text-gray-900'
@@ -485,9 +485,6 @@ function SalesList() {
                       className="border-b border-gray-200 hover:bg-gray-50 transition-colors"
                     >
                       {orderColumns.map((column) => {
-                        const value = column.dataIndex
-                          ? record[column.dataIndex]
-                          : null
                         return (
                           <td
                             key={column.key}
@@ -495,8 +492,8 @@ function SalesList() {
                             style={{ width: column.width }}
                           >
                             {column.render
-                              ? column.render(value, record, index)
-                              : value}
+                              ? (column.render as any)(null, record, index)
+                              : null}
                           </td>
                         )
                       })}

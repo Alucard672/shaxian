@@ -97,20 +97,7 @@ function CounterpartyPaymentModal({
   const columns = [
     {
       key: 'select',
-      title: (
-        <div className="flex items-center">
-          <button
-            onClick={handleSelectAll}
-            className="p-1 hover:bg-gray-100 rounded"
-          >
-            {selectedIds.size === unpaidAccounts.length && unpaidAccounts.length > 0 ? (
-              <CheckSquare className="w-5 h-5 text-primary-600" />
-            ) : (
-              <Square className="w-5 h-5 text-gray-400" />
-            )}
-          </button>
-        </div>
-      ),
+      title: '',
       render: (_: any, record: typeof unpaidAccounts[0]) => (
         <div className="flex items-center">
           <input
@@ -224,10 +211,21 @@ function CounterpartyPaymentModal({
             </div>
           ) : (
             <>
-              <div className="mb-4">
+              <div className="mb-4 flex items-center justify-between">
                 <p className="text-sm text-gray-600">
                   共 {unpaidAccounts.length} 笔未结清账款，请选择要{isCustomer ? '收款' : '付款'}的单据：
                 </p>
+                <button
+                  onClick={handleSelectAll}
+                  className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                >
+                  {selectedIds.size === unpaidAccounts.length && unpaidAccounts.length > 0 ? (
+                    <CheckSquare className="w-4 h-4 text-primary-600" />
+                  ) : (
+                    <Square className="w-4 h-4 text-gray-400" />
+                  )}
+                  <span>全选</span>
+                </button>
               </div>
               <Table columns={columns} data={unpaidAccounts} />
             </>

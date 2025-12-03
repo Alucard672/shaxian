@@ -65,7 +65,7 @@ function DyeingDetail({ order, onClose }: DyeingDetailProps) {
             <div>
               <div className="text-sm text-gray-600 mb-1">状态</div>
               <Badge
-                variant={order.status === '已完成' ? 'success' : order.status === '加工中' ? 'default' : 'default'}
+                variant={order.status === '已完成' ? 'success' : 'gray'}
                 className={order.status === '已完成' 
                   ? 'bg-green-100 text-green-700' 
                   : order.status === '加工中'

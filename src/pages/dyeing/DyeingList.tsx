@@ -317,7 +317,7 @@ function DyeingList() {
                             {order.status === '加工中' && <Loader className="w-4 h-4 text-blue-600 animate-spin" />}
                             {order.status === '待发货' && <Clock className="w-4 h-4 text-gray-600" />}
                             <Badge
-                              variant={order.status === '已完成' ? 'success' : order.status === '加工中' ? 'default' : 'default'}
+                              variant={order.status === '已完成' ? 'success' : 'gray'}
                               className={cn({
                                 'bg-green-100 text-green-700': order.status === '已完成',
                                 'bg-blue-100 text-blue-700': order.status === '加工中',

@@ -257,10 +257,10 @@ export const useInventoryCheckStore = create<InventoryCheckState>((set, get) => 
     // 注意: 生成调整单的逻辑应该在组件中调用,避免循环依赖
     set((state) => {
       const orders = state.orders.map((o) =>
-        o.id === id ? { ...o, status: '已完成', updatedAt: new Date().toISOString() } : o
+        o.id === id ? { ...o, status: '已完成' as const, updatedAt: new Date().toISOString() } : o
       )
       saveToStorage('inventoryCheckOrders', orders)
-      return { orders }
+      return { ...state, orders }
     })
   },
 }))

@@ -435,9 +435,6 @@ function PurchaseList() {
                       className="border-b border-gray-200 hover:bg-gray-50 transition-colors h-[61px]"
                     >
                       {orderColumns.map((column) => {
-                        const value = column.dataIndex
-                          ? record[column.dataIndex]
-                          : null
                         return (
                           <td
                             key={column.key}
@@ -445,8 +442,8 @@ function PurchaseList() {
                             style={{ width: column.width }}
                           >
                             {column.render
-                              ? column.render(value, record, index)
-                              : value}
+                              ? (column.render as any)(null, record, index)
+                              : null}
                           </td>
                         )
                       })}
