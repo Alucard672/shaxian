@@ -5,6 +5,7 @@ import { useProductStore } from '@/store/productStore'
 import { useContactStore } from '@/store/contactStore'
 import { DyeingOrderFormData, DyeingOrderItem } from '@/types/dyeing'
 import Button from '../../components/ui/Button'
+import Tooltip from '../../components/ui/Tooltip'
 import { X, Plus, Trash2, FileText, Calendar, AlertCircle } from 'lucide-react'
 import { format } from 'date-fns'
 import { cn } from '@/utils/cn'
@@ -281,22 +282,21 @@ function DyeingCreate() {
 
         {/* Form Content */}
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
-          {/* 提示框 */}
-          <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
-            <div className="flex items-start gap-2">
-              <AlertCircle className="w-5 h-5 text-yellow-600 mt-0.5 flex-shrink-0" />
-              <div>
-                <div className="text-sm font-medium text-yellow-800 mb-1">提示：</div>
-                <div className="text-sm text-yellow-700">
-                  染色加工只能选择白坯纱线。可以将一批白坯纱线分染成多个不同的色号，例如100kg白坯可以染成红色50kg、绿色50kg。
-                </div>
-              </div>
-            </div>
-          </div>
-
           {/* 白坯信息 */}
           <div className="space-y-4">
-            <h3 className="text-lg font-semibold text-gray-900 border-b border-gray-200 pb-3">白坯信息</h3>
+            <div className="flex items-center gap-2 border-b border-gray-200 pb-3">
+              <h3 className="text-lg font-semibold text-gray-900">白坯信息</h3>
+              <Tooltip
+                content={
+                  <div>
+                    <div className="font-medium mb-1">提示：</div>
+                    <div>
+                      染色加工只能选择白坯纱线。可以将一批白坯纱线分染成多个不同的色号，例如100kg白坯可以染成红色50kg、绿色50kg。
+                    </div>
+                  </div>
+                }
+              />
+            </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">

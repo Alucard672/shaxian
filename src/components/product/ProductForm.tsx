@@ -3,6 +3,7 @@ import { useForm } from 'react-hook-form'
 import { ProductFormData, ColorFormData } from '@/types/product'
 import { useSettingsStore } from '@/store/settingsStore'
 import Button from '../ui/Button'
+import Tooltip from '../ui/Tooltip'
 import { Package, Palette, Layers, Plus, Info, Check } from 'lucide-react'
 import { cn } from '@/utils/cn'
 
@@ -71,10 +72,22 @@ function ProductForm({ initialData, onSubmit, onCancel }: ProductFormProps) {
     <form id="product-form" onSubmit={handleSubmit(onFormSubmit)} className="space-y-6">
       <div className="space-y-6">
         {/* 商品基础信息区域 */}
-        <div className="bg-blue-50 border border-blue-200 rounded-2xl p-5">
+        <div className="bg-white border border-gray-200 rounded-2xl p-5">
           <div className="flex items-center gap-2 mb-4">
             <Package className="w-5 h-5 text-blue-600" />
             <h3 className="text-lg font-semibold text-gray-900">商品基础信息</h3>
+            <Tooltip
+              content={
+                <div>
+                  <div className="font-medium mb-2">💡 快速创建提示：</div>
+                  <ul className="space-y-1">
+                    <li>• 只填写商品基础信息即可快速创建</li>
+                    <li>• 色号和缸号可以创建后再添加</li>
+                    <li>• 也可以在这里一次性添加完整信息</li>
+                  </ul>
+                </div>
+              }
+            />
           </div>
 
           <div className="space-y-4">
@@ -271,19 +284,6 @@ function ProductForm({ initialData, onSubmit, onCancel }: ProductFormProps) {
             </div>
           </div>
 
-          <div className="bg-blue-50 border border-blue-200 rounded-2xl p-5">
-            <div className="flex items-start gap-3">
-              <Info className="w-4 h-4 text-blue-600 mt-1 flex-shrink-0" />
-              <div>
-                <div className="text-sm font-bold text-blue-900 mb-2">💡 快速创建提示：</div>
-                <ul className="space-y-1 text-sm text-blue-700">
-                  <li>• 只填写商品基础信息即可快速创建</li>
-                  <li>• 色号和缸号可以创建后再添加</li>
-                  <li>• 也可以在这里一次性添加完整信息</li>
-                </ul>
-              </div>
-            </div>
-          </div>
         </div>
       </div>
 

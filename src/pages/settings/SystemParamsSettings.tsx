@@ -1,6 +1,7 @@
 import { useSettingsStore } from '@/store/settingsStore'
 import Card from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
+import Tooltip from '../../components/ui/Tooltip'
 import { Settings, Palette, Save, Info } from 'lucide-react'
 import { useState } from 'react'
 
@@ -42,9 +43,23 @@ function SystemParamsSettings() {
               {/* 内容 */}
               <div className="flex-1">
                 <div className="flex items-center justify-between mb-2">
-                  <h3 className="text-lg font-semibold text-gray-900">
-                    染色加工流程
-                  </h3>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-lg font-semibold text-gray-900">
+                      染色加工流程
+                    </h3>
+                    {!localParams.enableDyeingProcess && (
+                      <Tooltip
+                        content={
+                          <div>
+                            <div className="font-medium mb-1">提示：</div>
+                            <div>
+                              禁用染色加工流程后，商品管理中的"白坯纱线"选项将被隐藏，侧边栏的"染色加工"菜单也将隐藏。
+                            </div>
+                          </div>
+                        }
+                      />
+                    )}
+                  </div>
                   <label className="relative inline-flex items-center cursor-pointer">
                     <input
                       type="checkbox"
@@ -72,19 +87,6 @@ function SystemParamsSettings() {
                   <li>• 支持创建染色加工单</li>
                   <li>• 支持将白坯纱线分染成不同色号</li>
                 </ul>
-                {!localParams.enableDyeingProcess && (
-                  <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
-                    <div className="flex items-start gap-2">
-                      <Info className="w-5 h-5 text-yellow-600 mt-0.5 flex-shrink-0" />
-                      <div className="text-sm text-yellow-700">
-                        <div className="font-medium mb-1">提示：</div>
-                        <div>
-                          禁用染色加工流程后，商品管理中的"白坯纱线"选项将被隐藏，侧边栏的"染色加工"菜单也将隐藏。
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
               </div>
             </div>
           </div>
