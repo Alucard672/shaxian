@@ -277,12 +277,12 @@ function ProductManagement() {
     },
   ]
 
-  // 统计卡片
+  // 统计卡片 - 变化指标基于实际数据，数据为空时不显示变化
   const statCards = [
     {
       label: '商品总数',
       value: stats.totalProducts.toString(),
-      change: '+12',
+      change: null, // 暂时不显示变化，等有历史数据后再计算
       icon: Package,
       iconBg: 'bg-blue-100',
       changeBg: 'bg-green-100',
@@ -291,7 +291,7 @@ function ProductManagement() {
     {
       label: '色号总数',
       value: stats.totalColors.toLocaleString(),
-      change: '+68',
+      change: null,
       icon: Palette,
       iconBg: 'bg-purple-100',
       changeBg: 'bg-green-100',
@@ -300,7 +300,7 @@ function ProductManagement() {
     {
       label: '缸号总数',
       value: stats.totalBatches.toLocaleString(),
-      change: '+125',
+      change: null,
       icon: Layers,
       iconBg: 'bg-green-100',
       changeBg: 'bg-green-100',
@@ -308,8 +308,10 @@ function ProductManagement() {
     },
     {
       label: '库存总量',
-      value: `${(stats.totalInventory / 1000).toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',')} kg`,
-      change: '+2.8%',
+      value: stats.totalInventory > 0 
+        ? `${(stats.totalInventory / 1000).toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',')} kg`
+        : '0 kg',
+      change: null,
       icon: Package,
       iconBg: 'bg-orange-100',
       changeBg: 'bg-green-100',
@@ -366,9 +368,11 @@ function ProductManagement() {
                 <div className={`w-9 h-9 ${card.iconBg} rounded-lg flex items-center justify-center`}>
                   <Icon className="w-4 h-4 text-gray-700" />
                 </div>
-                <div className={`text-xs px-1.5 py-0.5 ${card.changeBg} ${card.changeColor} rounded font-medium`}>
-                  {card.change}
-                </div>
+                {card.change && (
+                  <div className={`text-xs px-1.5 py-0.5 ${card.changeBg} ${card.changeColor} rounded font-medium`}>
+                    {card.change}
+                  </div>
+                )}
               </div>
               <div className="text-xs text-gray-600 mb-1">{card.label}</div>
               <div className="text-base font-semibold text-gray-900">{card.value}</div>

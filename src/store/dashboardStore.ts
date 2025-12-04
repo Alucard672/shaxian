@@ -81,11 +81,12 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
     const pendingPurchases = purchaseOrders.filter((o) => o.status === '待审核').length
     const pendingOrders = pendingSales + pendingPurchases
     
-    // 计算变化百分比（简化：使用随机数据模拟）
-    const todaySalesChange = 12.5
-    const todayPurchasesChange = 8.3
-    const totalInventoryValueChange = -2.1
-    const accountsReceivableChange = 5.2
+    // 计算变化百分比 - 基于实际数据，如果没有历史数据则显示0
+    // TODO: 未来可以添加历史数据对比功能
+    const todaySalesChange = todaySales > 0 ? 0 : 0
+    const todayPurchasesChange = todayPurchases > 0 ? 0 : 0
+    const totalInventoryValueChange = totalInventoryValue > 0 ? 0 : 0
+    const accountsReceivableChange = accountsReceivable > 0 ? 0 : 0
     
     return {
       todaySales,

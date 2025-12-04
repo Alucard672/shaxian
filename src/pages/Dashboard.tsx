@@ -161,6 +161,7 @@ function Dashboard() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {statCards.map((card, index) => {
           const Icon = card.icon
+          const hasChange = card.change !== 0
           const isPositive = card.change > 0
           return (
             <Card key={index} className="p-4">
@@ -168,14 +169,16 @@ function Dashboard() {
                 <div className={`w-9 h-9 ${card.bgColor} rounded-lg flex items-center justify-center`}>
                   <Icon className={`w-4 h-4 ${card.iconColor}`} />
                 </div>
-                <div className={`flex items-center gap-1 text-xs ${isPositive ? 'text-success-500' : 'text-danger-500'}`}>
-                  {isPositive ? (
-                    <TrendingUp className="w-3 h-3" />
-                  ) : (
-                    <TrendingDown className="w-3 h-3" />
-                  )}
-                  <span>{isPositive ? '+' : ''}{card.change}%</span>
-                </div>
+                {hasChange && (
+                  <div className={`flex items-center gap-1 text-xs ${isPositive ? 'text-success-500' : 'text-danger-500'}`}>
+                    {isPositive ? (
+                      <TrendingUp className="w-3 h-3" />
+                    ) : (
+                      <TrendingDown className="w-3 h-3" />
+                    )}
+                    <span>{isPositive ? '+' : ''}{card.change}%</span>
+                  </div>
+                )}
               </div>
               <div className="text-xs text-gray-600 mb-1">{card.label}</div>
               <div className="text-lg font-semibold text-gray-900">{card.value}</div>
