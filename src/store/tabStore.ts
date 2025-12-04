@@ -39,8 +39,11 @@ const routeTitleMap: Record<string, string> = {
   '/supplier': '往来单位',
   '/contact/customer/create': '新增客户',
   '/contact/supplier/create': '新增供应商',
+  '/contact/customer': '新增客户',
+  '/contact/supplier': '新增供应商',
   '/print': '打印管理',
   '/print/template/create': '新增模板',
+  '/print/template': '模板编辑',
   '/report': '统计报表',
   '/report/sales': '销售报表',
   '/report/purchase': '采购报表',
@@ -49,6 +52,8 @@ const routeTitleMap: Record<string, string> = {
   '/report/customer': '客户报表',
   '/report/fund': '资金报表',
   '/settings': '系统设置',
+  '/settings/params': '参数设置',
+  '/settings/tutorial': '使用教程',
 }
 
 // 获取路由标题
@@ -69,27 +74,18 @@ const getRouteTitle = (path: string): string => {
     if (cleanPath.includes('/adjustment')) return '编辑调整单'
     if (cleanPath.includes('/check')) return '编辑盘点单'
     if (cleanPath.includes('/template')) return '编辑模板'
-    if (cleanPath.includes('/contact')) return '编辑往来单位'
+    if (cleanPath.includes('/contact')) {
+      // 判断是客户还是供应商
+      if (cleanPath.includes('/customer')) return '编辑客户'
+      if (cleanPath.includes('/supplier')) return '编辑供应商'
+      return '编辑往来单位'
+    }
   }
   
-  // 处理带参数的路由，尝试匹配基础路径
-  // 例如 /purchase/123/edit -> /purchase/:id/edit -> 编辑进货单
+  // 处理带参数的路由，优先匹配更长的路径
   const pathParts = cleanPath.split('/').filter(Boolean)
   if (pathParts.length > 0) {
-    // 尝试匹配基础路径
-    const basePath = '/' + pathParts[0]
-    if (routeTitleMap[basePath]) {
-      // 如果有第二段路径，尝试匹配完整路径
-      if (pathParts.length > 1) {
-        const fullPath = '/' + pathParts.slice(0, 2).join('/')
-        if (routeTitleMap[fullPath]) {
-          return routeTitleMap[fullPath]
-        }
-      }
-      return routeTitleMap[basePath]
-    }
-    
-    // 尝试匹配更长的路径
+    // 从最长路径开始匹配（优先匹配二级、三级路径）
     for (let i = pathParts.length; i > 0; i--) {
       const testPath = '/' + pathParts.slice(0, i).join('/')
       if (routeTitleMap[testPath]) {
