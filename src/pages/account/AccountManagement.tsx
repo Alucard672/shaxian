@@ -616,7 +616,7 @@ function AccountManagement() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {statCards.map((card, index) => {
           const Icon = card.icon
-          const changeBgColor = card.change && card.change.startsWith('-') ? 'bg-danger-100' : 'bg-success-100'
+          const changeBgColor = card.change && typeof card.change === 'string' && card.change.startsWith('-') ? 'bg-danger-100' : 'bg-success-100'
           return (
             <Card key={index} className={`p-4 border ${card.borderColor} ${card.bgColor} rounded-xl`}>
               <div className="flex items-center justify-between mb-2">
