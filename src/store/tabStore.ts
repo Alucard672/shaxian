@@ -53,24 +53,54 @@ const routeTitleMap: Record<string, string> = {
 
 // 获取路由标题
 const getRouteTitle = (path: string): string => {
-  // 处理动态路由
-  if (path.includes('/edit')) {
-    if (path.includes('/purchase')) return '编辑进货单'
-    if (path.includes('/sales')) return '编辑销售单'
-    if (path.includes('/dyeing')) return '编辑加工单'
-    if (path.includes('/adjustment')) return '编辑调整单'
-    if (path.includes('/check')) return '编辑盘点单'
-    if (path.includes('/template')) return '编辑模板'
-    if (path.includes('/contact')) return '编辑往来单位'
+  // 移除 basename（如果有）
+  const cleanPath = path.replace(/^\/shaxian/, '') || '/'
+  
+  // 先尝试精确匹配
+  if (routeTitleMap[cleanPath]) {
+    return routeTitleMap[cleanPath]
   }
   
-  // 处理带参数的路由
-  const basePath = path.split('/').slice(0, -1).join('/') || '/'
-  if (routeTitleMap[basePath]) {
-    return routeTitleMap[basePath]
+  // 处理动态路由（带参数的路由，如 /purchase/123/edit）
+  if (cleanPath.includes('/edit')) {
+    if (cleanPath.includes('/purchase')) return '编辑进货单'
+    if (cleanPath.includes('/sales')) return '编辑销售单'
+    if (cleanPath.includes('/dyeing')) return '编辑加工单'
+    if (cleanPath.includes('/adjustment')) return '编辑调整单'
+    if (cleanPath.includes('/check')) return '编辑盘点单'
+    if (cleanPath.includes('/template')) return '编辑模板'
+    if (cleanPath.includes('/contact')) return '编辑往来单位'
   }
   
-  return routeTitleMap[path] || '未知页面'
+  // 处理带参数的路由，尝试匹配基础路径
+  // 例如 /purchase/123/edit -> /purchase/:id/edit -> 编辑进货单
+  const pathParts = cleanPath.split('/').filter(Boolean)
+  if (pathParts.length > 0) {
+    // 尝试匹配基础路径
+    const basePath = '/' + pathParts[0]
+    if (routeTitleMap[basePath]) {
+      // 如果有第二段路径，尝试匹配完整路径
+      if (pathParts.length > 1) {
+        const fullPath = '/' + pathParts.slice(0, 2).join('/')
+        if (routeTitleMap[fullPath]) {
+          return routeTitleMap[fullPath]
+        }
+      }
+      return routeTitleMap[basePath]
+    }
+    
+    // 尝试匹配更长的路径
+    for (let i = pathParts.length; i > 0; i--) {
+      const testPath = '/' + pathParts.slice(0, i).join('/')
+      if (routeTitleMap[testPath]) {
+        return routeTitleMap[testPath]
+      }
+    }
+  }
+  
+  // 如果都不匹配，返回路径的最后一段作为标题
+  const lastPart = pathParts[pathParts.length - 1] || '工作台'
+  return lastPart || '未知页面'
 }
 
 export const useTabStore = create<TabState>((set, get) => ({

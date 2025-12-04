@@ -12,20 +12,18 @@ function TabBar() {
   // 当路由变化时，自动添加标签页
   useEffect(() => {
     const path = location.pathname
-    const title = getRouteTitle(path)
+    // 移除 basename（如果有）
+    const cleanPath = path.replace(/^\/shaxian/, '') || '/'
+    const title = getRouteTitle(cleanPath)
     
-    // 处理动态路由的 key（如 /purchase/123/edit）
-    let key = path
-    if (path.includes('/edit') || path.includes('/create')) {
-      // 对于编辑和创建页面，使用完整路径作为 key，以便区分不同的编辑页面
-      key = path
-    }
+    // 使用完整路径作为 key，确保每个页面都有唯一的标签页
+    const key = cleanPath
     
     addTab({
       key,
-      path,
+      path: cleanPath,
       title,
-      closable: path !== '/', // 工作台不可关闭
+      closable: cleanPath !== '/', // 工作台不可关闭
     })
   }, [location.pathname, addTab])
 
