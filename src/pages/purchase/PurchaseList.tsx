@@ -125,12 +125,12 @@ function PurchaseList() {
   }
 
 
-  // 统计卡片
+  // 统计卡片 - 变化指标基于实际数据，数据为空时不显示变化
   const statCards = [
     {
       label: '今日进货单',
       value: stats.todayOrdersCount.toString(),
-      change: '+2',
+      change: null, // 暂时不显示变化，等有历史数据后再计算
       changeColor: 'text-green-600',
       icon: FileText,
       iconBg: 'bg-blue-100',
@@ -140,7 +140,7 @@ function PurchaseList() {
     {
       label: '已完成',
       value: stats.completedCount.toString(),
-      change: '+1',
+      change: null,
       changeColor: 'text-green-600',
       icon: CheckCircle,
       iconBg: 'bg-green-100',
@@ -150,7 +150,7 @@ function PurchaseList() {
     {
       label: '今日进货额',
       value: `¥${stats.todayAmount.toLocaleString()}`,
-      change: '+12%',
+      change: null,
       changeColor: 'text-green-600',
       icon: Package,
       iconBg: 'bg-purple-100',
@@ -301,9 +301,11 @@ function PurchaseList() {
                 <div className={`w-9 h-9 ${card.iconBg} rounded-lg flex items-center justify-center`}>
                   <Icon className="w-4 h-4 text-gray-700" />
                 </div>
-                <div className={`px-1.5 py-0.5 bg-green-100 ${card.changeColor} text-xs font-medium rounded`}>
-                  {card.change}
-                </div>
+                {card.change && (
+                  <div className={`px-1.5 py-0.5 bg-green-100 ${card.changeColor} text-xs font-medium rounded`}>
+                    {card.change}
+                  </div>
+                )}
               </div>
               <div className="text-xs text-gray-600 mb-1">{card.label}</div>
               <div className="text-base font-semibold text-gray-900">{card.value}</div>

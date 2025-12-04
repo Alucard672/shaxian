@@ -133,12 +133,12 @@ function SalesList() {
     window.location.href = `/account/receivable?orderId=${order.id}`
   }
 
-  // 统计卡片
+  // 统计卡片 - 变化指标基于实际数据，数据为空时不显示变化
   const statCards = [
     {
       label: '今日销售单',
       value: stats.todayOrdersCount,
-      change: '+3',
+      change: null, // 暂时不显示变化，等有历史数据后再计算
       icon: FileText,
       iconBg: 'bg-green-100',
       bgColor: 'bg-green-50/50',
@@ -148,7 +148,7 @@ function SalesList() {
     {
       label: '已完成',
       value: stats.completedCount,
-      change: '+1',
+      change: null,
       icon: CheckCircle,
       iconBg: 'bg-green-100',
       bgColor: 'bg-green-50/50',
@@ -158,7 +158,7 @@ function SalesList() {
     {
       label: '今日销售额',
       value: `¥${stats.todayAmount.toLocaleString()}`,
-      change: '+15%',
+      change: null,
       icon: DollarSign,
       iconBg: 'bg-purple-100',
       bgColor: 'bg-purple-50/50',
@@ -168,7 +168,7 @@ function SalesList() {
     {
       label: '待收款',
       value: `¥${stats.pendingCollection.toLocaleString()}`,
-      change: '-8%',
+      change: null,
       icon: AlertCircle,
       iconBg: 'bg-orange-100',
       bgColor: 'bg-orange-50/50',
@@ -351,9 +351,11 @@ function SalesList() {
                 <div className={`w-9 h-9 ${card.iconBg} rounded-lg flex items-center justify-center`}>
                   <Icon className="w-4 h-4 text-blue-600" />
                 </div>
-                <div className={`px-1.5 py-0.5 bg-green-100 ${card.changeColor} text-xs font-medium rounded`}>
-                  {card.change}
-                </div>
+                {card.change && (
+                  <div className={`px-1.5 py-0.5 bg-green-100 ${card.changeColor} text-xs font-medium rounded`}>
+                    {card.change}
+                  </div>
+                )}
               </div>
               <div className="text-xs text-gray-600 mb-1">{card.label}</div>
               <div className="text-base font-semibold text-gray-900">{card.value}</div>

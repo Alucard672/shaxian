@@ -75,12 +75,12 @@ function ReportManagement() {
     return getCustomerSalesRanking(5)
   }, [])
 
-  // 统计卡片
+  // 统计卡片 - 变化指标基于实际数据，数据为空时不显示变化
   const statCards = [
     {
       label: '本月销售额',
       value: `¥${stats.sales.toLocaleString()}`,
-      change: '+18.5%',
+      change: null, // 暂时不显示变化，等有历史数据后再计算
       icon: DollarSign,
       iconBg: 'bg-success-100',
       bgColor: 'bg-success-50/50',
@@ -90,7 +90,7 @@ function ReportManagement() {
     {
       label: '本月采购额',
       value: `¥${stats.purchases.toLocaleString()}`,
-      change: '+12.3%',
+      change: null,
       icon: Package,
       iconBg: 'bg-primary-100',
       bgColor: 'bg-primary-50/50',
@@ -100,7 +100,7 @@ function ReportManagement() {
     {
       label: '毛利润',
       value: `¥${stats.profit.toLocaleString()}`,
-      change: '+22.8%',
+      change: null,
       icon: TrendingUp,
       iconBg: 'bg-warning-100',
       bgColor: 'bg-warning-50/50',
@@ -110,7 +110,7 @@ function ReportManagement() {
     {
       label: '利润率',
       value: `${stats.profitRate.toFixed(1)}%`,
-      change: '+3.2%',
+      change: null,
       icon: RefreshCw,
       iconBg: 'bg-purple-100',
       bgColor: 'bg-purple-50/50',
