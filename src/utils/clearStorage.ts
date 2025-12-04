@@ -59,14 +59,14 @@ export const clearAllStorage = () => {
 // 清空特定模块的数据
 export const clearModuleStorage = (module: string) => {
   const moduleKeys: Record<string, string[]> = {
-    product: ['products', 'colors', 'batches'],
-    contact: ['customers', 'suppliers'],
-    purchase: ['purchaseOrders'],
-    sales: ['salesOrders'],
-    dyeing: ['dyeingOrders'],
-    account: ['accountReceivables', 'accountPayables', 'receipts', 'payments'],
-    inventory: ['adjustmentOrders', 'inventoryCheckOrders'],
-    template: ['printTemplates'],
+    product: ['products', 'colors', 'batches', 'products_initialized', 'colors_initialized', 'batches_initialized'],
+    contact: ['customers', 'suppliers', 'customers_initialized', 'suppliers_initialized'],
+    purchase: ['purchaseOrders', 'purchaseOrders_initialized'],
+    sales: ['salesOrders', 'salesOrders_initialized'],
+    dyeing: ['dyeingOrders', 'dyeingOrders_initialized'],
+    account: ['accountReceivables', 'accountPayables', 'receiptRecords', 'paymentRecords', 'accountReceivables_initialized', 'accountPayables_initialized'],
+    inventory: ['adjustmentOrders', 'inventoryCheckOrders', 'adjustmentOrders_initialized', 'inventoryCheckOrders_initialized'],
+    template: ['printTemplates', 'printTemplates_initialized'],
     settings: ['storeInfo', 'employees', 'roles', 'customQueries', 'inventoryAlertSettings', 'systemParams'],
   }
 

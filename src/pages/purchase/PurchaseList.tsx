@@ -406,11 +406,18 @@ function PurchaseList() {
       {/* 进货单列表表格 */}
       <Card className="rounded-2xl border-gray-200 overflow-hidden">
         {paginatedOrders.length === 0 ? (
-          <p className="text-gray-500 text-center py-8">
-            {searchKeyword || statusFilter !== '全部'
-              ? '未找到匹配的进货单'
-              : '暂无进货单，请创建进货单'}
-          </p>
+          <div className="text-center py-8">
+            <p className="text-gray-500 mb-4">
+              {searchKeyword || statusFilter !== '全部'
+                ? '未找到匹配的进货单'
+                : '暂无进货单，请创建进货单'}
+            </p>
+            {orders.length === 0 && !searchKeyword && statusFilter === '全部' && (
+              <p className="text-xs text-gray-400 mt-2">
+                提示：如需清空旧数据，请前往 <Link to="/settings/clear-data" className="text-blue-600 hover:underline">系统设置 → 清空数据</Link>
+              </p>
+            )}
+          </div>
         ) : (
           <>
             <div className="overflow-x-auto">
