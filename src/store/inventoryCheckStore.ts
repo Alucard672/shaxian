@@ -6,7 +6,7 @@ import {
   InventoryCheckItem,
 } from '@/types/inventoryCheck'
 import { useProductStore } from './productStore'
-import { initInventoryCheckOrders } from './initData'
+// 移除硬编码数据，使用空数组作为初始值
 
 interface InventoryCheckState {
   orders: InventoryCheckOrder[]
@@ -67,7 +67,7 @@ const saveToStorage = (key: string, value: any) => {
 }
 
 export const useInventoryCheckStore = create<InventoryCheckState>((set, get) => ({
-  orders: loadFromStorage('inventoryCheckOrders', initInventoryCheckOrders()),
+  orders: loadFromStorage('inventoryCheckOrders', []),
 
   generateOrderNumber: () => {
     const existingNumbers = get().orders.map((o) => o.orderNumber)

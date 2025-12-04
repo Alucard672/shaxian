@@ -32,6 +32,7 @@ import EmployeeManagement from '../pages/settings/EmployeeManagement'
 import RoleManagement from '../pages/settings/RoleManagement'
 import CustomQuerySettings from '../pages/settings/CustomQuerySettings'
 import InventoryAlertSettings from '../pages/settings/InventoryAlertSettings'
+import ClearData from '../pages/settings/ClearData'
 
 function AppRoutes() {
   return (
@@ -98,6 +99,7 @@ function AppRoutes() {
             <Route path="/settings/roles" element={<RoleManagement />} />
             <Route path="/settings/custom-query" element={<CustomQuerySettings />} />
             <Route path="/settings/inventory-alert" element={<InventoryAlertSettings />} />
+            <Route path="/settings/clear-data" element={<ClearData />} />
     </Routes>
   )
 }

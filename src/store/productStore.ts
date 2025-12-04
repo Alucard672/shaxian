@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { Product, Color, Batch, ProductFormData, ColorFormData, BatchFormData } from '@/types/product'
-import { initProducts, initColors, initBatches } from './initData'
+// 移除硬编码数据，使用空数组作为初始值
 
 interface ProductState {
   products: Product[]
@@ -67,9 +67,9 @@ const saveToStorage = (key: string, value: any) => {
 }
 
 export const useProductStore = create<ProductState>((set, get) => ({
-  products: loadFromStorage('products', initProducts()),
-  colors: loadFromStorage('colors', initColors()),
-  batches: loadFromStorage('batches', initBatches()),
+  products: loadFromStorage('products', []),
+  colors: loadFromStorage('colors', []),
+  batches: loadFromStorage('batches', []),
 
   // 商品操作
   addProduct: (data) => {

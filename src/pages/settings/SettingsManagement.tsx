@@ -9,6 +9,7 @@ import {
   Search,
   Info,
   BookOpen,
+  Trash2,
 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 
@@ -137,6 +138,8 @@ function SettingsManagement() {
                   navigate('/settings/custom-query')
                 } else if (card.id === 'inventory-alert') {
                   navigate('/settings/inventory-alert')
+                } else if (card.id === 'clear-data') {
+                  navigate('/settings/clear-data')
                 }
               }}
             >

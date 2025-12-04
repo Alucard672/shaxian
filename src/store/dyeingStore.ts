@@ -5,7 +5,7 @@ import {
   DyeingOrderStatus,
   DyeingOrderItem,
 } from '@/types/dyeing'
-import { initDyeingOrders } from './initData'
+// 移除硬编码数据，使用空数组作为初始值
 import { useProductStore } from './productStore'
 
 interface DyeingState {
@@ -72,7 +72,7 @@ const saveToStorage = (key: string, value: any) => {
 }
 
 export const useDyeingStore = create<DyeingState>((set, get) => ({
-  orders: loadFromStorage('dyeingOrders', initDyeingOrders()),
+  orders: loadFromStorage('dyeingOrders', []),
 
   generateOrderNumber: () => {
     const existingNumbers = get().orders.map(o => o.orderNumber)

@@ -8,7 +8,7 @@ import {
   SupplierStatus,
   SettlementCycle,
 } from '@/types/contact'
-import { initCustomers, initSuppliers } from './initData'
+// 移除硬编码数据，使用空数组作为初始值
 
 interface ContactState {
   customers: Customer[]
@@ -66,8 +66,8 @@ const saveToStorage = (key: string, value: any) => {
 }
 
 export const useContactStore = create<ContactState>((set, get) => ({
-  customers: loadFromStorage('customers', initCustomers()),
-  suppliers: loadFromStorage('suppliers', initSuppliers()),
+  customers: loadFromStorage('customers', []),
+  suppliers: loadFromStorage('suppliers', []),
 
   addCustomer: (data) => {
     const newCustomer: Customer = {

@@ -53,8 +53,9 @@ const routeTitleMap: Record<string, string> = {
   '/report/fund': '资金报表',
   '/settings': '系统设置',
   '/settings/params': '参数设置',
-  '/settings/tutorial': '使用教程',
-}
+         '/settings/tutorial': '使用教程',
+         '/settings/clear-data': '清空数据',
+       }
 
 // 获取路由标题
 const getRouteTitle = (path: string): string => {

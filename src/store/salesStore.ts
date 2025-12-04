@@ -7,7 +7,7 @@ import {
 } from '@/types/sales'
 import { useProductStore } from './productStore'
 import { useAccountStore } from './accountStore'
-import { initSalesOrders } from './initData'
+// 移除硬编码数据，使用空数组作为初始值
 
 interface SalesState {
   orders: SalesOrder[]
@@ -73,7 +73,7 @@ const saveToStorage = (key: string, value: any) => {
 }
 
 export const useSalesStore = create<SalesState>((set, get) => ({
-  orders: loadFromStorage('salesOrders', initSalesOrders()),
+  orders: loadFromStorage('salesOrders', []),
 
   generateOrderNumber: () => {
     const existingNumbers = get().orders.map(o => o.orderNumber)

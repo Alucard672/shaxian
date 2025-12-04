@@ -7,7 +7,7 @@ import {
   AccountStatus,
   PaymentMethod,
 } from '@/types/account'
-import { initAccountReceivables, initAccountPayables } from './initData'
+// 移除硬编码数据，使用空数组作为初始值
 
 interface AccountState {
   receivables: AccountReceivable[]
@@ -99,8 +99,8 @@ const saveToStorage = (key: string, value: any) => {
 }
 
 export const useAccountStore = create<AccountState>((set, get) => ({
-  receivables: loadFromStorage('accountReceivables', initAccountReceivables()),
-  payables: loadFromStorage('accountPayables', initAccountPayables()),
+  receivables: loadFromStorage('accountReceivables', []),
+  payables: loadFromStorage('accountPayables', []),
   receipts: loadFromStorage('receiptRecords', []),
   payments: loadFromStorage('paymentRecords', []),
 

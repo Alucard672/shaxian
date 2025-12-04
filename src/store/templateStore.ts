@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { PrintTemplate, PrintTemplateFormData, TemplateType } from '@/types/template'
-import { initPrintTemplates } from './initData'
+// 移除硬编码数据，使用空数组作为初始值
 
 interface TemplateState {
   templates: PrintTemplate[]
@@ -26,20 +26,10 @@ const loadFromStorage = (key: string, defaultValue: any) => {
       const parsed = JSON.parse(item)
       return parsed
     }
-    
-    // 如果没有数据且未初始化过，使用初始数据
-    const initializedKey = `${key}_initialized`
-    const initialized = localStorage.getItem(initializedKey)
-    if (!initialized) {
-      const initData = defaultValue()
-      localStorage.setItem(key, JSON.stringify(initData))
-      localStorage.setItem(initializedKey, 'true')
-      return initData
-    }
-    
-    return defaultValue()
+    // 如果没有数据，返回默认值（空数组）
+    return defaultValue
   } catch {
-    return defaultValue()
+    return defaultValue
   }
 }
 
@@ -53,7 +43,7 @@ const saveToStorage = (key: string, value: any) => {
 }
 
 export const useTemplateStore = create<TemplateState>((set, get) => ({
-  templates: loadFromStorage('printTemplates', initPrintTemplates),
+  templates: loadFromStorage('printTemplates', []),
 
   addTemplate: (data) => {
     const newTemplate: PrintTemplate = {

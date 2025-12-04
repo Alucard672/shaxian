@@ -7,7 +7,7 @@ import {
 } from '@/types/purchase'
 import { useProductStore } from './productStore'
 import { useAccountStore } from './accountStore'
-import { initPurchaseOrders } from './initData'
+// 移除硬编码数据，使用空数组作为初始值
 
 interface PurchaseState {
   orders: PurchaseOrder[]
@@ -72,7 +72,7 @@ const saveToStorage = (key: string, value: any) => {
 }
 
 export const usePurchaseStore = create<PurchaseState>((set, get) => ({
-  orders: loadFromStorage('purchaseOrders', initPurchaseOrders()),
+  orders: loadFromStorage('purchaseOrders', []),
 
   generateOrderNumber: () => {
     const existingNumbers = get().orders.map(o => o.orderNumber)

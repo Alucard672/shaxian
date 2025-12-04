@@ -64,9 +64,9 @@ const saveToStorage = (key: string, value: any) => {
   }
 }
 
-// 初始值
+// 初始值（移除硬编码，使用空值）
 const defaultStoreInfo: StoreInfo = {
-  name: '织云ERP门店',
+  name: '',
   address: '',
   phone: '',
   email: '',
@@ -75,9 +75,9 @@ const defaultStoreInfo: StoreInfo = {
 }
 
 const defaultInventoryAlertSettings: InventoryAlertSettings = {
-  enabled: true,
+  enabled: false,
   threshold: 10, // 10%
-  autoAlert: true,
+  autoAlert: false,
 }
 
 const defaultSystemInfo: SystemInfo = {
