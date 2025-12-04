@@ -1,4 +1,5 @@
-import { NavLink } from 'react-router-dom'
+import { NavLink, useNavigate } from 'react-router-dom'
+import { useTabStore, getRouteTitle } from '@/store/tabStore'
 import {
   LayoutDashboard,
   Package,
@@ -36,6 +37,21 @@ const settingsItem = {
 
 function Sidebar() {
   const SettingsIcon = settingsItem.icon
+  const navigate = useNavigate()
+  const { addTab, setActiveTab } = useTabStore()
+
+  // 处理菜单项点击
+  const handleMenuClick = (path: string) => {
+    const title = getRouteTitle(path)
+    addTab({
+      key: path,
+      path,
+      title,
+      closable: path !== '/',
+    })
+    setActiveTab(path)
+    navigate(path)
+  }
 
   return (
     <aside className="w-48 bg-white/80 border-r border-gray-200/60 h-full flex flex-col">
@@ -48,6 +64,7 @@ function Sidebar() {
               <li key={item.path}>
                 <NavLink
                   to={item.path}
+                  onClick={(e) => handleMenuClick(item.path, e)}
                   className={({ isActive }) =>
                     cn(
                       'flex items-center justify-between px-2 h-9 rounded-lg text-sm font-medium transition-all duration-200 group',
@@ -83,6 +100,7 @@ function Sidebar() {
       <div className="pt-2 px-2 pb-2 border-t border-gray-200">
         <NavLink
           to={settingsItem.path}
+          onClick={(e) => handleMenuClick(settingsItem.path, e)}
           className={({ isActive }) =>
             cn(
               'flex items-center gap-2 px-2 h-9 rounded-lg text-sm font-medium transition-all duration-200',
