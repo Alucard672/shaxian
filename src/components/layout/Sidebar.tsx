@@ -38,10 +38,10 @@ function Sidebar() {
   const SettingsIcon = settingsItem.icon
 
   return (
-    <aside className="w-64 bg-white/80 border-r border-gray-200/60 h-full flex flex-col">
+    <aside className="w-48 bg-white/80 border-r border-gray-200/60 h-full flex flex-col">
       {/* 主要导航区域 */}
-      <nav className="px-3 pt-3 flex-1">
-        <ul className="space-y-1">
+      <nav className="px-2 pt-2 flex-1">
+        <ul className="space-y-0.5">
           {menuItems.map((item) => {
             const Icon = item.icon
             return (
@@ -50,7 +50,7 @@ function Sidebar() {
                   to={item.path}
                   className={({ isActive }) =>
                     cn(
-                      'flex items-center justify-between px-3 h-[42px] rounded-xl text-sm font-medium transition-all duration-200 group',
+                      'flex items-center justify-between px-2 h-9 rounded-lg text-xs font-medium transition-all duration-200 group',
                       isActive
                         ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-[0px_2px_4px_-2px_rgba(59,130,246,0.25),0px_4px_6px_-1px_rgba(59,130,246,0.25)]'
                         : 'text-gray-700 hover:bg-gray-50'
@@ -59,15 +59,15 @@ function Sidebar() {
                 >
                   {({ isActive }) => (
                     <>
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-2">
                         <Icon className={cn(
-                          'w-5 h-5 flex-shrink-0',
+                          'w-4 h-4 flex-shrink-0',
                           'transition-colors'
                         )} />
-                        <span className="leading-[1.5]">{item.label}</span>
+                        <span className="leading-[1.4]">{item.label}</span>
                       </div>
                       <ChevronRight className={cn(
-                        'w-4 h-4 flex-shrink-0 transition-opacity',
+                        'w-3 h-3 flex-shrink-0 transition-opacity',
                         isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
                       )} />
                     </>
@@ -80,20 +80,20 @@ function Sidebar() {
       </nav>
 
       {/* 系统设置区域 - 底部带分隔线 */}
-      <div className="pt-[13px] px-3 pb-0 border-t border-gray-200">
+      <div className="pt-2 px-2 pb-2 border-t border-gray-200">
         <NavLink
           to={settingsItem.path}
           className={({ isActive }) =>
             cn(
-              'flex items-center gap-3 px-3 h-[42px] rounded-xl text-sm font-medium transition-all duration-200',
+              'flex items-center gap-2 px-2 h-9 rounded-lg text-xs font-medium transition-all duration-200',
               isActive
                 ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-[0px_2px_4px_-2px_rgba(59,130,246,0.25),0px_4px_6px_-1px_rgba(59,130,246,0.25)]'
                 : 'text-gray-700 hover:bg-gray-50'
             )
           }
         >
-          <SettingsIcon className="w-5 h-5 flex-shrink-0" />
-          <span className="leading-[1.5]">{settingsItem.label}</span>
+          <SettingsIcon className="w-4 h-4 flex-shrink-0" />
+          <span className="leading-[1.4]">{settingsItem.label}</span>
         </NavLink>
       </div>
     </aside>

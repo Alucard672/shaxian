@@ -12,8 +12,8 @@ function Layout({ children }: LayoutProps) {
       <Header />
       <div className="flex h-[calc(100vh-4rem)]">
         <Sidebar />
-        <main className="flex-1 p-6 overflow-auto">
-          <div className="max-w-7xl mx-auto">
+        <main className="flex-1 p-4 overflow-auto">
+          <div className="max-w-full mx-auto">
             {children}
           </div>
         </main>
