@@ -256,12 +256,27 @@ function DyeingCreate() {
           <h2 className="text-xl font-semibold text-gray-900">
             {isEditMode ? '编辑加工单' : '新建加工单'}
           </h2>
-          <button
-            onClick={() => navigate('/dyeing')}
-            className="w-9 h-9 flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-xl transition-colors"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-3">
+            <Button
+              variant="outline"
+              onClick={() => navigate('/dyeing')}
+              className="h-9 border-gray-300 rounded-xl"
+            >
+              取消
+            </Button>
+            <Button
+              onClick={handleSubmit}
+              className="h-9 rounded-xl bg-blue-600 hover:bg-blue-700"
+            >
+              {isEditMode ? '保存修改' : '创建加工单'}
+            </Button>
+            <button
+              onClick={() => navigate('/dyeing')}
+              className="w-9 h-9 flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-xl transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         {/* Form Content */}
