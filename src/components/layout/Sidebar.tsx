@@ -50,7 +50,7 @@ function Sidebar() {
                   to={item.path}
                   className={({ isActive }) =>
                     cn(
-                      'flex items-center justify-between px-2 h-9 rounded-lg text-xs font-medium transition-all duration-200 group',
+                      'flex items-center justify-between px-2 h-9 rounded-lg text-sm font-medium transition-all duration-200 group',
                       isActive
                         ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-[0px_2px_4px_-2px_rgba(59,130,246,0.25),0px_4px_6px_-1px_rgba(59,130,246,0.25)]'
                         : 'text-gray-700 hover:bg-gray-50'
@@ -85,7 +85,7 @@ function Sidebar() {
           to={settingsItem.path}
           className={({ isActive }) =>
             cn(
-              'flex items-center gap-2 px-2 h-9 rounded-lg text-xs font-medium transition-all duration-200',
+              'flex items-center gap-2 px-2 h-9 rounded-lg text-sm font-medium transition-all duration-200',
               isActive
                 ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-[0px_2px_4px_-2px_rgba(59,130,246,0.25),0px_4px_6px_-1px_rgba(59,130,246,0.25)]'
                 : 'text-gray-700 hover:bg-gray-50'
