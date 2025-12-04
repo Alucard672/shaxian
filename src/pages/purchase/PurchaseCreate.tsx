@@ -22,6 +22,11 @@ function PurchaseCreate() {
   const { suppliers, getSuppliers } = useContactStore()
   const { products, colors, getColorsByProduct } = useProductStore()
 
+  // 检查是否是复制模式
+  const copyId = new URLSearchParams(window.location.search).get('copy')
+  const isCopyMode = !!copyId
+  const copyOrder = isCopyMode ? getOrder(copyId) : null
+
   const isEditMode = !!id
   const existingOrder = isEditMode ? getOrder(id!) : null
 
@@ -50,33 +55,34 @@ function PurchaseCreate() {
 
   const [items, setItems] = useState<PurchaseOrderItemForm[]>([])
 
-  // 加载订单数据（编辑模式）
+  // 加载订单数据（编辑模式或复制模式）
   useEffect(() => {
-    if (existingOrder) {
-      // 检查是否可以编辑（只能编辑草稿状态）
-      if (existingOrder.status !== '草稿') {
+    const orderToLoad = isCopyMode ? copyOrder : existingOrder
+    if (orderToLoad) {
+      // 编辑模式：检查是否可以编辑（只能编辑草稿状态）
+      if (isEditMode && orderToLoad.status !== '草稿') {
         alert('只能编辑草稿状态的进货单')
         navigate('/purchase')
         return
       }
 
       setFormData({
-        supplierId: existingOrder.supplierId,
-        supplierName: existingOrder.supplierName,
-        purchaseDate: existingOrder.purchaseDate,
-        expectedDate: existingOrder.expectedDate,
-        remark: existingOrder.remark || '',
-        paidAmount: existingOrder.paidAmount || 0,
+        supplierId: orderToLoad.supplierId,
+        supplierName: orderToLoad.supplierName,
+        purchaseDate: isCopyMode ? format(new Date(), 'yyyy-MM-dd') : orderToLoad.purchaseDate,
+        expectedDate: orderToLoad.expectedDate,
+        remark: orderToLoad.remark || '',
+        paidAmount: isCopyMode ? 0 : (orderToLoad.paidAmount || 0),
       })
 
       setItems(
-        existingOrder.items.map((item) => ({
+        orderToLoad.items.map((item) => ({
           ...item,
           amount: item.amount,
         }))
       )
     }
-  }, [existingOrder, navigate])
+  }, [existingOrder, copyOrder, isEditMode, isCopyMode, navigate])
 
   // 获取所有供应商选项
   const supplierOptions = useMemo(() => {
@@ -184,6 +190,7 @@ function PurchaseCreate() {
     if (isEditMode && existingOrder) {
       updateOrder(existingOrder.id, orderData)
     } else {
+      // 新建模式或复制模式：创建新订单
       addOrder(orderData, '草稿')
     }
     navigate('/purchase')

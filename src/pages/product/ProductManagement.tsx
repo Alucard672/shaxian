@@ -10,7 +10,7 @@ import Pagination from '../../components/ui/Pagination'
 import ProductModal from '../../components/product/ProductModal'
 import ProductForm from '../../components/product/ProductForm'
 import ProductDetail from '../../components/product/ProductDetail'
-import { Plus, Eye, Edit, Trash2, Package, Palette, Layers, Download, Search, MoreVertical, Check } from 'lucide-react'
+import { Plus, Eye, Edit, Trash2, Package, Palette, Layers, Download, Search, MoreVertical, Check, Copy } from 'lucide-react'
 import Tooltip from '../../components/ui/Tooltip'
 import { ProductFormData } from '@/types/product'
 import { Link } from 'react-router-dom'
@@ -111,6 +111,18 @@ function ProductManagement() {
   const handleViewProduct = (product: Product) => {
     setViewingProduct(product)
     setIsDetailModalOpen(true)
+  }
+
+  const handleCopyProduct = (product: Product) => {
+    // 复制商品信息，打开编辑模态框并预设数据
+    const copiedProduct: Product = {
+      ...product,
+      id: '', // 清空ID，作为新商品
+      name: `${product.name} (副本)`,
+      code: `${product.code}-COPY`,
+    }
+    setEditingProduct(copiedProduct)
+    setIsProductModalOpen(true)
   }
 
   const handleProductSubmit = (data: ProductFormData) => {

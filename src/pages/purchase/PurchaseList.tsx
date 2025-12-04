@@ -20,6 +20,7 @@ import {
   CheckCircle,
   Search,
   Eye,
+  Copy,
 } from 'lucide-react'
 import { cn } from '@/utils/cn'
 import { format, parseISO, startOfDay, endOfDay } from 'date-fns'
@@ -122,6 +123,11 @@ function PurchaseList() {
     if (confirm('确定要删除这个进货单吗？')) {
       deleteOrder(id)
     }
+  }
+
+  const handleCopyOrder = (order: PurchaseOrder) => {
+    // 复制进货单，导航到创建页面并传递复制参数
+    navigate(`/purchase/create?copy=${order.id}`)
   }
 
 
@@ -266,6 +272,15 @@ function PurchaseList() {
             className="p-1.5 hover:bg-gray-100 rounded"
           >
             <Edit className="w-4 h-4 text-gray-600" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => handleCopyOrder(record)}
+            title="复制"
+            className="p-1.5 hover:bg-gray-100 rounded"
+          >
+            <Copy className="w-4 h-4 text-blue-600" />
           </Button>
           <Button
             variant="ghost"

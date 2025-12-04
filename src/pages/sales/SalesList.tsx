@@ -19,6 +19,7 @@ import {
   CheckCircle,
   Search,
   Eye,
+  Copy,
 } from 'lucide-react'
 import { format, parseISO, startOfDay, endOfDay } from 'date-fns'
 import SalesDetail from '../../components/sales/SalesDetail'
@@ -131,6 +132,11 @@ function SalesList() {
   const handleCollect = (order: SalesOrder) => {
     // TODO: 打开收款弹窗
     window.location.href = `/account/receivable?orderId=${order.id}`
+  }
+
+  const handleCopyOrder = (order: SalesOrder) => {
+    // 复制销售单，导航到创建页面并传递复制参数
+    navigate(`/sales/create?copy=${order.id}`)
   }
 
   // 统计卡片 - 变化指标基于实际数据，数据为空时不显示变化
@@ -306,6 +312,15 @@ function SalesList() {
             className="p-1.5 hover:bg-gray-100 rounded-xl"
           >
             <Edit className="w-4 h-4 text-gray-600" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => handleCopyOrder(record)}
+            title="复制"
+            className="p-1.5 hover:bg-gray-100 rounded-xl"
+          >
+            <Copy className="w-4 h-4 text-blue-600" />
           </Button>
           <Button
             variant="ghost"
