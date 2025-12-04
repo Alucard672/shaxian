@@ -160,12 +160,12 @@ function ContactManagement() {
     }
   }
 
-  // 统计卡片
+  // 统计卡片 - 变化指标基于实际数据，数据为空时不显示变化
   const statCards = [
     {
       label: '客户总数',
       value: stats.totalCustomers,
-      change: '+12',
+      change: null, // 暂时不显示变化，等有历史数据后再计算
       icon: Users,
       iconBg: 'bg-primary-100',
       bgColor: 'bg-primary-50/50',
@@ -175,7 +175,7 @@ function ContactManagement() {
     {
       label: '供应商总数',
       value: stats.totalSuppliers,
-      change: '+3',
+      change: null,
       icon: Building2,
       iconBg: 'bg-purple-100',
       bgColor: 'bg-purple-50/50',
@@ -185,7 +185,7 @@ function ContactManagement() {
     {
       label: '活跃客户',
       value: stats.activeCustomers,
-      change: '+8',
+      change: null,
       icon: Users,
       iconBg: 'bg-success-100',
       bgColor: 'bg-success-50/50',
@@ -195,7 +195,7 @@ function ContactManagement() {
     {
       label: '本月新增',
       value: stats.thisMonthNew,
-      change: '+5',
+      change: null,
       icon: Plus,
       iconBg: 'bg-warning-100',
       bgColor: 'bg-warning-50/50',
@@ -434,9 +434,11 @@ function ContactManagement() {
                   <div className="text-lg font-semibold text-gray-900">{card.value}</div>
                 </div>
                 <div className="flex flex-col items-end gap-1.5">
-                  <div className={`px-1.5 py-0.5 ${changeBgColor} ${card.changeColor} text-xs font-medium rounded`}>
-                    {card.change}
-                  </div>
+                  {card.change && (
+                    <div className={`px-1.5 py-0.5 ${changeBgColor} ${card.changeColor} text-xs font-medium rounded`}>
+                      {card.change}
+                    </div>
+                  )}
                   <div className={`w-9 h-9 ${card.iconBg} rounded-lg flex items-center justify-center`}>
                     <Icon className="w-4 h-4 text-gray-700" />
                   </div>

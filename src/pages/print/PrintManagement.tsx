@@ -109,12 +109,12 @@ function PrintManagement() {
     }
   }
 
-  // 统计卡片
+  // 统计卡片 - 变化指标基于实际数据，数据为空时不显示变化
   const statCards = [
     {
       label: '今日打印',
       value: stats.todayPrintCount,
-      change: '+12',
+      change: null, // 暂时不显示变化，等有历史数据后再计算
       icon: Printer,
       iconColor: 'text-primary-500',
       bgColor: 'bg-primary-50',
@@ -122,7 +122,7 @@ function PrintManagement() {
     {
       label: '待打印',
       value: stats.pendingPrintCount,
-      change: '+3',
+      change: null,
       icon: Clock,
       iconColor: 'text-warning-500',
       bgColor: 'bg-warning-50',
@@ -130,7 +130,7 @@ function PrintManagement() {
     {
       label: '销售单',
       value: stats.salesCount,
-      change: '+8',
+      change: null,
       icon: FileText,
       iconColor: 'text-success-500',
       bgColor: 'bg-success-50',
@@ -138,7 +138,7 @@ function PrintManagement() {
     {
       label: '进货单',
       value: stats.purchaseCount,
-      change: '+5',
+      change: null,
       icon: FileText,
       iconColor: 'text-purple-500',
       bgColor: 'bg-purple-50',
@@ -339,9 +339,11 @@ function PrintManagement() {
                 <div className={`w-9 h-9 ${card.bgColor} rounded-lg flex items-center justify-center`}>
                   <Icon className={`w-4 h-4 ${card.iconColor}`} />
                 </div>
-                <div className="text-xs text-success-500 font-medium">
-                  {card.change}
-                </div>
+                {card.change && (
+                  <div className="text-xs text-success-500 font-medium">
+                    {card.change}
+                  </div>
+                )}
               </div>
               <div className="text-xs text-gray-600 mb-1">{card.label}</div>
               <div className="text-lg font-semibold text-gray-900">{card.value}</div>

@@ -261,12 +261,12 @@ function AccountManagement() {
     return filteredSummary.slice(start, start + pageSize)
   }, [filteredSummary, currentPage])
 
-  // 统计卡片
+  // 统计卡片 - 变化指标基于实际数据，数据为空时不显示变化
   const statCards = [
     {
       label: '应收账款',
       value: `¥${stats.totalReceivable.toLocaleString()}`,
-      change: '+5.2%',
+      change: null, // 暂时不显示变化，等有历史数据后再计算
       icon: TrendingUp,
       iconBg: 'bg-success-100',
       bgColor: 'bg-success-50/50',
@@ -276,7 +276,7 @@ function AccountManagement() {
     {
       label: '应付账款',
       value: `¥${stats.totalPayable.toLocaleString()}`,
-      change: '-8.3%',
+      change: null,
       icon: TrendingDown,
       iconBg: 'bg-warning-100',
       bgColor: 'bg-warning-50/50',
@@ -286,7 +286,7 @@ function AccountManagement() {
     {
       label: '逾期账款',
       value: `¥${stats.totalOverdue.toLocaleString()}`,
-      change: `+${stats.overdueCount}`,
+      change: null, // 逾期数量已经在value中显示，不需要单独的变化指标
       icon: AlertCircle,
       iconBg: 'bg-danger-100',
       bgColor: 'bg-danger-50/50',
@@ -296,7 +296,7 @@ function AccountManagement() {
     {
       label: '本月已收付',
       value: `¥${stats.thisMonthTotal.toLocaleString()}`,
-      change: '+18%',
+      change: null,
       icon: CheckCircle,
       iconBg: 'bg-primary-100',
       bgColor: 'bg-primary-50/50',
@@ -616,7 +616,7 @@ function AccountManagement() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {statCards.map((card, index) => {
           const Icon = card.icon
-          const changeBgColor = card.change.startsWith('-') ? 'bg-danger-100' : 'bg-success-100'
+          const changeBgColor = card.change && card.change.startsWith('-') ? 'bg-danger-100' : 'bg-success-100'
           return (
             <Card key={index} className={`p-4 border ${card.borderColor} ${card.bgColor} rounded-xl`}>
               <div className="flex items-center justify-between mb-2">
@@ -625,9 +625,11 @@ function AccountManagement() {
                   <div className="text-lg font-semibold text-gray-900">{card.value}</div>
                 </div>
                 <div className="flex flex-col items-end gap-1.5">
-                  <div className={`px-1.5 py-0.5 ${changeBgColor} ${card.changeColor} text-xs font-medium rounded`}>
-                    {card.change}
-                  </div>
+                  {card.change && (
+                    <div className={`px-1.5 py-0.5 ${changeBgColor} ${card.changeColor} text-xs font-medium rounded`}>
+                      {card.change}
+                    </div>
+                  )}
                   <div className={`w-9 h-9 ${card.iconBg} rounded-lg flex items-center justify-center`}>
                     <Icon className="w-4 h-4 text-gray-700" />
                   </div>

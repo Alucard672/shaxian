@@ -103,12 +103,12 @@ function Inventory() {
     return filteredInventory.slice(start, end)
   }, [filteredInventory, currentPage])
 
-  // 统计卡片
+  // 统计卡片 - 变化指标基于实际数据，数据为空时不显示变化
   const statCards = [
     {
       label: '库存总值',
       value: `¥${stats.totalValue.toLocaleString()}`,
-      change: '-2.1%',
+      change: null, // 暂时不显示变化，等有历史数据后再计算
       icon: Package,
       iconBg: 'bg-primary-100',
       bgColor: 'bg-primary-50/50',
@@ -118,7 +118,7 @@ function Inventory() {
     {
       label: '商品种类',
       value: stats.productCount,
-      change: '+5',
+      change: null,
       icon: Package,
       iconBg: 'bg-purple-100',
       bgColor: 'bg-purple-50/50',
@@ -128,7 +128,7 @@ function Inventory() {
     {
       label: '低库存预警',
       value: stats.lowStockCount,
-      change: '+3',
+      change: null,
       icon: AlertTriangle,
       iconBg: 'bg-warning-100',
       bgColor: 'bg-warning-50/50',
@@ -138,7 +138,7 @@ function Inventory() {
     {
       label: '库存周转率',
       value: `${stats.turnoverRate} 次/月`,
-      change: '+0.5',
+      change: null,
       icon: TrendingUp,
       iconBg: 'bg-success-100',
       bgColor: 'bg-success-50/50',
@@ -300,7 +300,7 @@ function Inventory() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {statCards.map((card, index) => {
           const Icon = card.icon
-          const changeBgColor = card.change.startsWith('-') ? 'bg-danger-100' : 'bg-success-100'
+          const changeBgColor = card.change && card.change.startsWith('-') ? 'bg-danger-100' : 'bg-success-100'
           return (
             <Card key={index} className={`p-4 border ${card.borderColor} ${card.bgColor} rounded-xl`}>
               <div className="flex items-center justify-between mb-2">
@@ -309,9 +309,11 @@ function Inventory() {
                   <div className="text-lg font-semibold text-gray-900">{card.value}</div>
                 </div>
                 <div className="flex flex-col items-end gap-1.5">
-                  <div className={`px-1.5 py-0.5 ${changeBgColor} ${card.changeColor} text-xs font-medium rounded`}>
-                    {card.change}
-                  </div>
+                  {card.change && (
+                    <div className={`px-1.5 py-0.5 ${changeBgColor} ${card.changeColor} text-xs font-medium rounded`}>
+                      {card.change}
+                    </div>
+                  )}
                   <div className={`w-9 h-9 ${card.iconBg} rounded-lg flex items-center justify-center`}>
                     <Icon className="w-4 h-4 text-gray-700" />
                   </div>
