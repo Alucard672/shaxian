@@ -205,7 +205,13 @@ function SalesCreate() {
       items: items.map(({ amount, ...item }) => item),
     }
 
-    addOrder(orderData)
+    if (isEditMode && existingOrder) {
+      // 编辑模式：更新订单
+      updateOrder(existingOrder.id, orderData)
+    } else {
+      // 新建模式：创建订单
+      addOrder(orderData)
+    }
     navigate('/sales')
   }
 
