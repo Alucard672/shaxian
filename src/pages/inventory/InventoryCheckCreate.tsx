@@ -92,8 +92,10 @@ function InventoryCheckCreate() {
       return item.batch.stockLocation?.startsWith(warehouse) || false
     })
 
+    // 即使没有库存也允许盘点，可以手动添加明细或往多里盘
     if (warehouseInventory.length === 0) {
-      alert('该仓库暂无库存')
+      // 如果没有库存，生成空列表，允许用户手动添加明细
+      setItems([])
       return
     }
 
