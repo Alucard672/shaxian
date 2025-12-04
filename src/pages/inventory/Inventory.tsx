@@ -308,9 +308,9 @@ function Inventory() {
                   <div className="text-lg font-semibold text-gray-900">{card.value}</div>
                 </div>
                 <div className="flex flex-col items-end gap-1.5">
-                  {card.change && (
+                  {card.change !== null && (
                     <div className={`px-1.5 py-0.5 ${
-                      typeof card.change === 'string' && card.change.startsWith('-') ? 'bg-danger-100' : 'bg-success-100'
+                      String(card.change).startsWith('-') ? 'bg-danger-100' : 'bg-success-100'
                     } ${card.changeColor} text-xs font-medium rounded`}>
                       {card.change}
                     </div>
