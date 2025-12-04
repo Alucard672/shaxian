@@ -344,7 +344,9 @@ function InventoryCheckCreate() {
                   </thead>
                   <tbody>
                     {items.map((item) => {
-                      const difference = (item.actualQuantity || item.systemQuantity) - item.systemQuantity
+                      const systemQty = item.systemQuantity ?? 0
+                      const actualQty = item.actualQuantity ?? systemQty
+                      const difference = actualQty - systemQty
                       return (
                         <tr key={item.batchId} className="border-b border-gray-100 last:border-b-0">
                           <td className="px-4 py-3 text-sm text-gray-900">
@@ -356,12 +358,12 @@ function InventoryCheckCreate() {
                           <td className="px-4 py-3 text-sm text-gray-900">{item.colorName}</td>
                           <td className="px-4 py-3 text-sm text-gray-900">{item.batchCode}</td>
                           <td className="px-4 py-3 text-right text-sm text-gray-600">
-                            {item.systemQuantity} {item.unit}
+                            {systemQty} {item.unit}
                           </td>
                           <td className="px-4 py-3 text-right">
                             <input
                               type="number"
-                              value={item.actualQuantity ?? item.systemQuantity}
+                              value={actualQty}
                               onChange={(e) =>
                                 handleUpdateActualQuantity(
                                   item.batchId,
