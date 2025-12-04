@@ -273,8 +273,8 @@ function Inventory() {
             variant="ghost"
             size="sm"
             onClick={() => {
-              // TODO: 编辑库存
-              window.location.href = `/inventory/${record.batch.id}/edit`
+              // 库存编辑功能暂未实现，可通过库存调整功能进行库存修改
+              alert('库存编辑功能暂未实现，请使用"库存调整"功能进行库存修改')
             }}
             title="编辑"
             className="p-1.5 hover:bg-gray-100 rounded"

@@ -1,18 +1,15 @@
-import Card from '../../components/ui/Card'
+import { useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 
 function AccountPayable() {
-  return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold text-gray-900 mb-2">应付账款</h1>
-        <p className="text-gray-600">管理与供应商的应付账款</p>
-      </div>
-      
-      <Card>
-        <p className="text-gray-500 text-center py-8">应付账款列表（待实现）</p>
-      </Card>
-    </div>
-  )
+  const navigate = useNavigate()
+
+  useEffect(() => {
+    // 重定向到统一管理页面
+    navigate('/account/payable', { replace: true })
+  }, [navigate])
+
+  return null
 }
 
 export default AccountPayable

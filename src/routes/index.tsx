@@ -29,6 +29,9 @@ import SystemParamsSettings from '../pages/settings/SystemParamsSettings'
 import TutorialManagement from '../pages/settings/TutorialManagement'
 import StoreInfoSettings from '../pages/settings/StoreInfoSettings'
 import EmployeeManagement from '../pages/settings/EmployeeManagement'
+import RoleManagement from '../pages/settings/RoleManagement'
+import CustomQuerySettings from '../pages/settings/CustomQuerySettings'
+import InventoryAlertSettings from '../pages/settings/InventoryAlertSettings'
 
 function AppRoutes() {
   return (
@@ -92,6 +95,9 @@ function AppRoutes() {
             <Route path="/settings/tutorial" element={<TutorialManagement />} />
             <Route path="/settings/store" element={<StoreInfoSettings />} />
             <Route path="/settings/employees" element={<EmployeeManagement />} />
+            <Route path="/settings/roles" element={<RoleManagement />} />
+            <Route path="/settings/custom-query" element={<CustomQuerySettings />} />
+            <Route path="/settings/inventory-alert" element={<InventoryAlertSettings />} />
     </Routes>
   )
 }
