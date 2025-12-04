@@ -55,3 +55,9 @@ export interface SystemInfo {
   lastUpdate: string
 }
 
+// 系统参数设置
+export interface SystemParams {
+  // 染色加工流程
+  enableDyeingProcess: boolean // 是否启用染色加工流程，默认false
+}
+

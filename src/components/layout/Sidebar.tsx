@@ -1,5 +1,7 @@
 import { NavLink, useNavigate } from 'react-router-dom'
+import { useMemo } from 'react'
 import { useTabStore, getRouteTitle } from '@/store/tabStore'
+import { useSettingsStore } from '@/store/settingsStore'
 import {
   LayoutDashboard,
   Package,
@@ -16,17 +18,22 @@ import {
 } from 'lucide-react'
 import { cn } from '@/utils/cn'
 
-const menuItems = [
+// 基础菜单项（不包含条件显示的菜单）
+const baseMenuItems = [
   { path: '/', label: '工作台', icon: LayoutDashboard },
   { path: '/product', label: '商品管理', icon: Package },
   { path: '/purchase', label: '进货管理', icon: ShoppingCart },
   { path: '/sales', label: '销售管理', icon: DollarSign },
-  { path: '/dyeing', label: '染色加工', icon: Palette },
   { path: '/inventory', label: '库存管理', icon: BarChart3 },
   { path: '/print', label: '打印管理', icon: Printer },
   { path: '/account/receivable', label: '账款管理', icon: CreditCard },
   { path: '/customer', label: '往来单位', icon: Users },
   { path: '/report', label: '统计报表', icon: FileText },
+]
+
+// 条件菜单项
+const conditionalMenuItems = [
+  { path: '/dyeing', label: '染色加工', icon: Palette },
 ]
 
 const settingsItem = {
@@ -39,6 +46,19 @@ function Sidebar() {
   const SettingsIcon = settingsItem.icon
   const navigate = useNavigate()
   const { addTab, setActiveTab } = useTabStore()
+  const { systemParams } = useSettingsStore()
+  
+  // 根据系统参数动态生成菜单项
+  const menuItems = useMemo(() => {
+    const items = [...baseMenuItems]
+    // 如果染色加工流程启用，添加染色加工菜单
+    if (systemParams.enableDyeingProcess) {
+      // 在库存管理之后插入染色加工菜单
+      const inventoryIndex = items.findIndex(item => item.path === '/inventory')
+      items.splice(inventoryIndex + 1, 0, ...conditionalMenuItems)
+    }
+    return items
+  }, [systemParams.enableDyeingProcess])
 
   // 处理菜单项点击
   const handleMenuClick = (path: string, e?: React.MouseEvent) => {

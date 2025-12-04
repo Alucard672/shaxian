@@ -1,6 +1,7 @@
 import { useSettingsStore } from '@/store/settingsStore'
 import Card from '../../components/ui/Card'
 import {
+  Settings,
   Store,
   Users,
   AlertTriangle,
@@ -8,12 +9,26 @@ import {
   Search,
   Info,
 } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 
 function SettingsManagement() {
   const { systemInfo } = useSettingsStore()
+  const navigate = useNavigate()
 
   // 设置卡片配置
   const settingCards = [
+    {
+      id: 'params',
+      title: '参数设置',
+      description: '配置系统业务参数，控制功能模块的启用与禁用',
+      icon: Settings,
+      iconBg: 'bg-gradient-to-br from-indigo-100 to-indigo-200',
+      iconColor: '#6366F1',
+      features: [
+        '• 染色加工流程开关',
+        '• 功能模块启用控制',
+      ],
+    },
     {
       id: 'store',
       title: '门店信息',
@@ -91,9 +106,14 @@ function SettingsManagement() {
         {settingCards.map((card) => {
           const Icon = card.icon
           return (
-            <Card
+            <div
               key={card.id}
-              className="p-6 border border-gray-200/50 hover:shadow-md transition-shadow"
+              className="p-6 border border-gray-200/50 hover:shadow-md transition-shadow cursor-pointer bg-white rounded-xl"
+              onClick={() => {
+                if (card.id === 'params') {
+                  navigate('/settings/params')
+                }
+              }}
             >
               <div className="flex items-start gap-4">
                 {/* 图标 */}
@@ -120,7 +140,7 @@ function SettingsManagement() {
                   </div>
                 </div>
               </div>
-            </Card>
+            </div>
           )
         })}
       </div>

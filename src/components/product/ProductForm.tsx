@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { ProductFormData, ColorFormData } from '@/types/product'
+import { useSettingsStore } from '@/store/settingsStore'
 import Button from '../ui/Button'
 import { Package, Palette, Layers, Plus, Info, Check } from 'lucide-react'
 import { cn } from '@/utils/cn'
@@ -18,7 +19,8 @@ const units = [
 ]
 
 function ProductForm({ initialData, onSubmit, onCancel }: ProductFormProps) {
-  const [isWhiteYarn, setIsWhiteYarn] = useState(false)
+  const { systemParams } = useSettingsStore()
+  const [isWhiteYarn, setIsWhiteYarn] = useState(initialData?.isWhiteYarn || false)
   const [colors, setColors] = useState<ColorFormData[]>([])
   const [colorInputs, setColorInputs] = useState({
     code: '',
@@ -165,23 +167,25 @@ function ProductForm({ initialData, onSubmit, onCancel }: ProductFormProps) {
               />
             </div>
 
-            {/* 白坯纱线复选框 */}
-            <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
-              <label className="flex items-start gap-3 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={isWhiteYarn}
-                  onChange={(e) => setIsWhiteYarn(e.target.checked)}
-                  className="mt-0.5 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                />
-                <div>
-                  <div className="text-sm font-medium text-gray-900 mb-0.5">白坯纱线</div>
-                  <div className="text-sm text-gray-600">
-                    （勾选表示此商品为白坯，可用于染色加工）
+            {/* 白坯纱线复选框 - 仅在染色加工流程启用时显示 */}
+            {systemParams.enableDyeingProcess && (
+              <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={isWhiteYarn}
+                    onChange={(e) => setIsWhiteYarn(e.target.checked)}
+                    className="mt-0.5 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                  />
+                  <div>
+                    <div className="text-sm font-medium text-gray-900 mb-0.5">白坯纱线</div>
+                    <div className="text-sm text-gray-600">
+                      （勾选表示此商品为白坯，可用于染色加工）
+                    </div>
                   </div>
-                </div>
-              </label>
-            </div>
+                </label>
+              </div>
+            )}
 
             {/* 商品描述 */}
             <div>

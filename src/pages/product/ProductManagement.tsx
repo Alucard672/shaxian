@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react'
 import { useProductStore } from '@/store/productStore'
+import { useSettingsStore } from '@/store/settingsStore'
 import { Product } from '@/types/product'
 import Card from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
@@ -25,6 +26,7 @@ function ProductManagement() {
     deleteProduct,
     getColorsByProduct,
   } = useProductStore()
+  const { systemParams } = useSettingsStore()
 
   const [isProductModalOpen, setIsProductModalOpen] = useState(false)
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false)
@@ -55,11 +57,16 @@ function ProductManagement() {
   const filteredProducts = useMemo(() => {
     let filtered = products
     
+    // 如果染色加工流程未启用，过滤掉白坯商品
+    if (!systemParams.enableDyeingProcess) {
+      filtered = filtered.filter((p) => !p.isWhiteYarn)
+    }
+    
     // 类型筛选
     if (filterType === 'white') {
-      filtered = filtered.filter((p) => p.name.includes('白坯'))
+      filtered = filtered.filter((p) => p.isWhiteYarn === true)
     } else if (filterType === 'dyed') {
-      filtered = filtered.filter((p) => !p.name.includes('白坯'))
+      filtered = filtered.filter((p) => !p.isWhiteYarn)
     }
     
     // 搜索筛选
@@ -75,7 +82,7 @@ function ProductManagement() {
     }
     
     return filtered
-  }, [products, searchKeyword, filterType])
+  }, [products, searchKeyword, filterType, systemParams.enableDyeingProcess])
 
   // 分页数据
   const paginatedProducts = useMemo(() => {
@@ -146,7 +153,7 @@ function ProductManagement() {
       title: '商品名称',
       width: '186px',
       render: (_: any, record: Product) => {
-        const isWhite = record.name.includes('白坯')
+        const isWhite = record.isWhiteYarn === true
         return (
           <div className="flex items-center gap-2">
             <Package className="w-4 h-4 text-blue-600" />
@@ -386,17 +393,19 @@ function ProductManagement() {
             >
               全部
             </button>
-            <button
-              onClick={() => setFilterType('white')}
-              className={cn(
-                'px-4 h-9 rounded-xl text-sm font-medium transition-colors',
-                filterType === 'white'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50'
-              )}
-            >
-              白坯纱线
-            </button>
+            {systemParams.enableDyeingProcess && (
+              <button
+                onClick={() => setFilterType('white')}
+                className={cn(
+                  'px-4 h-9 rounded-xl text-sm font-medium transition-colors',
+                  filterType === 'white'
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50'
+                )}
+              >
+                白坯纱线
+              </button>
+            )}
             <button
               onClick={() => setFilterType('dyed')}
               className={cn(

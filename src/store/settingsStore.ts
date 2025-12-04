@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { StoreInfo, Employee, InventoryAlertSettings, Role, CustomQuery, SystemInfo } from '@/types/settings'
+import { StoreInfo, Employee, InventoryAlertSettings, Role, CustomQuery, SystemInfo, SystemParams } from '@/types/settings'
 
 interface SettingsState {
   // 门店信息
@@ -30,6 +30,10 @@ interface SettingsState {
   updateCustomQuery: (id: string, query: Partial<CustomQuery>) => void
   deleteCustomQuery: (id: string) => void
   getCustomQuery: (id: string) => CustomQuery | undefined
+  
+  // 系统参数设置
+  systemParams: SystemParams
+  updateSystemParams: (params: Partial<SystemParams>) => void
   
   // 系统信息
   systemInfo: SystemInfo
@@ -80,6 +84,10 @@ const defaultSystemInfo: SystemInfo = {
   systemName: '织云ERP',
   version: 'v1.0.0',
   lastUpdate: '2025年12月1日',
+}
+
+const defaultSystemParams: SystemParams = {
+  enableDyeingProcess: false, // 默认不启用染色加工流程
 }
 
 export const useSettingsStore = create<SettingsState>((set, get) => ({
@@ -187,6 +195,14 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   },
   getCustomQuery: (id) => {
     return get().customQueries.find((q) => q.id === id)
+  },
+  
+  // 系统参数设置
+  systemParams: loadFromStorage('systemParams', defaultSystemParams),
+  updateSystemParams: (params) => {
+    const newParams = { ...get().systemParams, ...params }
+    set({ systemParams: newParams })
+    saveToStorage('systemParams', newParams)
   },
   
   // 系统信息
