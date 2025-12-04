@@ -7,11 +7,47 @@ export const clearAllStorage = () => {
     // 可以在这里添加需要保留的 key
   ]
 
-  // 获取所有 localStorage keys
-  const keys = Object.keys(localStorage)
+  // 需要清空的所有业务数据 key
+  const dataKeys = [
+    'products',
+    'colors',
+    'batches',
+    'customers',
+    'suppliers',
+    'purchaseOrders',
+    'salesOrders',
+    'dyeingOrders',
+    'accountReceivables',
+    'accountPayables',
+    'receiptRecords',
+    'paymentRecords',
+    'adjustmentOrders',
+    'inventoryCheckOrders',
+    'printTemplates',
+    'storeInfo',
+    'employees',
+    'roles',
+    'customQueries',
+    'inventoryAlertSettings',
+    'systemParams',
+    // 清理初始化标记
+    'products_initialized',
+    'colors_initialized',
+    'batches_initialized',
+    'customers_initialized',
+    'suppliers_initialized',
+    'purchaseOrders_initialized',
+    'salesOrders_initialized',
+    'dyeingOrders_initialized',
+    'accountReceivables_initialized',
+    'accountPayables_initialized',
+    'adjustmentOrders_initialized',
+    'inventoryCheckOrders_initialized',
+    'printTemplates_initialized',
+  ]
 
-  // 删除所有 key（除了需要保留的）
-  keys.forEach((key) => {
+  // 删除所有业务数据 key
+  dataKeys.forEach((key) => {
     if (!preserveKeys.includes(key)) {
       localStorage.removeItem(key)
     }

@@ -65,27 +65,17 @@ interface AccountState {
 // 生成唯一ID
 const generateId = () => Date.now().toString(36) + Math.random().toString(36).substr(2)
 
-// 从localStorage加载数据，如果为空则使用初始数据
-const loadFromStorage = (key: string, initData: any) => {
+// 从localStorage加载数据，不再自动初始化硬编码数据
+const loadFromStorage = (key: string, defaultValue: any) => {
   try {
     const item = localStorage.getItem(key)
     if (item) {
-      const data = JSON.parse(item)
-      if (Array.isArray(data) && data.length > 0) {
-        return data
-      }
-      if (Array.isArray(data) && data.length === 0) {
-        const initialized = localStorage.getItem(`${key}_initialized`)
-        if (initialized === 'true') {
-          return data
-        }
-      }
+      return JSON.parse(item)
     }
-    localStorage.setItem(key, JSON.stringify(initData))
-    localStorage.setItem(`${key}_initialized`, 'true')
-    return initData
+    // 如果没有数据，返回默认值（空数组），不自动写入
+    return defaultValue
   } catch {
-    return initData
+    return defaultValue
   }
 }
 

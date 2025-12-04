@@ -18,15 +18,14 @@ interface TemplateState {
 // 生成唯一ID
 const generateId = () => Date.now().toString(36) + Math.random().toString(36).substr(2)
 
-// 从localStorage加载数据
+// 从localStorage加载数据，不再自动初始化硬编码数据
 const loadFromStorage = (key: string, defaultValue: any) => {
   try {
     const item = localStorage.getItem(key)
     if (item) {
-      const parsed = JSON.parse(item)
-      return parsed
+      return JSON.parse(item)
     }
-    // 如果没有数据，返回默认值（空数组）
+    // 如果没有数据，返回默认值（空数组），不自动写入
     return defaultValue
   } catch {
     return defaultValue
