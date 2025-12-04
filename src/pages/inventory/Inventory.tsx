@@ -300,7 +300,6 @@ function Inventory() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {statCards.map((card, index) => {
           const Icon = card.icon
-          const changeBgColor = card.change && typeof card.change === 'string' && card.change.startsWith('-') ? 'bg-danger-100' : 'bg-success-100'
           return (
             <Card key={index} className={`p-4 border ${card.borderColor} ${card.bgColor} rounded-xl`}>
               <div className="flex items-center justify-between mb-2">
@@ -310,7 +309,9 @@ function Inventory() {
                 </div>
                 <div className="flex flex-col items-end gap-1.5">
                   {card.change && (
-                    <div className={`px-1.5 py-0.5 ${changeBgColor} ${card.changeColor} text-xs font-medium rounded`}>
+                    <div className={`px-1.5 py-0.5 ${
+                      typeof card.change === 'string' && card.change.startsWith('-') ? 'bg-danger-100' : 'bg-success-100'
+                    } ${card.changeColor} text-xs font-medium rounded`}>
                       {card.change}
                     </div>
                   )}
