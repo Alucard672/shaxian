@@ -283,3 +283,4 @@ function InventoryDetail({ inventoryItem, onClose }: InventoryDetailProps) {
 
 export default InventoryDetail
 
+

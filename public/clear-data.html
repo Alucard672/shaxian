@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>清空数据</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 { color: #333; }
+        .warning {
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        button {
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px;
+        }
+        button:hover {
+            background: #c82333;
+        }
+        .info {
+            margin-top: 20px;
+            padding: 15px;
+            background: #e7f3ff;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>清空系统数据</h1>
+        <div class="warning">
+            <strong>⚠️ 警告：</strong>此操作将清空所有业务数据，包括商品、订单、账款等。此操作不可逆！
+        </div>
+        <button onclick="clearAll()">清空所有数据</button>
+        <button onclick="checkData()">检查当前数据</button>
+        <div id="result" class="info" style="display:none;"></div>
+    </div>
+    <script>
+        const dataKeys = [
+            'products', 'colors', 'batches',
+            'customers', 'suppliers',
+            'purchaseOrders', 'salesOrders', 'dyeingOrders',
+            'accountReceivables', 'accountPayables',
+            'receiptRecords', 'paymentRecords',
+            'adjustmentOrders', 'inventoryCheckOrders',
+            'printTemplates', 'storeInfo', 'employees', 'roles',
+            'customQueries', 'inventoryAlertSettings', 'systemParams',
+            'products_initialized', 'colors_initialized', 'batches_initialized',
+            'customers_initialized', 'suppliers_initialized',
+            'purchaseOrders_initialized', 'salesOrders_initialized',
+            'dyeingOrders_initialized', 'accountReceivables_initialized',
+            'accountPayables_initialized', 'adjustmentOrders_initialized',
+            'inventoryCheckOrders_initialized', 'printTemplates_initialized'
+        ];
+        
+        function checkData() {
+            const result = document.getElementById('result');
+            let info = '<h3>当前数据状态：</h3><ul>';
+            let hasData = false;
+            
+            dataKeys.forEach(key => {
+                const value = localStorage.getItem(key);
+                if (value) {
+                    try {
+                        const data = JSON.parse(value);
+                        if (Array.isArray(data) && data.length > 0) {
+                            info += `<li><strong>${key}:</strong> ${data.length} 条记录</li>`;
+                            hasData = true;
+                        } else if (!Array.isArray(data) && Object.keys(data).length > 0) {
+                            info += `<li><strong>${key}:</strong> 有数据</li>`;
+                            hasData = true;
+                        }
+                    } catch (e) {
+                        if (value && value !== 'null') {
+                            info += `<li><strong>${key}:</strong> 有数据</li>`;
+                            hasData = true;
+                        }
+                    }
+                }
+            });
+            
+            if (!hasData) {
+                info += '<li>没有发现数据</li>';
+            }
+            
+            info += '</ul>';
+            result.innerHTML = info;
+            result.style.display = 'block';
+        }
+        
+        function clearAll() {
+            if (!confirm('确定要清空所有数据吗？此操作不可逆！')) {
+                return;
+            }
+            
+            let cleared = 0;
+            dataKeys.forEach(key => {
+                if (localStorage.getItem(key)) {
+                    localStorage.removeItem(key);
+                    cleared++;
+                }
+            });
+            
+            const result = document.getElementById('result');
+            result.innerHTML = `<h3>✅ 清空完成！</h3><p>已清空 ${cleared} 个数据项。请刷新主页面查看效果。</p>`;
+            result.style.display = 'block';
+        }
+    </script>
+</body>
+</html>
