@@ -27,6 +27,8 @@ import ProductManagement from '../pages/product/ProductManagement'
 import SettingsManagement from '../pages/settings/SettingsManagement'
 import SystemParamsSettings from '../pages/settings/SystemParamsSettings'
 import TutorialManagement from '../pages/settings/TutorialManagement'
+import StoreInfoSettings from '../pages/settings/StoreInfoSettings'
+import EmployeeManagement from '../pages/settings/EmployeeManagement'
 
 function AppRoutes() {
   return (
@@ -41,6 +43,7 @@ function AppRoutes() {
       {/* 销售管理 */}
       <Route path="/sales" element={<SalesList />} />
       <Route path="/sales/create" element={<SalesCreate />} />
+      <Route path="/sales/:id/edit" element={<SalesCreate />} />
       
       {/* 染色加工 */}
       <Route path="/dyeing" element={<DyeingList />} />
@@ -87,6 +90,8 @@ function AppRoutes() {
             <Route path="/settings" element={<SettingsManagement />} />
             <Route path="/settings/params" element={<SystemParamsSettings />} />
             <Route path="/settings/tutorial" element={<TutorialManagement />} />
+            <Route path="/settings/store" element={<StoreInfoSettings />} />
+            <Route path="/settings/employees" element={<EmployeeManagement />} />
     </Routes>
   )
 }

@@ -127,6 +127,16 @@ function SettingsManagement() {
                   navigate('/settings/params')
                 } else if (card.id === 'tutorial') {
                   navigate('/settings/tutorial')
+                } else if (card.id === 'store') {
+                  navigate('/settings/store')
+                } else if (card.id === 'employees') {
+                  navigate('/settings/employees')
+                } else if (card.id === 'roles') {
+                  navigate('/settings/roles')
+                } else if (card.id === 'custom-query') {
+                  navigate('/settings/custom-query')
+                } else if (card.id === 'inventory-alert') {
+                  navigate('/settings/inventory-alert')
                 }
               }}
             >

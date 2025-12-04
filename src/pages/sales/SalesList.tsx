@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useSalesStore } from '@/store/salesStore'
 import { SalesOrder, SalesOrderStatus } from '@/types/sales'
 import Card from '../../components/ui/Card'
@@ -25,6 +25,7 @@ import SalesDetail from '../../components/sales/SalesDetail'
 import DateRangePicker from '../../components/ui/DateRangePicker'
 
 function SalesList() {
+  const navigate = useNavigate()
   const { orders, deleteOrder } = useSalesStore()
 
   const [searchKeyword, setSearchKeyword] = useState('')
@@ -299,8 +300,7 @@ function SalesList() {
             variant="ghost"
             size="sm"
             onClick={() => {
-              // TODO: 跳转到编辑页面
-              window.location.href = `/sales/${record.id}/edit`
+              navigate(`/sales/${record.id}/edit`)
             }}
             title="编辑"
             className="p-1.5 hover:bg-gray-100 rounded-xl"
@@ -534,8 +534,7 @@ function SalesList() {
               order={viewingOrder}
               onEdit={() => {
                 setIsDetailModalOpen(false)
-                // TODO: 跳转到编辑页面
-                window.location.href = `/sales/${viewingOrder.id}/edit`
+                navigate(`/sales/${viewingOrder.id}/edit`)
               }}
               onPrint={() => {
                 import('@/utils/printDocument').then(({ printOrder }) => {

@@ -1,5 +1,5 @@
-import { useState, useMemo } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useState, useMemo, useEffect } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
 import { useSalesStore } from '@/store/salesStore'
 import { useContactStore } from '@/store/contactStore'
 import { useProductStore } from '@/store/productStore'
@@ -15,11 +15,20 @@ interface SalesOrderItemForm extends Omit<SalesOrderItem, 'id' | 'amount'> {
 
 function SalesCreate() {
   const navigate = useNavigate()
-  const { generateOrderNumber, addOrder, checkStock } = useSalesStore()
+  const { id } = useParams<{ id: string }>()
+  const { generateOrderNumber, addOrder, updateOrder, getOrder, checkStock } = useSalesStore()
   const { getCustomers } = useContactStore()
   const { products, colors, batches, getColorsByProduct, getBatchesByColor } = useProductStore()
 
-  const orderNumber = useMemo(() => generateOrderNumber(), [generateOrderNumber])
+  const isEditMode = !!id
+  const existingOrder = isEditMode ? getOrder(id!) : null
+
+  const orderNumber = useMemo(() => {
+    if (isEditMode && existingOrder) {
+      return existingOrder.orderNumber
+    }
+    return generateOrderNumber()
+  }, [isEditMode, existingOrder, generateOrderNumber])
 
   const [formData, setFormData] = useState<Omit<SalesOrderFormData, 'items'>>({
     customerId: '',
@@ -39,6 +48,26 @@ function SalesCreate() {
   })
 
   const [items, setItems] = useState<SalesOrderItemForm[]>([])
+
+  // 编辑模式下加载已有订单数据
+  useEffect(() => {
+    if (isEditMode && existingOrder) {
+      setFormData({
+        customerId: existingOrder.customerId,
+        customerName: existingOrder.customerName,
+        salesDate: existingOrder.salesDate,
+        expectedDate: existingOrder.expectedDate || '',
+        remark: existingOrder.remark || '',
+        receivedAmount: existingOrder.receivedAmount || 0,
+      })
+      // 加载订单明细
+      const loadedItems: SalesOrderItemForm[] = existingOrder.items.map((item) => ({
+        ...item,
+        amount: item.amount,
+      }))
+      setItems(loadedItems)
+    }
+  }, [isEditMode, existingOrder])
 
   // 获取所有客户选项
   const customerOptions = useMemo(() => {
@@ -205,9 +234,11 @@ function SalesCreate() {
         {/* 标题栏 */}
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
           <div>
-            <h2 className="text-xl font-semibold text-gray-900">新建销售单</h2>
+            <h2 className="text-xl font-semibold text-gray-900">
+              {isEditMode ? '编辑销售单' : '新建销售单'}
+            </h2>
             <p className="text-sm text-gray-600 mt-1">
-              填写销售单信息，系统会自动校验库存
+              {isEditMode ? '修改销售单信息' : '填写销售单信息，系统会自动校验库存'}
             </p>
           </div>
           <div className="flex items-center gap-3">
@@ -223,7 +254,7 @@ function SalesCreate() {
               className="h-9 bg-blue-600 hover:bg-blue-700 text-white rounded-lg"
             >
               <FileText className="w-4 h-4 mr-2" />
-              保存销售单
+              {isEditMode ? '保存修改' : '保存销售单'}
             </Button>
             <button
               onClick={handleCancel}

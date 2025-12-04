@@ -1,10 +1,12 @@
 // 门店信息
 export interface StoreInfo {
   name: string // 门店名称
+  code?: string // 门店编码
   address?: string // 地址
   phone?: string // 电话
   email?: string // 邮箱
   fax?: string // 传真
+  postalCode?: string // 邮编
   remark?: string // 备注
 }
 
