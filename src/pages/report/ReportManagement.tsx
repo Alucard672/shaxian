@@ -143,24 +143,24 @@ function ReportManagement() {
       </div>
 
       {/* 统计卡片 */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {statCards.map((card, index) => {
           const Icon = card.icon
           const changeBgColor = 'bg-success-100'
           return (
-            <Card key={index} className={`p-5 border ${card.borderColor} ${card.bgColor} rounded-2xl`}>
-              <div className="flex items-center justify-between mb-3">
+            <Card key={index} className={`p-4 border ${card.borderColor} ${card.bgColor} rounded-xl`}>
+              <div className="flex items-center justify-between mb-2">
                 <div className="flex flex-col gap-1">
-                  <div className="text-sm text-gray-600">{card.label}</div>
-                  <div className="text-2xl font-semibold text-gray-900">{card.value}</div>
+                  <div className="text-xs text-gray-600">{card.label}</div>
+                  <div className="text-lg font-semibold text-gray-900">{card.value}</div>
                 </div>
-                <div className="flex flex-col items-end gap-2">
-                  <div className={`px-2 py-1 ${changeBgColor} ${card.changeColor} text-xs font-medium rounded-lg flex items-center gap-1`}>
+                <div className="flex flex-col items-end gap-1.5">
+                  <div className={`px-1.5 py-0.5 ${changeBgColor} ${card.changeColor} text-xs font-medium rounded flex items-center gap-1`}>
                     <TrendingUp className="w-3 h-3" />
                     {card.change}
                   </div>
-                  <div className={`w-12 h-12 ${card.iconBg} rounded-xl flex items-center justify-center`}>
-                    <Icon className="w-6 h-6 text-gray-700" />
+                  <div className={`w-9 h-9 ${card.iconBg} rounded-lg flex items-center justify-center`}>
+                    <Icon className="w-4 h-4 text-gray-700" />
                   </div>
                 </div>
               </div>

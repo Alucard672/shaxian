@@ -342,21 +342,21 @@ function SalesList() {
       </div>
 
       {/* 统计卡片 */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         {statCards.map((card, index) => {
           const Icon = card.icon
           return (
-            <Card key={index} className={`p-5 border ${card.borderColor} ${card.bgColor} rounded-2xl`}>
-              <div className="flex items-center justify-between mb-3">
-                <div className={`w-10 h-10 ${card.iconBg} rounded-xl flex items-center justify-center`}>
-                  <Icon className="w-5 h-5 text-blue-600" />
+            <Card key={index} className={`p-4 border ${card.borderColor} ${card.bgColor} rounded-xl`}>
+              <div className="flex items-center justify-between mb-2">
+                <div className={`w-9 h-9 ${card.iconBg} rounded-lg flex items-center justify-center`}>
+                  <Icon className="w-4 h-4 text-blue-600" />
                 </div>
-                <div className={`px-2 py-1 bg-green-100 ${card.changeColor} text-xs font-medium rounded-lg`}>
+                <div className={`px-1.5 py-0.5 bg-green-100 ${card.changeColor} text-xs font-medium rounded`}>
                   {card.change}
                 </div>
               </div>
-              <div className="text-sm text-gray-600 mb-1">{card.label}</div>
-              <div className="text-lg font-medium text-gray-900">{card.value}</div>
+              <div className="text-xs text-gray-600 mb-1">{card.label}</div>
+              <div className="text-base font-semibold text-gray-900">{card.value}</div>
             </Card>
           )
         })}

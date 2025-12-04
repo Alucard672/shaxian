@@ -164,18 +164,18 @@ function DyeingList() {
       </div>
 
       {/* 统计卡片 */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {statCards.map((card, index) => {
           const Icon = card.icon
           return (
-            <Card key={index} className={`p-5 border ${card.borderColor} ${card.bgColor} rounded-xl`}>
+            <Card key={index} className={`p-4 border ${card.borderColor} ${card.bgColor} rounded-xl`}>
               <div className="flex items-center justify-between">
                 <div className="flex flex-col gap-1">
-                  <div className="text-sm text-gray-600">{card.label}</div>
-                  <div className="text-lg font-medium text-gray-900">{card.value}</div>
+                  <div className="text-xs text-gray-600">{card.label}</div>
+                  <div className="text-base font-semibold text-gray-900">{card.value}</div>
                 </div>
-                <div className={`w-12 h-12 ${card.iconBg} rounded-xl flex items-center justify-center`}>
-                  <Icon className={cn('w-5 h-5', {
+                <div className={`w-9 h-9 ${card.iconBg} rounded-lg flex items-center justify-center`}>
+                  <Icon className={cn('w-4 h-4', {
                     'text-gray-700': card.iconBg === 'bg-gray-100',
                     'text-blue-600': card.iconBg === 'bg-blue-100',
                     'text-green-600': card.iconBg === 'bg-green-100',

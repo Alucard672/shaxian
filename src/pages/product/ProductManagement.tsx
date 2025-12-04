@@ -9,7 +9,8 @@ import Pagination from '../../components/ui/Pagination'
 import ProductModal from '../../components/product/ProductModal'
 import ProductForm from '../../components/product/ProductForm'
 import ProductDetail from '../../components/product/ProductDetail'
-import { Plus, Eye, Edit, Trash2, Package, Palette, Layers, Download, Search, Info, MoreVertical, Check } from 'lucide-react'
+import { Plus, Eye, Edit, Trash2, Package, Palette, Layers, Download, Search, MoreVertical, Check } from 'lucide-react'
+import Tooltip from '../../components/ui/Tooltip'
 import { ProductFormData } from '@/types/product'
 import { Link } from 'react-router-dom'
 import { cn } from '@/utils/cn'
@@ -332,40 +333,38 @@ function ProductManagement() {
   return (
     <div className="space-y-6">
       {/* 页面标题 */}
-      <div>
-        <h1 className="text-2xl font-semibold text-gray-900 mb-2">商品管理</h1>
-        <p className="text-sm text-gray-600">管理纱线商品的三层结构：商品 → 色号 → 缸号</p>
-      </div>
-
-      {/* 信息提示框 */}
-      <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 flex items-start gap-4">
-        <Info className="w-5 h-5 text-blue-600 flex-shrink-0 mt-1" />
-        <div className="flex-1">
-          <div className="text-sm font-medium text-blue-900 mb-1">关于三层结构</div>
-          <div className="text-sm text-blue-700 leading-relaxed">
-            <span className="font-medium">商品</span>：基础商品信息（如"精梳棉纱 32支"） →{' '}
-            <span className="font-medium">色号</span>：该商品的不同颜色 →{' '}
-            <span className="font-medium">缸号</span>：同一色号的不同生产批次，每个缸号有独立的库存和价格
-          </div>
-        </div>
+      <div className="flex items-center gap-2">
+        <h1 className="text-2xl font-semibold text-gray-900">商品管理</h1>
+        <Tooltip
+          content={
+            <div>
+              <div className="font-medium text-gray-900 mb-2">关于三层结构</div>
+              <div className="text-sm text-gray-700 leading-relaxed">
+                <span className="font-medium">商品</span>：基础商品信息（如"精梳棉纱 32支"） →{' '}
+                <span className="font-medium">色号</span>：该商品的不同颜色 →{' '}
+                <span className="font-medium">缸号</span>：同一色号的不同生产批次，每个缸号有独立的库存和价格
+              </div>
+            </div>
+          }
+        />
       </div>
 
       {/* 统计卡片 */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {statCards.map((card, index) => {
           const Icon = card.icon
           return (
-            <Card key={index} className="p-5 border-gray-200 rounded-2xl">
-              <div className="flex items-center justify-between mb-3">
-                <div className={`w-11 h-11 ${card.iconBg} rounded-xl flex items-center justify-center`}>
-                  <Icon className="w-5 h-5 text-gray-700" />
+            <Card key={index} className="p-4 border-gray-200 rounded-xl">
+              <div className="flex items-center justify-between mb-2">
+                <div className={`w-9 h-9 ${card.iconBg} rounded-lg flex items-center justify-center`}>
+                  <Icon className="w-4 h-4 text-gray-700" />
                 </div>
-                <div className={`text-xs px-2 py-1 ${card.changeBg} ${card.changeColor} rounded-lg font-medium`}>
+                <div className={`text-xs px-1.5 py-0.5 ${card.changeBg} ${card.changeColor} rounded font-medium`}>
                   {card.change}
                 </div>
               </div>
-              <div className="text-sm text-gray-600 mb-1">{card.label}</div>
-              <div className="text-lg font-medium text-gray-900">{card.value}</div>
+              <div className="text-xs text-gray-600 mb-1">{card.label}</div>
+              <div className="text-base font-semibold text-gray-900">{card.value}</div>
             </Card>
           )
         })}

@@ -330,21 +330,21 @@ function PrintManagement() {
       </div>
 
       {/* 统计卡片 */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {statCards.map((card, index) => {
           const Icon = card.icon
           return (
-            <Card key={index} className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <div className={`w-12 h-12 ${card.bgColor} rounded-lg flex items-center justify-center`}>
-                  <Icon className={`w-6 h-6 ${card.iconColor}`} />
+            <Card key={index} className="p-4">
+              <div className="flex items-center justify-between mb-2">
+                <div className={`w-9 h-9 ${card.bgColor} rounded-lg flex items-center justify-center`}>
+                  <Icon className={`w-4 h-4 ${card.iconColor}`} />
                 </div>
-                <div className="text-sm text-success-500 font-medium">
+                <div className="text-xs text-success-500 font-medium">
                   {card.change}
                 </div>
               </div>
-              <div className="text-sm text-gray-600 mb-1">{card.label}</div>
-              <div className="text-2xl font-semibold text-gray-900">{card.value}</div>
+              <div className="text-xs text-gray-600 mb-1">{card.label}</div>
+              <div className="text-lg font-semibold text-gray-900">{card.value}</div>
             </Card>
           )
         })}
