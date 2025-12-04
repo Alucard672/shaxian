@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>纱线进销存系统</title>
+    <script>
+      // GitHub Pages SPA 路由修复
+      // 将所有 404 请求重定向到 index.html，保留路径信息
+      (function() {
+        var pathSegmentsToKeep = 1; // 保留 /shaxian/ 路径段
+        var l = window.location;
+        var path = l.pathname;
+        
+        // 提取路径中 /shaxian/ 之后的部分
+        var match = path.match(/^\/shaxian\/(.*)$/);
+        var subPath = match ? match[1] : '';
+        
+        // 构建重定向 URL
+        var redirectUrl = '/shaxian/';
+        if (subPath) {
+          // 使用查询参数传递路径信息，React Router 会处理
+          redirectUrl += '?/' + subPath.replace(/&/g, '~and~');
+        }
+        
+        // 添加查询参数和哈希
+        if (l.search) {
+          redirectUrl += (subPath ? '&' : '?') + l.search.slice(1).replace(/&/g, '~and~');
+        }
+        if (l.hash) {
+          redirectUrl += l.hash;
+        }
+        
+        // 重定向
+        l.replace(l.protocol + '//' + l.hostname + (l.port ? ':' + l.port : '') + redirectUrl);
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <p>正在重定向...</p>
+  </body>
+</html>
+
