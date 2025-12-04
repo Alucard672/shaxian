@@ -26,6 +26,7 @@ import FundReport from '../pages/report/FundReport'
 import ProductManagement from '../pages/product/ProductManagement'
 import SettingsManagement from '../pages/settings/SettingsManagement'
 import SystemParamsSettings from '../pages/settings/SystemParamsSettings'
+import TutorialManagement from '../pages/settings/TutorialManagement'
 
 function AppRoutes() {
   return (
@@ -85,6 +86,7 @@ function AppRoutes() {
             {/* 系统设置 */}
             <Route path="/settings" element={<SettingsManagement />} />
             <Route path="/settings/params" element={<SystemParamsSettings />} />
+            <Route path="/settings/tutorial" element={<TutorialManagement />} />
     </Routes>
   )
 }

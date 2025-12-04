@@ -8,6 +8,7 @@ import {
   Shield,
   Search,
   Info,
+  BookOpen,
 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 
@@ -17,6 +18,18 @@ function SettingsManagement() {
 
   // 设置卡片配置
   const settingCards = [
+    {
+      id: 'tutorial',
+      title: '使用教程',
+      description: '查看各功能模块的详细操作步骤和流程说明',
+      icon: BookOpen,
+      iconBg: 'bg-gradient-to-br from-cyan-100 to-cyan-200',
+      iconColor: '#06B6D4',
+      features: [
+        '• 按模块分类查看教程',
+        '• 详细的操作步骤说明',
+      ],
+    },
     {
       id: 'params',
       title: '参数设置',
@@ -112,6 +125,8 @@ function SettingsManagement() {
               onClick={() => {
                 if (card.id === 'params') {
                   navigate('/settings/params')
+                } else if (card.id === 'tutorial') {
+                  navigate('/settings/tutorial')
                 }
               }}
             >
