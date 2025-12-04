@@ -155,10 +155,12 @@ function ReportManagement() {
                   <div className="text-lg font-semibold text-gray-900">{card.value}</div>
                 </div>
                 <div className="flex flex-col items-end gap-1.5">
-                  <div className={`px-1.5 py-0.5 ${changeBgColor} ${card.changeColor} text-xs font-medium rounded flex items-center gap-1`}>
-                    <TrendingUp className="w-3 h-3" />
-                    {card.change}
-                  </div>
+                  {card.change && (
+                    <div className={`px-1.5 py-0.5 ${changeBgColor} ${card.changeColor} text-xs font-medium rounded flex items-center gap-1`}>
+                      <TrendingUp className="w-3 h-3" />
+                      {card.change}
+                    </div>
+                  )}
                   <div className={`w-9 h-9 ${card.iconBg} rounded-lg flex items-center justify-center`}>
                     <Icon className="w-4 h-4 text-gray-700" />
                   </div>
