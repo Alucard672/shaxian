@@ -103,6 +103,18 @@ function SettingsManagement() {
         '• 快速查找数据',
       ],
     },
+    {
+      id: 'clear-data',
+      title: '清空数据',
+      description: '清空系统中的测试数据，用于重新开始测试',
+      icon: Trash2,
+      iconBg: 'bg-gradient-to-br from-red-100 to-red-200',
+      iconColor: '#DC2626',
+      features: [
+        '• 清空所有业务数据',
+        '• 按模块清空数据',
+      ],
+    },
   ]
 
   return (
