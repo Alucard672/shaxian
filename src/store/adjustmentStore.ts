@@ -38,20 +38,17 @@ const generateOrderNumber = (existingNumbers: string[]): string => {
   return orderNumber
 }
 
-const loadFromStorage = (key: string, initData: any) => {
+// 从localStorage加载数据，不再自动初始化硬编码数据
+const loadFromStorage = (key: string, defaultValue: any) => {
   try {
-    const stored = localStorage.getItem(key)
-    const initialized = localStorage.getItem(`${key}_initialized`)
-    
-    if (stored && initialized === 'true') {
-      return JSON.parse(stored)
+    const item = localStorage.getItem(key)
+    if (item) {
+      return JSON.parse(item)
     }
-    
-    localStorage.setItem(key, JSON.stringify(initData))
-    localStorage.setItem(`${key}_initialized`, 'true')
-    return initData
+    // 如果没有数据，返回默认值（空数组），不自动写入
+    return defaultValue
   } catch {
-    return initData
+    return defaultValue
   }
 }
 
