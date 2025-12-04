@@ -41,7 +41,10 @@ function Sidebar() {
   const { addTab, setActiveTab } = useTabStore()
 
   // 处理菜单项点击
-  const handleMenuClick = (path: string) => {
+  const handleMenuClick = (path: string, e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault()
+    }
     const title = getRouteTitle(path)
     addTab({
       key: path,
