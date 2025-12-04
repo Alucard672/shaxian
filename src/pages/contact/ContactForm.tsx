@@ -135,25 +135,45 @@ function ContactForm() {
   return (
     <div className="space-y-6">
       {/* 页面标题 */}
-      <div className="flex items-center gap-4">
-        <button
-          onClick={() => navigate('/customer')}
-          className="p-2 hover:bg-gray-100 rounded-xl transition-colors"
-        >
-          <ArrowLeft className="w-5 h-5 text-gray-600" />
-        </button>
-        <div>
-          <h1 className="text-2xl font-semibold text-gray-900">
-            {isEditMode ? '编辑' : '新增'}{isCustomer ? '客户' : '供应商'}
-          </h1>
-          <p className="text-gray-600 mt-1">
-            {isEditMode ? '修改' : '添加'}{isCustomer ? '客户' : '供应商'}基本信息
-          </p>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <button
+            onClick={() => navigate('/customer')}
+            className="p-2 hover:bg-gray-100 rounded-xl transition-colors"
+          >
+            <ArrowLeft className="w-5 h-5 text-gray-600" />
+          </button>
+          <div>
+            <h1 className="text-2xl font-semibold text-gray-900">
+              {isEditMode ? '编辑' : '新增'}{isCustomer ? '客户' : '供应商'}
+            </h1>
+            <p className="text-gray-600 mt-1">
+              {isEditMode ? '修改' : '添加'}{isCustomer ? '客户' : '供应商'}基本信息
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-3">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => navigate('/customer')}
+            className="px-6 py-2"
+          >
+            取消
+          </Button>
+          <Button
+            type="submit"
+            form="contact-form"
+            className="px-6 py-2"
+          >
+            <Save className="w-4 h-4 mr-2" />
+            保存
+          </Button>
         </div>
       </div>
 
       {/* 表单 */}
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+      <form id="contact-form" onSubmit={handleSubmit(onSubmit)} className="space-y-6">
         <div className="bg-white rounded-2xl p-6 border border-gray-200 space-y-6">
           <h2 className="text-lg font-semibold text-gray-900">基本信息</h2>
           
@@ -302,24 +322,6 @@ function ContactForm() {
           />
         </div>
 
-        {/* 操作按钮 */}
-        <div className="flex items-center justify-end gap-4">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => navigate('/customer')}
-            className="px-6 py-2"
-          >
-            取消
-          </Button>
-          <Button
-            type="submit"
-            className="px-6 py-2"
-          >
-            <Save className="w-4 h-4 mr-2" />
-            保存
-          </Button>
-        </div>
       </form>
     </div>
   )

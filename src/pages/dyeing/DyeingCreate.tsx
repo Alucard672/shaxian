@@ -553,22 +553,6 @@ function DyeingCreate() {
           </div>
         </div>
 
-        {/* Footer */}
-        <div className="border-t border-gray-200 px-6 py-4 flex justify-end gap-3">
-          <Button
-            variant="outline"
-            onClick={() => navigate('/dyeing')}
-            className="h-9 border-gray-300 rounded-xl"
-          >
-            取消
-          </Button>
-          <Button
-            onClick={handleSubmit}
-            className="h-9 rounded-xl bg-blue-600 hover:bg-blue-700"
-          >
-            {isEditMode ? '保存修改' : '创建加工单'}
-          </Button>
-        </div>
       </div>
     </div>
   )

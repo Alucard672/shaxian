@@ -198,12 +198,37 @@ function InventoryCheckCreate() {
               创建盘点计划并生成盘点明细
             </p>
           </div>
-          <button
-            onClick={() => navigate('/inventory/check')}
-            className="w-9 h-9 flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-xl transition-colors"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-3">
+            <Button
+              variant="outline"
+              onClick={() => setShowPreview(true)}
+              disabled={items.length === 0}
+              className="h-9 border-gray-300 rounded-lg"
+            >
+              <Eye className="w-4 h-4 mr-2" />
+              预览
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => navigate('/inventory/check')}
+              className="h-9 border-gray-300 rounded-lg"
+            >
+              取消
+            </Button>
+            <Button
+              onClick={handleSubmit}
+              className="h-9 rounded-lg bg-primary-600 hover:bg-primary-700"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              {isEditMode ? '保存修改' : '创建盘点计划'}
+            </Button>
+            <button
+              onClick={() => navigate('/inventory/check')}
+              className="w-9 h-9 flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-xl transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         {/* Form Content */}
@@ -366,34 +391,6 @@ function InventoryCheckCreate() {
           </div>
         </div>
 
-        {/* 底部按钮 */}
-        <div className="border-t border-gray-200 px-6 py-4 flex justify-between bg-gray-50">
-          <Button
-            variant="outline"
-            onClick={() => setShowPreview(true)}
-            disabled={items.length === 0}
-            className="h-9 border-gray-300 rounded-lg"
-          >
-            <Eye className="w-4 h-4 mr-2" />
-            预览
-          </Button>
-          <div className="flex gap-3">
-            <Button
-              variant="outline"
-              onClick={() => navigate('/inventory/check')}
-              className="h-9 border-gray-300 rounded-lg"
-            >
-              取消
-            </Button>
-            <Button
-              onClick={handleSubmit}
-              className="h-9 rounded-lg bg-primary-600 hover:bg-primary-700"
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              {isEditMode ? '保存修改' : '创建盘点计划'}
-            </Button>
-          </div>
-        </div>
       </div>
 
       {/* 预览模态窗口 */}

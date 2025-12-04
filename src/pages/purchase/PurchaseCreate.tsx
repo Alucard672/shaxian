@@ -297,12 +297,35 @@ function PurchaseCreate() {
               {isEditMode ? '修改进货单信息' : '填写进货单信息，选择供应商和商品'}
             </p>
           </div>
-          <button
-            onClick={handleCancel}
-            className="w-9 h-9 flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-xl transition-colors"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-3">
+            <Button
+              variant="outline"
+              onClick={handleCancel}
+              className="h-9 border-gray-300 rounded-lg"
+            >
+              取消
+            </Button>
+            <Button
+              variant="outline"
+              onClick={handleSaveDraft}
+              className="h-9 border-gray-300 rounded-lg"
+            >
+              保存草稿
+            </Button>
+            <Button
+              onClick={handleSaveAndSubmit}
+              className="h-9 bg-blue-600 hover:bg-blue-700 text-white rounded-lg"
+            >
+              <Package className="w-4 h-4 mr-2" />
+              保存并入库
+            </Button>
+            <button
+              onClick={handleCancel}
+              className="w-9 h-9 flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-xl transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         {/* 内容区域 */}
@@ -547,30 +570,6 @@ function PurchaseCreate() {
           )}
         </div>
 
-        {/* 底部按钮 */}
-        <div className="border-t border-gray-200 px-6 py-4 flex justify-end gap-3">
-          <Button
-            variant="outline"
-            onClick={handleCancel}
-            className="h-9 border-gray-300 rounded-lg"
-          >
-            取消
-          </Button>
-          <Button
-            variant="outline"
-            onClick={handleSaveDraft}
-            className="h-9 border-gray-300 rounded-lg"
-          >
-            保存草稿
-          </Button>
-          <Button
-            onClick={handleSaveAndSubmit}
-            className="h-9 bg-blue-600 hover:bg-blue-700 text-white rounded-lg"
-          >
-            <Package className="w-4 h-4 mr-2" />
-            保存并入库
-          </Button>
-        </div>
       </div>
     </div>
   )

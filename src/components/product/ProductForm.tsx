@@ -66,7 +66,7 @@ function ProductForm({ initialData, onSubmit, onCancel }: ProductFormProps) {
   }
 
   return (
-    <form onSubmit={handleSubmit(onFormSubmit)} className="space-y-6">
+    <form id="product-form" onSubmit={handleSubmit(onFormSubmit)} className="space-y-6">
       <div className="space-y-6">
         {/* 商品基础信息区域 */}
         <div className="bg-blue-50 border border-blue-200 rounded-2xl p-5">
@@ -283,24 +283,6 @@ function ProductForm({ initialData, onSubmit, onCancel }: ProductFormProps) {
         </div>
       </div>
 
-      {/* 底部操作按钮 */}
-      <div className="flex justify-end gap-3 pt-6 border-t border-gray-200">
-        <Button
-          type="button"
-          variant="outline"
-          onClick={onCancel}
-          className="border-gray-300"
-        >
-          取消
-        </Button>
-        <Button
-          type="submit"
-          className="bg-blue-600 hover:bg-blue-700 text-white"
-        >
-          <Check className="w-4 h-4 mr-2" />
-          保存商品
-        </Button>
-      </div>
     </form>
   )
 }

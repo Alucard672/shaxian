@@ -293,12 +293,36 @@ function AdjustmentCreate() {
             </h2>
             <p className="text-sm text-gray-600 mt-1">填写调整信息并添加调整明细</p>
           </div>
-          <button
-            onClick={() => navigate('/inventory/adjustment')}
-            className="w-9 h-9 flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-xl transition-colors"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-3">
+            <Button
+              variant="outline"
+              onClick={() => navigate('/inventory/adjustment')}
+              className="h-9 border-gray-300 rounded-lg"
+            >
+              取消
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => handleSubmit('草稿')}
+              className="h-9 border-gray-300 rounded-lg"
+            >
+              <FileText className="w-4 h-4 mr-2" />
+              保存草稿
+            </Button>
+            <Button
+              onClick={() => handleSubmit('已完成')}
+              className="h-9 rounded-lg bg-primary-600 hover:bg-primary-700"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              提交完成
+            </Button>
+            <button
+              onClick={() => navigate('/inventory/adjustment')}
+              className="w-9 h-9 flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-xl transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         {/* Form Content */}
@@ -547,33 +571,6 @@ function AdjustmentCreate() {
           </div>
         </div>
 
-        {/* 底部按钮 */}
-        <div className="border-t border-gray-200 px-6 py-4 flex justify-between items-center bg-gray-50">
-          <Button
-            variant="outline"
-            onClick={() => navigate('/inventory/adjustment')}
-            className="h-9 border-gray-300 rounded-lg"
-          >
-            取消
-          </Button>
-          <div className="flex gap-3">
-            <Button
-              variant="outline"
-              onClick={() => handleSubmit('草稿')}
-              className="h-9 border-gray-300 rounded-lg"
-            >
-              <FileText className="w-4 h-4 mr-2" />
-              保存草稿
-            </Button>
-            <Button
-              onClick={() => handleSubmit('已完成')}
-              className="h-9 rounded-lg bg-primary-600 hover:bg-primary-700"
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              提交完成
-            </Button>
-          </div>
-        </div>
       </div>
     </div>
   )

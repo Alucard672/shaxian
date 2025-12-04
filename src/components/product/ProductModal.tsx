@@ -1,5 +1,5 @@
 import { ReactNode } from 'react'
-import { X } from 'lucide-react'
+import { X, Check } from 'lucide-react'
 import { cn } from '@/utils/cn'
 import Button from '../ui/Button'
 
@@ -39,12 +39,30 @@ function ProductModal({
             <h2 className="text-xl font-semibold text-gray-900 mb-1">{title}</h2>
             <p className="text-sm text-gray-600">填写商品基础信息，可选添加色号和缸号</p>
           </div>
-          <button
-            onClick={onClose}
-            className="w-9 h-9 flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-xl transition-colors"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-3">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onClose}
+              className="h-9 border-gray-300 rounded-lg"
+            >
+              取消
+            </Button>
+            <Button
+              type="submit"
+              form="product-form"
+              className="h-9 bg-blue-600 hover:bg-blue-700 text-white rounded-lg"
+            >
+              <Check className="w-4 h-4 mr-2" />
+              保存商品
+            </Button>
+            <button
+              onClick={onClose}
+              className="w-9 h-9 flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-xl transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
         
         {/* 内容区域 */}
