@@ -140,10 +140,8 @@ function InventoryCheckCreate() {
       alert('请选择计划日期')
       return
     }
-    if (items.length === 0) {
-      alert('请先生成盘点明细')
-      return
-    }
+    // 允许没有明细的盘点单，可以后续手动添加或用于"往多里盘"
+    // 即使没有库存也可以创建盘点单
 
     // 获取库存明细以获取完整信息
     const inventoryDetails = getInventoryDetails()
@@ -155,6 +153,10 @@ function InventoryCheckCreate() {
       items: items.map((item) => {
         const inventoryItem = inventoryDetails.find((detail) => detail.batch.id === item.batchId)
         
+        // 如果没有找到库存项（手动添加的明细或新商品），使用默认值
+        // 系统库存为0时，允许实际盘点数量大于0（往多里盘）
+        const systemQty = inventoryItem?.batch.stockQuantity ?? item.systemQuantity ?? 0
+        
         return {
           batchId: item.batchId,
           batchCode: item.batchCode,
@@ -163,8 +165,8 @@ function InventoryCheckCreate() {
           colorId: inventoryItem?.colorId || '',
           colorName: item.colorName,
           colorCode: inventoryItem?.colorCode || '',
-          systemQuantity: item.systemQuantity,
-          actualQuantity: item.actualQuantity || item.systemQuantity,
+          systemQuantity: systemQty, // 系统库存，如果没有则为0
+          actualQuantity: item.actualQuantity ?? systemQty, // 实际盘点数量，允许大于系统库存（往多里盘）
           unit: item.unit,
         }
       }),
