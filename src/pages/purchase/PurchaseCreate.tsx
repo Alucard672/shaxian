@@ -191,7 +191,7 @@ function PurchaseCreate() {
       updateOrder(existingOrder.id, orderData)
     } else {
       // 新建模式或复制模式：创建新订单
-      addOrder(orderData, '草稿')
+      await addOrder(orderData, '草稿')
     }
     navigate('/purchase')
   }

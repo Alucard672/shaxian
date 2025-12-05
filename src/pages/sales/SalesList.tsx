@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useSalesStore } from '@/store/salesStore'
 import { SalesOrder, SalesOrderStatus } from '@/types/sales'

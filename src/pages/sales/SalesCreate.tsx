@@ -218,14 +218,18 @@ function SalesCreate() {
       items: items.map(({ amount, ...item }) => item),
     }
 
-    if (isEditMode && existingOrder) {
-      // 编辑模式：更新订单
-      updateOrder(existingOrder.id, orderData)
-    } else {
-      // 新建模式或复制模式：创建订单
-      addOrder(orderData)
+    try {
+      if (isEditMode && existingOrder) {
+        // 编辑模式：更新订单
+        await updateOrder(existingOrder.id, orderData)
+      } else {
+        // 新建模式或复制模式：创建订单
+        await addOrder(orderData)
+      }
+      navigate('/sales')
+    } catch (error: any) {
+      alert('保存失败: ' + (error.message || '未知错误'))
     }
-    navigate('/sales')
   }
 
   // 取消
