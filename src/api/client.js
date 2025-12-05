@@ -73,8 +73,12 @@ export const productApi = {
   delete: (id) => api.delete(`/products/${id}`),
   getColors: (productId) => api.get(`/products/${productId}/colors`),
   createColor: (productId, data) => api.post(`/products/${productId}/colors`, data),
+  updateColor: (id, data) => api.put(`/products/colors/${id}`, data),
+  deleteColor: (id) => api.delete(`/products/colors/${id}`),
   getBatches: (colorId) => api.get(`/products/colors/${colorId}/batches`),
   createBatch: (colorId, data) => api.post(`/products/colors/${colorId}/batches`, data),
+  updateBatch: (id, data) => api.put(`/products/batches/${id}`, data),
+  deleteBatch: (id) => api.delete(`/products/batches/${id}`),
 };
 
 /**

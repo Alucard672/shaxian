@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useProductStore } from '@/store/productStore'
 import { useSettingsStore } from '@/store/settingsStore'
 import { Product } from '@/types/product'
@@ -21,11 +21,19 @@ function ProductManagement() {
     products,
     colors,
     batches,
+    loading,
+    error,
+    loadAll,
     addProduct,
     updateProduct,
     deleteProduct,
     getColorsByProduct,
   } = useProductStore()
+  
+  // 加载数据
+  useEffect(() => {
+    loadAll()
+  }, [loadAll])
   const { systemParams } = useSettingsStore()
 
   const [isProductModalOpen, setIsProductModalOpen] = useState(false)
@@ -102,9 +110,13 @@ function ProductManagement() {
     setIsProductModalOpen(true)
   }
 
-  const handleDeleteProduct = (id: string) => {
+  const handleDeleteProduct = async (id: string) => {
     if (confirm('确定要删除这个商品吗？删除后相关的色号和缸号也会被删除。')) {
-      deleteProduct(id)
+      try {
+        await deleteProduct(id)
+      } catch (error: any) {
+        alert('删除失败: ' + (error.message || '未知错误'))
+      }
     }
   }
 
@@ -128,16 +140,20 @@ function ProductManagement() {
     setIsProductModalOpen(true)
   }
 
-  const handleProductSubmit = (data: ProductFormData) => {
-    if (editingProduct && editingProduct.id) {
-      // 编辑模式：更新商品
-      updateProduct(editingProduct.id, data)
-    } else {
-      // 新建模式或复制模式：创建新商品
-      addProduct(data)
+  const handleProductSubmit = async (data: ProductFormData) => {
+    try {
+      if (editingProduct && editingProduct.id) {
+        // 编辑模式：更新商品
+        await updateProduct(editingProduct.id, data)
+      } else {
+        // 新建模式或复制模式：创建新商品
+        await addProduct(data)
+      }
+      setIsProductModalOpen(false)
+      setEditingProduct(null)
+    } catch (error: any) {
+      alert('保存失败: ' + (error.message || '未知错误'))
     }
-    setIsProductModalOpen(false)
-    setEditingProduct(null)
   }
 
   // 表格列定义

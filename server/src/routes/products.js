@@ -121,6 +121,42 @@ router.post('/:id/colors', async (req, res, next) => {
   }
 });
 
+// 更新色号
+router.put('/colors/:id', async (req, res, next) => {
+  try {
+    const { code, name, colorValue, description, status } = req.body;
+
+    await query(
+      `UPDATE colors SET code = ?, name = ?, color_value = ?, description = ?, status = ? WHERE id = ?`,
+      [code, name, colorValue || null, description || null, status, req.params.id]
+    );
+
+    const [color] = await query('SELECT * FROM colors WHERE id = ?', [req.params.id]);
+    if (!color) {
+      return res.status(404).json({ error: 'Color not found' });
+    }
+    res.json(color);
+  } catch (error) {
+    if (error.code === 'ER_DUP_ENTRY') {
+      return res.status(400).json({ error: 'Color code already exists' });
+    }
+    next(error);
+  }
+});
+
+// 删除色号
+router.delete('/colors/:id', async (req, res, next) => {
+  try {
+    const result = await query('DELETE FROM colors WHERE id = ?', [req.params.id]);
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: 'Color not found' });
+    }
+    res.status(204).send();
+  } catch (error) {
+    next(error);
+  }
+});
+
 // 获取色号的缸号
 router.get('/colors/:colorId/batches', async (req, res, next) => {
   try {
@@ -153,6 +189,49 @@ router.post('/colors/:colorId/batches', async (req, res, next) => {
 
     const [batch] = await query('SELECT * FROM batches WHERE id = ?', [id]);
     res.status(201).json(batch);
+  } catch (error) {
+    next(error);
+  }
+});
+
+// 更新缸号
+router.put('/batches/:id', async (req, res, next) => {
+  try {
+    const {
+      code, productionDate, supplierId, supplierName, purchasePrice,
+      initialQuantity, stockQuantity, stockLocation, remark
+    } = req.body;
+
+    await query(
+      `UPDATE batches SET code = ?, production_date = ?, supplier_id = ?, supplier_name = ?, purchase_price = ?, initial_quantity = ?, stock_quantity = ?, stock_location = ?, remark = ? WHERE id = ?`,
+      [
+        code, productionDate || null, supplierId || null, supplierName || null,
+        purchasePrice || null, initialQuantity, stockQuantity, stockLocation || null,
+        remark || null, req.params.id
+      ]
+    );
+
+    const [batch] = await query('SELECT * FROM batches WHERE id = ?', [req.params.id]);
+    if (!batch) {
+      return res.status(404).json({ error: 'Batch not found' });
+    }
+    res.json(batch);
+  } catch (error) {
+    if (error.code === 'ER_DUP_ENTRY') {
+      return res.status(400).json({ error: 'Batch code already exists' });
+    }
+    next(error);
+  }
+});
+
+// 删除缸号
+router.delete('/batches/:id', async (req, res, next) => {
+  try {
+    const result = await query('DELETE FROM batches WHERE id = ?', [req.params.id]);
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: 'Batch not found' });
+    }
+    res.status(204).send();
   } catch (error) {
     next(error);
   }

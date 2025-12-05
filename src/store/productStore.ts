@@ -1,107 +1,152 @@
 import { create } from 'zustand'
 import { Product, Color, Batch, ProductFormData, ColorFormData, BatchFormData } from '@/types/product'
-// 移除硬编码数据，使用空数组作为初始值
+import { productApi } from '@/api/client'
 
 interface ProductState {
   products: Product[]
   colors: Color[]
   batches: Batch[]
+  loading: boolean
+  error: string | null
+  
+  // 数据加载
+  loadProducts: () => Promise<void>
+  loadColors: () => Promise<void>
+  loadBatches: () => Promise<void>
+  loadAll: () => Promise<void>
   
   // 商品操作
-  addProduct: (data: ProductFormData) => Product
-  updateProduct: (id: string, data: Partial<ProductFormData>) => void
-  deleteProduct: (id: string) => void
+  addProduct: (data: ProductFormData) => Promise<Product>
+  updateProduct: (id: string, data: Partial<ProductFormData>) => Promise<void>
+  deleteProduct: (id: string) => Promise<void>
   getProduct: (id: string) => Product | undefined
   
   // 色号操作
-  addColor: (productId: string, data: ColorFormData) => Color
-  updateColor: (id: string, data: Partial<ColorFormData>) => void
-  deleteColor: (id: string) => void
+  addColor: (productId: string, data: ColorFormData) => Promise<Color>
+  updateColor: (id: string, data: Partial<ColorFormData>) => Promise<void>
+  deleteColor: (id: string) => Promise<void>
   getColorsByProduct: (productId: string) => Color[]
+  loadColorsByProduct: (productId: string) => Promise<void>
   
   // 缸号操作
-  addBatch: (colorId: string, data: BatchFormData) => Batch
-  updateBatch: (id: string, data: Partial<BatchFormData>) => void
-  deleteBatch: (id: string) => void
+  addBatch: (colorId: string, data: BatchFormData) => Promise<Batch>
+  updateBatch: (id: string, data: Partial<BatchFormData>) => Promise<void>
+  deleteBatch: (id: string) => Promise<void>
   getBatchesByColor: (colorId: string) => Batch[]
-  updateBatchStock: (id: string, quantity: number) => void
-}
-
-// 生成唯一ID
-const generateId = () => Date.now().toString(36) + Math.random().toString(36).substr(2)
-
-// 从localStorage加载数据，不再自动初始化硬编码数据
-const loadFromStorage = (key: string, defaultValue: any) => {
-  try {
-    const item = localStorage.getItem(key)
-    if (item) {
-      return JSON.parse(item)
-    }
-    // 如果没有数据，返回默认值（空数组），不自动写入
-    return defaultValue
-  } catch {
-    return defaultValue
-  }
-}
-
-// 保存到localStorage
-const saveToStorage = (key: string, value: any) => {
-  try {
-    localStorage.setItem(key, JSON.stringify(value))
-  } catch (error) {
-    console.error('Failed to save to localStorage:', error)
-  }
+  loadBatchesByColor: (colorId: string) => Promise<void>
+  updateBatchStock: (id: string, quantity: number) => Promise<void>
 }
 
 export const useProductStore = create<ProductState>((set, get) => ({
-  products: loadFromStorage('products', []),
-  colors: loadFromStorage('colors', []),
-  batches: loadFromStorage('batches', []),
+  products: [],
+  colors: [],
+  batches: [],
+  loading: false,
+  error: null,
+
+  // 加载所有商品
+  loadProducts: async () => {
+    set({ loading: true, error: null })
+    try {
+      const products = await productApi.getAll()
+      set({ products, loading: false })
+    } catch (error: any) {
+      set({ error: error.message || 'Failed to load products', loading: false })
+      console.error('Failed to load products:', error)
+    }
+  },
+
+  // 加载所有色号
+  loadColors: async () => {
+    try {
+      // 色号需要从每个商品加载，或者后端提供批量接口
+      // 暂时通过商品接口获取
+      const products = get().products
+      const allColors: Color[] = []
+      for (const product of products) {
+        try {
+          const colors = await productApi.getColors(product.id)
+          allColors.push(...colors)
+        } catch (error) {
+          console.error(`Failed to load colors for product ${product.id}:`, error)
+        }
+      }
+      set({ colors: allColors })
+    } catch (error: any) {
+      console.error('Failed to load colors:', error)
+    }
+  },
+
+  // 加载所有缸号
+  loadBatches: async () => {
+    try {
+      const colors = get().colors
+      const allBatches: Batch[] = []
+      for (const color of colors) {
+        try {
+          const batches = await productApi.getBatches(color.id)
+          allBatches.push(...batches)
+        } catch (error) {
+          console.error(`Failed to load batches for color ${color.id}:`, error)
+        }
+      }
+      set({ batches: allBatches })
+    } catch (error: any) {
+      console.error('Failed to load batches:', error)
+    }
+  },
+
+  // 加载所有数据
+  loadAll: async () => {
+    await get().loadProducts()
+    await get().loadColors()
+    await get().loadBatches()
+  },
 
   // 商品操作
-  addProduct: (data) => {
-    const newProduct: Product = {
-      id: generateId(),
-      ...data,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+  addProduct: async (data) => {
+    try {
+      const newProduct = await productApi.create(data)
+      set((state) => ({
+        products: [...state.products, newProduct]
+      }))
+      return newProduct
+    } catch (error: any) {
+      console.error('Failed to add product:', error)
+      throw error
     }
-    set((state) => {
-      const products = [...state.products, newProduct]
-      saveToStorage('products', products)
-      return { products }
-    })
-    return newProduct
   },
 
-  updateProduct: (id, data) => {
-    set((state) => {
-      const products = state.products.map((p) =>
-        p.id === id
-          ? { ...p, ...data, updatedAt: new Date().toISOString() }
-          : p
-      )
-      saveToStorage('products', products)
-      return { products }
-    })
+  updateProduct: async (id, data) => {
+    try {
+      const updated = await productApi.update(id, data)
+      set((state) => ({
+        products: state.products.map((p) => p.id === id ? updated : p)
+      }))
+    } catch (error: any) {
+      console.error('Failed to update product:', error)
+      throw error
+    }
   },
 
-  deleteProduct: (id) => {
-    set((state) => {
-      // 删除商品时，同时删除关联的色号和缸号
-      const productColors = state.colors.filter((c) => c.productId === id)
-      const colorIds = productColors.map((c) => c.id)
-      
-      const products = state.products.filter((p) => p.id !== id)
-      const colors = state.colors.filter((c) => c.productId !== id)
-      const batches = state.batches.filter((b) => !colorIds.includes(b.colorId))
-      
-      saveToStorage('products', products)
-      saveToStorage('colors', colors)
-      saveToStorage('batches', batches)
-      
-      return { products, colors, batches }
-    })
+  deleteProduct: async (id) => {
+    try {
+      await productApi.delete(id)
+      set((state) => {
+        // 删除商品时，同时删除关联的色号和缸号
+        const productColors = state.colors.filter((c) => c.productId === id)
+        const colorIds = productColors.map((c) => c.id)
+        
+        return {
+          products: state.products.filter((p) => p.id !== id),
+          colors: state.colors.filter((c) => c.productId !== id),
+          batches: state.batches.filter((b) => !colorIds.includes(b.colorId))
+        }
+      })
+    } catch (error: any) {
+      console.error('Failed to delete product:', error)
+      throw error
+    }
   },
 
   getProduct: (id) => {
@@ -109,98 +154,141 @@ export const useProductStore = create<ProductState>((set, get) => ({
   },
 
   // 色号操作
-  addColor: (productId, data) => {
-    const newColor: Color = {
-      id: generateId(),
-      productId,
-      ...data,
+  addColor: async (productId, data) => {
+    try {
+      const newColor = await productApi.createColor(productId, data)
+      set((state) => ({
+        colors: [...state.colors, newColor]
+      }))
+      return newColor
+    } catch (error: any) {
+      console.error('Failed to add color:', error)
+      throw error
     }
-    set((state) => {
-      const colors = [...state.colors, newColor]
-      saveToStorage('colors', colors)
-      return { colors }
-    })
-    return newColor
   },
 
-  updateColor: (id, data) => {
-    set((state) => {
-      const colors = state.colors.map((c) =>
-        c.id === id ? { ...c, ...data } : c
-      )
-      saveToStorage('colors', colors)
-      return { colors }
-    })
+  updateColor: async (id, data) => {
+    try {
+      const updated = await productApi.updateColor(id, data)
+      set((state) => ({
+        colors: state.colors.map((c) => c.id === id ? updated : c)
+      }))
+    } catch (error: any) {
+      console.error('Failed to update color:', error)
+      throw error
+    }
   },
 
-  deleteColor: (id) => {
-    set((state) => {
-      // 删除色号时，同时删除关联的缸号
-      const colors = state.colors.filter((c) => c.id !== id)
-      const batches = state.batches.filter((b) => b.colorId !== id)
-      
-      saveToStorage('colors', colors)
-      saveToStorage('batches', batches)
-      
-      return { colors, batches }
-    })
+  deleteColor: async (id) => {
+    try {
+      await productApi.deleteColor(id)
+      set((state) => {
+        // 删除色号时，同时删除关联的缸号
+        return {
+          colors: state.colors.filter((c) => c.id !== id),
+          batches: state.batches.filter((b) => b.colorId !== id)
+        }
+      })
+    } catch (error: any) {
+      console.error('Failed to delete color:', error)
+      throw error
+    }
   },
 
   getColorsByProduct: (productId) => {
     return get().colors.filter((c) => c.productId === productId)
   },
 
-  // 缸号操作
-  addBatch: (colorId, data) => {
-    const newBatch: Batch = {
-      id: generateId(),
-      colorId,
-      stockQuantity: data.initialQuantity,
-      ...data,
+  loadColorsByProduct: async (productId) => {
+    try {
+      const colors = await productApi.getColors(productId)
+      set((state) => {
+        // 合并新加载的色号，避免重复
+        const existingIds = new Set(state.colors.map(c => c.id))
+        const newColors = colors.filter(c => !existingIds.has(c.id))
+        return {
+          colors: [...state.colors, ...newColors]
+        }
+      })
+    } catch (error: any) {
+      console.error('Failed to load colors by product:', error)
+      throw error
     }
-    set((state) => {
-      const batches = [...state.batches, newBatch]
-      saveToStorage('batches', batches)
-      return { batches }
-    })
-    return newBatch
   },
 
-  updateBatch: (id, data) => {
-    set((state) => {
-      const batches = state.batches.map((b) =>
-        b.id === id ? { ...b, ...data } : b
-      )
-      saveToStorage('batches', batches)
-      return { batches }
-    })
+  // 缸号操作
+  addBatch: async (colorId, data) => {
+    try {
+      const newBatch = await productApi.createBatch(colorId, data)
+      set((state) => ({
+        batches: [...state.batches, newBatch]
+      }))
+      return newBatch
+    } catch (error: any) {
+      console.error('Failed to add batch:', error)
+      throw error
+    }
   },
 
-  deleteBatch: (id) => {
-    set((state) => {
-      const batches = state.batches.filter((b) => b.id !== id)
-      saveToStorage('batches', batches)
-      return { batches }
-    })
+  updateBatch: async (id, data) => {
+    try {
+      const updated = await productApi.updateBatch(id, data)
+      set((state) => ({
+        batches: state.batches.map((b) => b.id === id ? updated : b)
+      }))
+    } catch (error: any) {
+      console.error('Failed to update batch:', error)
+      throw error
+    }
+  },
+
+  deleteBatch: async (id) => {
+    try {
+      await productApi.deleteBatch(id)
+      set((state) => ({
+        batches: state.batches.filter((b) => b.id !== id)
+      }))
+    } catch (error: any) {
+      console.error('Failed to delete batch:', error)
+      throw error
+    }
   },
 
   getBatchesByColor: (colorId) => {
     return get().batches.filter((b) => b.colorId === colorId)
   },
 
-  updateBatchStock: (id, quantity) => {
-    set((state) => {
-      const batches = state.batches.map((b) =>
-        b.id === id ? { ...b, stockQuantity: quantity } : b
-      )
-      saveToStorage('batches', batches)
-      return { batches }
-    })
+  loadBatchesByColor: async (colorId) => {
+    try {
+      const batches = await productApi.getBatches(colorId)
+      set((state) => {
+        // 合并新加载的缸号，避免重复
+        const existingIds = new Set(state.batches.map(b => b.id))
+        const newBatches = batches.filter(b => !existingIds.has(b.id))
+        return {
+          batches: [...state.batches, ...newBatches]
+        }
+      })
+    } catch (error: any) {
+      console.error('Failed to load batches by color:', error)
+      throw error
+    }
+  },
+
+  updateBatchStock: async (id, quantity) => {
+    try {
+      const batch = get().batches.find(b => b.id === id)
+      if (!batch) throw new Error('Batch not found')
+      
+      await productApi.updateBatch(id, { stockQuantity: quantity })
+      set((state) => ({
+        batches: state.batches.map((b) =>
+          b.id === id ? { ...b, stockQuantity: quantity } : b
+        )
+      }))
+    } catch (error: any) {
+      console.error('Failed to update batch stock:', error)
+      throw error
+    }
   },
 }))
-
-
-
-
-
-
