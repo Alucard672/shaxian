@@ -39,7 +39,7 @@ function PaymentModal({
 
   const [errors, setErrors] = useState<Record<string, string>>({})
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     const errors: Record<string, string> = {}
     const amount = parseFloat(formData.amount)
 
@@ -62,28 +62,32 @@ function PaymentModal({
       return
     }
 
-    if (isReceivable) {
-      addReceipt({
-        accountReceivableId: accountId,
-        amount,
-        paymentMethod: formData.paymentMethod,
-        receiptDate: formData.paymentDate,
-        operator: formData.operator,
-        remark: formData.remark || undefined,
-      })
-    } else {
-      addPayment({
-        accountPayableId: accountId,
-        amount,
-        paymentMethod: formData.paymentMethod,
-        paymentDate: formData.paymentDate,
-        operator: formData.operator,
-        remark: formData.remark || undefined,
-      })
-    }
+    try {
+      if (isReceivable) {
+        await addReceipt({
+          accountReceivableId: accountId,
+          amount,
+          paymentMethod: formData.paymentMethod,
+          receiptDate: formData.paymentDate,
+          operator: formData.operator,
+          remark: formData.remark || undefined,
+        })
+      } else {
+        await addPayment({
+          accountPayableId: accountId,
+          amount,
+          paymentMethod: formData.paymentMethod,
+          paymentDate: formData.paymentDate,
+          operator: formData.operator,
+          remark: formData.remark || undefined,
+        })
+      }
 
-    onSuccess?.()
-    onClose()
+      onSuccess?.()
+      onClose()
+    } catch (error: any) {
+      alert('保存失败: ' + (error.message || '未知错误'))
+    }
   }
 
   return (

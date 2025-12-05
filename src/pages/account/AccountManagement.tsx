@@ -827,8 +827,8 @@ function AccountManagement() {
             setShowBatchPayment(false)
             setSelectedBatchAccounts([])
           }}
-          onSuccess={() => {
-            window.location.reload()
+          onSuccess={async () => {
+            await loadAll()
           }}
         />
       )}
