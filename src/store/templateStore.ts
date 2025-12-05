@@ -1,90 +1,77 @@
 import { create } from 'zustand'
 import { PrintTemplate, PrintTemplateFormData, TemplateType } from '@/types/template'
-// 移除硬编码数据，使用空数组作为初始值
+import { templateApi } from '@/api/client'
 
 interface TemplateState {
   templates: PrintTemplate[]
+  loading: boolean
+  error: string | null
+  
+  // 数据加载
+  loadTemplates: () => Promise<void>
   
   // 模板操作
-  addTemplate: (data: PrintTemplateFormData) => string // 返回模板ID
-  updateTemplate: (id: string, data: Partial<PrintTemplateFormData>) => void
-  deleteTemplate: (id: string) => void
+  addTemplate: (data: PrintTemplateFormData) => Promise<string> // 返回模板ID
+  updateTemplate: (id: string, data: Partial<PrintTemplateFormData>) => Promise<void>
+  deleteTemplate: (id: string) => Promise<void>
   getTemplate: (id: string) => PrintTemplate | undefined
   getTemplatesByType: (type: TemplateType | '全部') => PrintTemplate[]
   getDefaultTemplate: (documentType: '销售单' | '进货单') => PrintTemplate | undefined
-  setDefaultTemplate: (id: string) => void
-}
-
-// 生成唯一ID
-const generateId = () => Date.now().toString(36) + Math.random().toString(36).substr(2)
-
-// 从localStorage加载数据，不再自动初始化硬编码数据
-const loadFromStorage = (key: string, defaultValue: any) => {
-  try {
-    const item = localStorage.getItem(key)
-    if (item) {
-      return JSON.parse(item)
-    }
-    // 如果没有数据，返回默认值（空数组），不自动写入
-    return defaultValue
-  } catch {
-    return defaultValue
-  }
-}
-
-// 保存到localStorage
-const saveToStorage = (key: string, value: any) => {
-  try {
-    localStorage.setItem(key, JSON.stringify(value))
-  } catch (error) {
-    console.error('Failed to save to localStorage:', error)
-  }
+  setDefaultTemplate: (id: string) => Promise<void>
 }
 
 export const useTemplateStore = create<TemplateState>((set, get) => ({
-  templates: loadFromStorage('printTemplates', []),
+  templates: [],
+  loading: false,
+  error: null,
 
-  addTemplate: (data) => {
-    const newTemplate: PrintTemplate = {
-      id: generateId(),
-      ...data,
-      isDefault: false,
-      usageCount: 0,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+  // 加载所有模板
+  loadTemplates: async () => {
+    set({ loading: true, error: null })
+    try {
+      const templates = await templateApi.getAll()
+      set({ templates, loading: false })
+    } catch (error: any) {
+      set({ error: error.message || 'Failed to load templates', loading: false })
+      console.error('Failed to load templates:', error)
     }
-
-    set((state) => {
-      const templates = [...state.templates, newTemplate]
-      saveToStorage('printTemplates', templates)
-      return { templates }
-    })
-
-    return newTemplate.id
   },
 
-  updateTemplate: (id, data) => {
-    set((state) => {
-      const templates = state.templates.map((t) =>
-        t.id === id
-          ? {
-              ...t,
-              ...data,
-              updatedAt: new Date().toISOString(),
-            }
-          : t
-      )
-      saveToStorage('printTemplates', templates)
-      return { templates }
-    })
+  addTemplate: async (data) => {
+    try {
+      const newTemplate = await templateApi.create(data)
+      set((state) => ({
+        templates: [...state.templates, newTemplate]
+      }))
+      return newTemplate.id
+    } catch (error: any) {
+      console.error('Failed to add template:', error)
+      throw error
+    }
   },
 
-  deleteTemplate: (id) => {
-    set((state) => {
-      const templates = state.templates.filter((t) => t.id !== id)
-      saveToStorage('printTemplates', templates)
-      return { templates }
-    })
+  updateTemplate: async (id, data) => {
+    try {
+      const updated = await templateApi.update(id, data)
+      set((state) => ({
+        templates: state.templates.map((t) => t.id === id ? updated : t)
+      }))
+    } catch (error: any) {
+      console.error('Failed to update template:', error)
+      throw error
+    }
+  },
+
+  deleteTemplate: async (id) => {
+    try {
+      await templateApi.delete(id)
+      set((state) => ({
+        templates: state.templates.filter((t) => t.id !== id)
+      }))
+    } catch (error: any) {
+      console.error('Failed to delete template:', error)
+      throw error
+    }
   },
 
   getTemplate: (id) => {
@@ -103,18 +90,36 @@ export const useTemplateStore = create<TemplateState>((set, get) => ({
     )
   },
 
-  setDefaultTemplate: (id) => {
+  setDefaultTemplate: async (id) => {
     const template = get().getTemplate(id)
     if (!template) return
 
-    set((state) => {
-      const templates = state.templates.map((t) => ({
-        ...t,
-        isDefault: t.id === id && t.documentType === template.documentType,
+    try {
+      // 先取消同类型模板的默认状态
+      const sameTypeTemplates = get().templates.filter(
+        (t) => t.documentType === template.documentType && t.id !== id
+      )
+      
+      // 更新所有同类型模板
+      for (const t of sameTypeTemplates) {
+        if (t.isDefault) {
+          await templateApi.update(t.id, { isDefault: false })
+        }
+      }
+      
+      // 设置当前模板为默认
+      await templateApi.update(id, { isDefault: true })
+      
+      // 更新本地状态
+      set((state) => ({
+        templates: state.templates.map((t) => ({
+          ...t,
+          isDefault: t.id === id && t.documentType === template.documentType,
+        }))
       }))
-      saveToStorage('printTemplates', templates)
-      return { templates }
-    })
+    } catch (error: any) {
+      console.error('Failed to set default template:', error)
+      throw error
+    }
   },
 }))
-
