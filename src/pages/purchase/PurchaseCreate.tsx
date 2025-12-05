@@ -3,11 +3,9 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { usePurchaseStore } from '@/store/purchaseStore'
 import { useContactStore } from '@/store/contactStore'
 import { useProductStore } from '@/store/productStore'
-import { useAccountStore } from '@/store/accountStore'
 import { PurchaseOrderFormData, PurchaseOrderItem } from '@/types/purchase'
-import Card from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
-import { X, Plus, Calendar, Package } from 'lucide-react'
+import { X, Plus, Calendar, FileText } from 'lucide-react'
 import { format } from 'date-fns'
 import { cn } from '@/utils/cn'
 
@@ -18,9 +16,9 @@ interface PurchaseOrderItemForm extends Omit<PurchaseOrderItem, 'id' | 'amount'>
 function PurchaseCreate() {
   const navigate = useNavigate()
   const { id } = useParams<{ id: string }>()
-  const { generateOrderNumber, addOrder, updateOrder, getOrder } = usePurchaseStore()
-  const { suppliers, getSuppliers } = useContactStore()
-  const { products, colors, getColorsByProduct } = useProductStore()
+  const { generateOrderNumber, addOrder, updateOrder, getOrder, loadOrders } = usePurchaseStore()
+  const { suppliers, getSuppliers, loadAll: loadContacts } = useContactStore()
+  const { products, colors, getColorsByProduct, loadAll: loadProducts } = useProductStore()
 
   // 检查是否是复制模式
   const copyId = new URLSearchParams(window.location.search).get('copy')
@@ -55,8 +53,23 @@ function PurchaseCreate() {
 
   const [items, setItems] = useState<PurchaseOrderItemForm[]>([])
 
+  // 加载数据
+  useEffect(() => {
+    loadContacts()
+    loadProducts()
+    if (isEditMode) {
+      loadOrders()
+    }
+  }, [isEditMode, loadContacts, loadProducts, loadOrders])
+
   // 加载订单数据（编辑模式或复制模式）
   useEffect(() => {
+    // 如果数据不存在，先加载
+    if (isEditMode && !existingOrder) {
+      loadOrders()
+      return
+    }
+    
     const orderToLoad = isCopyMode ? copyOrder : existingOrder
     if (orderToLoad) {
       // 编辑模式：检查是否可以编辑（只能编辑草稿状态）
@@ -82,7 +95,7 @@ function PurchaseCreate() {
         }))
       )
     }
-  }, [existingOrder, copyOrder, isEditMode, isCopyMode, navigate])
+  }, [existingOrder, copyOrder, isEditMode, isCopyMode, navigate, loadOrders])
 
   // 获取所有供应商选项
   const supplierOptions = useMemo(() => {
@@ -90,7 +103,7 @@ function PurchaseCreate() {
       value: s.id,
       label: s.name,
     }))
-  }, [suppliers])
+  }, [suppliers, getSuppliers])
 
   // 获取所有商品选项
   const productOptions = useMemo(() => {
@@ -107,7 +120,7 @@ function PurchaseCreate() {
       value: c.id,
       label: `${c.code} - ${c.name}`,
     }))
-  }, [itemForm.productId, colors])
+  }, [itemForm.productId, colors, getColorsByProduct])
 
   // 计算金额
   const itemAmount = useMemo(() => {
@@ -117,40 +130,50 @@ function PurchaseCreate() {
   // 获取当前选中的商品和色号信息
   const selectedProduct = useMemo(() => {
     return products.find((p) => p.id === itemForm.productId)
-  }, [itemForm.productId, products])
+  }, [products, itemForm.productId])
 
   const selectedColor = useMemo(() => {
     return colors.find((c) => c.id === itemForm.colorId)
-  }, [itemForm.colorId, colors])
+  }, [colors, itemForm.colorId])
 
-  // 添加商品到清单
+  // 添加清单项
   const handleAddItem = () => {
-    if (!itemForm.productId || !itemForm.colorId || !itemForm.batchCode || itemForm.quantity <= 0 || itemForm.price <= 0) {
-      alert('请填写完整的商品信息')
+    if (!itemForm.productId) {
+      alert('请选择商品')
       return
     }
-
-    if (!selectedProduct || !selectedColor) {
-      alert('请选择有效的商品和色号')
+    if (!itemForm.colorId) {
+      alert('请选择色号')
+      return
+    }
+    if (!itemForm.batchCode) {
+      alert('请输入缸号')
+      return
+    }
+    if (itemForm.quantity <= 0) {
+      alert('请输入数量')
+      return
+    }
+    if (itemForm.price <= 0) {
+      alert('请输入单价')
       return
     }
 
     const newItem: PurchaseOrderItemForm = {
-      productId: selectedProduct.id,
-      productName: selectedProduct.name,
-      productCode: selectedProduct.code,
-      colorId: selectedColor.id,
-      colorName: selectedColor.name,
-      colorCode: selectedColor.code,
+      productId: itemForm.productId,
+      productName: selectedProduct!.name,
+      productCode: selectedProduct!.code,
+      colorId: itemForm.colorId,
+      colorName: selectedColor!.name,
+      colorCode: selectedColor!.code,
       batchCode: itemForm.batchCode,
       quantity: itemForm.quantity,
-      unit: selectedProduct.unit || 'kg',
+      unit: selectedProduct!.unit,
       price: itemForm.price,
       amount: itemAmount,
     }
 
     setItems([...items, newItem])
-    // 重置表单
     setItemForm({
       productId: '',
       colorId: '',
@@ -167,7 +190,7 @@ function PurchaseCreate() {
 
   // 处理供应商选择
   const handleSupplierChange = (supplierId: string) => {
-    const supplier = suppliers.find((s) => s.id === supplierId)
+    const supplier = getSuppliers().find((s) => s.id === supplierId)
     setFormData({
       ...formData,
       supplierId: supplierId,
@@ -176,7 +199,7 @@ function PurchaseCreate() {
   }
 
   // 保存草稿
-  const handleSaveDraft = () => {
+  const handleSaveDraft = async () => {
     if (!formData.supplierId) {
       alert('请选择供应商')
       return
@@ -187,17 +210,21 @@ function PurchaseCreate() {
       items: items.map(({ amount, ...item }) => item),
     }
 
-    if (isEditMode && existingOrder) {
-      updateOrder(existingOrder.id, orderData)
-    } else {
-      // 新建模式或复制模式：创建新订单
-      await addOrder(orderData, '草稿')
+    try {
+      if (isEditMode && existingOrder) {
+        await updateOrder(existingOrder.id, orderData)
+      } else {
+        // 新建模式或复制模式：创建新订单
+        await addOrder(orderData, '草稿')
+      }
+      navigate('/purchase')
+    } catch (error: any) {
+      alert('保存失败: ' + (error.message || '未知错误'))
     }
-    navigate('/purchase')
   }
 
   // 保存并入库
-  const handleSaveAndSubmit = () => {
+  const handleSaveAndSubmit = async () => {
     if (!formData.supplierId) {
       alert('请选择供应商')
       return
@@ -213,63 +240,27 @@ function PurchaseCreate() {
       items: items.map(({ amount, ...item }) => item),
     }
 
-    if (isEditMode && existingOrder) {
-      // 编辑模式下，先更新订单数据
-      updateOrder(existingOrder.id, orderData)
-      
-      // 如果订单是草稿状态，将其改为已入库状态并执行入库操作
-      if (existingOrder.status === '草稿') {
-        // 先更新为已入库状态，然后执行入库逻辑
-        const updatedOrder = { ...existingOrder, ...orderData, status: '已入库' as const }
-        // 执行入库逻辑（创建批次、生成应付账款等）
-        const { addBatch } = useProductStore.getState()
-        const { addAccountPayable } = useAccountStore.getState()
+    try {
+      if (isEditMode && existingOrder) {
+        // 编辑模式下，先更新订单数据
+        await updateOrder(existingOrder.id, orderData)
         
-        // 为每个明细创建缸号并增加库存
-        updatedOrder.items.forEach((item) => {
-          const products = useProductStore.getState().products
-          const colors = useProductStore.getState().colors
-          const product = products.find((p) => p.id === item.productId)
-          const color = colors.find((c) => c.id === item.colorId)
-          
-          if (product && color) {
-            addBatch(color.id, {
-              code: item.batchCode,
-              productionDate: item.productionDate || new Date().toISOString().split('T')[0],
-              supplierId: updatedOrder.supplierId,
-              purchasePrice: item.price,
-              initialQuantity: item.quantity,
-              stockLocation: item.stockLocation,
-              remark: item.remark,
-            })
-          }
-        })
-        
-        // 如果有欠款，生成应付账款
-        const unpaidAmount = updatedOrder.totalAmount - (updatedOrder.paidAmount || 0)
-        if (unpaidAmount > 0) {
-          addAccountPayable({
-            supplierId: updatedOrder.supplierId,
-            supplierName: updatedOrder.supplierName,
-            purchaseOrderId: updatedOrder.id,
-            purchaseOrderNumber: updatedOrder.orderNumber,
-            payableAmount: updatedOrder.totalAmount,
-            paidAmount: updatedOrder.paidAmount || 0,
-            accountDate: updatedOrder.purchaseDate,
-          })
+        // 如果订单是草稿状态，将其改为已入库状态并执行入库操作
+        if (existingOrder.status === '草稿') {
+          // 更新状态为已入库（后端会自动处理入库逻辑）
+          await updateOrder(existingOrder.id, { ...orderData, status: '已入库' } as any)
+        } else {
+          alert('只能对草稿状态的订单进行保存并入库操作')
+          return
         }
-        
-        // 更新状态为已入库
-        updateOrder(existingOrder.id, { status: '已入库' } as any)
       } else {
-        alert('只能对草稿状态的订单进行保存并入库操作')
-        return
+        // 直接创建为已入库状态（会自动执行入库逻辑）
+        await addOrder(orderData, '已入库')
       }
-    } else {
-      // 直接创建为已入库状态（会自动执行入库逻辑）
-      addOrder(orderData, '已入库')
+      navigate('/purchase')
+    } catch (error: any) {
+      alert('保存失败: ' + (error.message || '未知错误'))
     }
-    navigate('/purchase')
   }
 
   // 取消
@@ -291,95 +282,42 @@ function PurchaseCreate() {
         className="absolute inset-0 bg-black/50"
         onClick={handleCancel}
       />
-      
-      {/* 表单内容 */}
-      <div className="relative z-10 bg-white rounded-2xl shadow-xl w-full max-w-[1152px] max-h-[90vh] mx-auto my-6 flex flex-col">
-        {/* 标题栏 */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200">
-          <div>
-            <h2 className="text-xl font-semibold text-gray-900">
-              {isEditMode ? '编辑进货单' : '新建进货单'}
-            </h2>
-            <p className="text-sm text-gray-600 mt-1">
-              {isEditMode ? '修改进货单信息' : '填写进货单信息，选择供应商和商品'}
-            </p>
-          </div>
+      {/* 内容区域 */}
+      <div className="relative z-10 bg-white rounded-xl shadow-xl w-full max-w-6xl max-h-[90vh] overflow-hidden flex flex-col">
+        {/* 头部 */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
           <div className="flex items-center gap-3">
-            <Button
-              variant="outline"
-              onClick={handleCancel}
-              className="h-9 border-gray-300 rounded-lg"
-            >
-              取消
-            </Button>
-            <Button
-              variant="outline"
-              onClick={handleSaveDraft}
-              className="h-9 border-gray-300 rounded-lg"
-            >
-              保存草稿
-            </Button>
-            <Button
-              onClick={handleSaveAndSubmit}
-              className="h-9 bg-blue-600 hover:bg-blue-700 text-white rounded-lg"
-            >
-              <Package className="w-4 h-4 mr-2" />
-              保存并入库
-            </Button>
-            <button
-              onClick={handleCancel}
-              className="w-9 h-9 flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-xl transition-colors"
-            >
-              <X className="w-5 h-5" />
-            </button>
+            <FileText className="w-6 h-6 text-primary-600" />
+            <div>
+              <h2 className="text-xl font-semibold text-gray-900">
+                {isEditMode ? '编辑进货单' : isCopyMode ? '复制进货单' : '新建进货单'}
+              </h2>
+              <p className="text-sm text-gray-500">进货单号: {orderNumber}</p>
+            </div>
           </div>
+          <button
+            onClick={handleCancel}
+            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+          >
+            <X className="w-5 h-5 text-gray-500" />
+          </button>
         </div>
 
-        {/* 内容区域 */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-6">
-          {/* 基础信息 */}
-          <Card className="bg-blue-50 border border-blue-200 rounded-xl p-5">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">基础信息</h3>
-            <div className="grid grid-cols-3 gap-4">
-              {/* 进货单号 */}
+        {/* 表单内容 */}
+        <div className="flex-1 overflow-y-auto px-6 py-4">
+          <div className="space-y-6">
+            {/* 基本信息 */}
+            <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm text-gray-600 mb-2">进货单号</label>
-                <input
-                  type="text"
-                  value={orderNumber}
-                  readOnly
-                  className="w-full px-3 py-2 h-9 border border-gray-200 rounded-xl text-sm bg-gray-50 text-gray-600"
-                />
-              </div>
-
-              {/* 预计到货日期（编辑模式时显示） */}
-              {isEditMode && (
-                <div>
-                  <label className="block text-sm text-gray-600 mb-2">预计到货日期</label>
-                  <div className="relative">
-                    <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                    <input
-                      type="date"
-                      value={formData.expectedDate || ''}
-                      onChange={(e) => setFormData({ ...formData, expectedDate: e.target.value })}
-                      className="w-full pl-10 pr-3 py-2 h-9 border border-gray-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    />
-                  </div>
-                </div>
-              )}
-
-              {/* 供应商 */}
-              <div>
-                <label className="block text-sm text-gray-600 mb-2">
-                  供应商
-                  <span className="text-red-500 ml-1">*</span>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  供应商 <span className="text-red-500">*</span>
                 </label>
                 <select
                   value={formData.supplierId}
                   onChange={(e) => handleSupplierChange(e.target.value)}
-                  className="w-full px-3 py-2 h-9 border border-gray-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
                 >
-                  <option value="">点击选择供应商</option>
+                  <option value="">请选择供应商</option>
                   {supplierOptions.map((option) => (
                     <option key={option.value} value={option.value}>
                       {option.label}
@@ -387,196 +325,253 @@ function PurchaseCreate() {
                   ))}
                 </select>
               </div>
-
-              {/* 进货日期 */}
               <div>
-                <label className="block text-sm text-gray-600 mb-2">进货日期</label>
-                <div className="relative">
-                  <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                  <input
-                    type="date"
-                    value={formData.purchaseDate}
-                    onChange={(e) => setFormData({ ...formData, purchaseDate: e.target.value })}
-                    className="w-full pl-10 pr-3 py-2 h-9 border border-gray-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  />
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  进货日期 <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="date"
+                  value={formData.purchaseDate}
+                  onChange={(e) =>
+                    setFormData({ ...formData, purchaseDate: e.target.value })
+                  }
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  预计到货日期
+                </label>
+                <input
+                  type="date"
+                  value={formData.expectedDate || ''}
+                  onChange={(e) =>
+                    setFormData({ ...formData, expectedDate: e.target.value })
+                  }
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  已付金额
+                </label>
+                <input
+                  type="number"
+                  value={formData.paidAmount}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      paidAmount: parseFloat(e.target.value) || 0,
+                    })
+                  }
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                />
+              </div>
+            </div>
+
+            {/* 商品明细 */}
+            <div>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900">商品明细</h3>
+                <Button
+                  onClick={handleAddItem}
+                  className="flex items-center gap-2"
+                >
+                  <Plus className="w-4 h-4" />
+                  添加商品
+                </Button>
+              </div>
+
+              {/* 添加商品表单 */}
+              <div className="bg-gray-50 p-4 rounded-lg mb-4">
+                <div className="grid grid-cols-6 gap-4">
+                  <div>
+                    <label className="block text-xs text-gray-600 mb-1">商品</label>
+                    <select
+                      value={itemForm.productId}
+                      onChange={(e) =>
+                        setItemForm({ ...itemForm, productId: e.target.value, colorId: '' })
+                      }
+                      className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-primary-500"
+                    >
+                      <option value="">选择商品</option>
+                      {productOptions.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-600 mb-1">色号</label>
+                    <select
+                      value={itemForm.colorId}
+                      onChange={(e) =>
+                        setItemForm({ ...itemForm, colorId: e.target.value })
+                      }
+                      className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-primary-500"
+                      disabled={!itemForm.productId}
+                    >
+                      <option value="">选择色号</option>
+                      {colorOptions.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-600 mb-1">缸号</label>
+                    <input
+                      type="text"
+                      value={itemForm.batchCode}
+                      onChange={(e) =>
+                        setItemForm({ ...itemForm, batchCode: e.target.value })
+                      }
+                      placeholder="输入缸号"
+                      className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-primary-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-600 mb-1">数量</label>
+                    <input
+                      type="number"
+                      value={itemForm.quantity || ''}
+                      onChange={(e) =>
+                        setItemForm({
+                          ...itemForm,
+                          quantity: parseFloat(e.target.value) || 0,
+                        })
+                      }
+                      className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-primary-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-600 mb-1">单价</label>
+                    <input
+                      type="number"
+                      value={itemForm.price || ''}
+                      onChange={(e) =>
+                        setItemForm({
+                          ...itemForm,
+                          price: parseFloat(e.target.value) || 0,
+                        })
+                      }
+                      className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-primary-500"
+                    />
+                  </div>
+                  <div className="flex items-end">
+                    <Button
+                      onClick={handleAddItem}
+                      size="sm"
+                      className="w-full"
+                    >
+                      添加
+                    </Button>
+                  </div>
                 </div>
               </div>
 
-              {/* 备注 */}
-              <div className="col-span-3">
-                <label className="block text-sm text-gray-600 mb-2">备注</label>
-                <textarea
-                  value={formData.remark || ''}
-                  onChange={(e) => setFormData({ ...formData, remark: e.target.value })}
-                  placeholder="填写备注信息..."
-                  className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
-                  rows={3}
-                />
-              </div>
-            </div>
-          </Card>
-
-          {/* 添加商品 */}
-          <Card className="border border-gray-200 rounded-xl p-5">
-            <div className="flex items-center gap-2 mb-4">
-              <Package className="w-5 h-5 text-gray-600" />
-              <h3 className="text-lg font-semibold text-gray-900">添加商品</h3>
-            </div>
-
-            <div className="grid grid-cols-4 gap-4 mb-4">
-              {/* 选择商品 */}
-              <div>
-                <label className="block text-sm text-gray-600 mb-2">选择商品</label>
-                <select
-                  value={itemForm.productId}
-                  onChange={(e) => {
-                    setItemForm({ ...itemForm, productId: e.target.value, colorId: '' })
-                  }}
-                  className="w-full px-3 py-2 h-9 border border-gray-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                >
-                  <option value="">请选择</option>
-                  {productOptions.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* 选择色号 */}
-              <div>
-                <label className="block text-sm text-gray-600 mb-2">选择色号</label>
-                <select
-                  value={itemForm.colorId}
-                  onChange={(e) => setItemForm({ ...itemForm, colorId: e.target.value })}
-                  disabled={!itemForm.productId}
-                  className="w-full px-3 py-2 h-9 border border-gray-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-50 disabled:text-gray-400"
-                >
-                  <option value="">请选择</option>
-                  {colorOptions.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* 缸号 */}
-              <div>
-                <label className="block text-sm text-gray-600 mb-2">缸号</label>
-                <input
-                  type="text"
-                  value={itemForm.batchCode}
-                  onChange={(e) => setItemForm({ ...itemForm, batchCode: e.target.value })}
-                  placeholder="自动生成或手动输入"
-                  className="w-full px-3 py-2 h-9 border border-gray-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                />
-              </div>
-
-              {/* 数量 */}
-              <div>
-                <label className="block text-sm text-gray-600 mb-2">数量(kg)</label>
-                <input
-                  type="number"
-                  value={itemForm.quantity || ''}
-                  onChange={(e) => setItemForm({ ...itemForm, quantity: parseFloat(e.target.value) || 0 })}
-                  placeholder="0"
-                  className="w-full px-3 py-2 h-9 border border-gray-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-4 gap-4">
-              {/* 单价 */}
-              <div>
-                <label className="block text-sm text-gray-600 mb-2">单价(元)</label>
-                <input
-                  type="number"
-                  value={itemForm.price || ''}
-                  onChange={(e) => setItemForm({ ...itemForm, price: parseFloat(e.target.value) || 0 })}
-                  placeholder="0.00"
-                  step="0.01"
-                  className="w-full px-3 py-2 h-9 border border-gray-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                />
-              </div>
-
-              {/* 金额 */}
-      <div>
-                <label className="block text-sm text-gray-600 mb-2">金额(元)</label>
-                <input
-                  type="text"
-                  value={itemAmount.toFixed(2)}
-                  readOnly
-                  className="w-full px-3 py-2 h-9 border border-gray-200 rounded-xl text-sm bg-gray-50 text-gray-600"
-                />
-      </div>
-      
-              {/* 添加到清单按钮 */}
-              <div className="col-span-2 flex items-end">
-                <Button
-                  onClick={handleAddItem}
-                  className="w-full h-9 bg-blue-600 hover:bg-blue-700 text-white rounded-lg"
-                >
-                  <Plus className="w-4 h-4 mr-2" />
-                  添加到清单
-                </Button>
-              </div>
-            </div>
-          </Card>
-
-          {/* 商品清单 */}
-          {items.length > 0 && (
-            <Card className="border border-gray-200 rounded-xl overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="w-full border-collapse">
-                  <thead>
-                    <tr className="bg-gray-50 border-b border-gray-200">
-                      <th className="px-6 py-3 text-left text-sm font-bold text-gray-700">商品名称</th>
-                      <th className="px-6 py-3 text-left text-sm font-bold text-gray-700">色号</th>
-                      <th className="px-6 py-3 text-left text-sm font-bold text-gray-700">缸号</th>
-                      <th className="px-6 py-3 text-left text-sm font-bold text-gray-700">数量</th>
-                      <th className="px-6 py-3 text-left text-sm font-bold text-gray-700">单价</th>
-                      <th className="px-6 py-3 text-left text-sm font-bold text-gray-700">金额</th>
-                      <th className="px-6 py-3 text-left text-sm font-bold text-gray-700">操作</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {items.map((item, index) => (
-                      <tr key={index} className="border-b border-gray-200 hover:bg-gray-50">
-                        <td className="px-6 py-3 text-sm text-gray-900">{item.productName}</td>
-                        <td className="px-6 py-3 text-sm text-gray-900">{item.colorCode}</td>
-                        <td className="px-6 py-3 text-sm text-gray-900">{item.batchCode}</td>
-                        <td className="px-6 py-3 text-sm text-gray-900">{item.quantity} {item.unit}</td>
-                        <td className="px-6 py-3 text-sm text-gray-900">¥{item.price.toFixed(2)}</td>
-                        <td className="px-6 py-3 text-sm text-gray-900">¥{item.amount.toFixed(2)}</td>
-                        <td className="px-6 py-3">
-                          <button
-                            onClick={() => handleRemoveItem(index)}
-                            className="text-red-600 hover:text-red-700 text-sm"
-                          >
-                            删除
-                          </button>
-                        </td>
+              {/* 商品列表 */}
+              {items.length > 0 && (
+                <div className="border border-gray-200 rounded-lg overflow-hidden">
+                  <table className="w-full">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">
+                          商品
+                        </th>
+                        <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">
+                          色号
+                        </th>
+                        <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">
+                          缸号
+                        </th>
+                        <th className="px-4 py-2 text-right text-sm font-medium text-gray-700">
+                          数量
+                        </th>
+                        <th className="px-4 py-2 text-right text-sm font-medium text-gray-700">
+                          单价
+                        </th>
+                        <th className="px-4 py-2 text-right text-sm font-medium text-gray-700">
+                          金额
+                        </th>
+                        <th className="px-4 py-2 text-center text-sm font-medium text-gray-700">
+                          操作
+                        </th>
                       </tr>
-                    ))}
-                  </tbody>
-                  <tfoot>
-                    <tr className="bg-gray-50">
-                      <td colSpan={5} className="px-6 py-3 text-right text-sm font-bold text-gray-700">
-                        合计：
-                      </td>
-                      <td className="px-6 py-3 text-sm font-bold text-gray-900">
-                        ¥{totalAmount.toFixed(2)}
-                      </td>
-                      <td></td>
-                    </tr>
-                  </tfoot>
-                </table>
-              </div>
-      </Card>
-          )}
+                    </thead>
+                    <tbody className="divide-y divide-gray-200">
+                      {items.map((item, index) => (
+                        <tr key={index}>
+                          <td className="px-4 py-2 text-sm text-gray-900">
+                            {item.productName}
+                          </td>
+                          <td className="px-4 py-2 text-sm text-gray-600">
+                            {item.colorName}
+                          </td>
+                          <td className="px-4 py-2 text-sm text-gray-600">
+                            {item.batchCode}
+                          </td>
+                          <td className="px-4 py-2 text-sm text-gray-900 text-right">
+                            {item.quantity} {item.unit}
+                          </td>
+                          <td className="px-4 py-2 text-sm text-gray-900 text-right">
+                            ¥{item.price.toFixed(2)}
+                          </td>
+                          <td className="px-4 py-2 text-sm font-medium text-gray-900 text-right">
+                            ¥{item.amount.toFixed(2)}
+                          </td>
+                          <td className="px-4 py-2 text-center">
+                            <button
+                              onClick={() => handleRemoveItem(index)}
+                              className="text-red-600 hover:text-red-700"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+
+            {/* 备注 */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                备注
+              </label>
+              <textarea
+                value={formData.remark || ''}
+                onChange={(e) =>
+                  setFormData({ ...formData, remark: e.target.value })
+                }
+                rows={3}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+              />
+            </div>
+          </div>
         </div>
 
+        {/* 底部操作栏 */}
+        <div className="flex items-center justify-between px-6 py-4 border-t border-gray-200 bg-gray-50">
+          <div className="text-lg font-semibold text-gray-900">
+            合计: ¥{totalAmount.toLocaleString()}
+          </div>
+          <div className="flex items-center gap-3">
+            <Button variant="outline" onClick={handleCancel}>
+              取消
+            </Button>
+            <Button variant="outline" onClick={handleSaveDraft}>
+              保存草稿
+            </Button>
+            <Button onClick={handleSaveAndSubmit}>
+              保存并入库
+            </Button>
+          </div>
+        </div>
       </div>
     </div>
   )
