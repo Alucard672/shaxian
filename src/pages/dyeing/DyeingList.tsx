@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useDyeingStore } from '@/store/dyeingStore'
 import { DyeingOrder, DyeingOrderStatus } from '@/types/dyeing'
@@ -25,7 +25,12 @@ import DateRangePicker from '../../components/ui/DateRangePicker'
 
 function DyeingList() {
   const navigate = useNavigate()
-  const { orders, deleteOrder } = useDyeingStore()
+  const { orders, loading, error, loadOrders, deleteOrder } = useDyeingStore()
+  
+  // 加载数据
+  useEffect(() => {
+    loadOrders()
+  }, [loadOrders])
 
   const [searchKeyword, setSearchKeyword] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('全部状态')

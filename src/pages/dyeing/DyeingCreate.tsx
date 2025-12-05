@@ -17,12 +17,21 @@ interface ColorItemForm extends Omit<DyeingOrderItem, 'id'> {
 function DyeingCreate() {
   const navigate = useNavigate()
   const { id } = useParams<{ id: string }>()
-  const { addOrder, updateOrder, getOrder } = useDyeingStore()
-  const { products, colors, batches } = useProductStore()
-  const { getSuppliers } = useContactStore()
+  const { addOrder, updateOrder, getOrder, loadOrders } = useDyeingStore()
+  const { products, colors, batches, loadAll: loadProducts } = useProductStore()
+  const { getSuppliers, loadAll: loadContacts } = useContactStore()
 
   const isEditMode = !!id
   const existingOrder = isEditMode ? getOrder(id!) : null
+  
+  // 加载数据
+  useEffect(() => {
+    loadProducts()
+    loadContacts()
+    if (isEditMode) {
+      loadOrders()
+    }
+  }, [isEditMode, loadProducts, loadContacts, loadOrders])
 
   // 获取白坯纱线的批次
   // 白坯批次没有关联色号，colorId 为空字符串
