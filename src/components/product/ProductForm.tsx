@@ -65,6 +65,7 @@ function ProductForm({ initialData, onSubmit, onCancel }: ProductFormProps) {
     onSubmit({
       ...data,
       isWhiteYarn,
+      colors, // 传递色号数据
     })
   }
 

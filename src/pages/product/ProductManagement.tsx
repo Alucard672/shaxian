@@ -142,13 +142,32 @@ function ProductManagement() {
 
   const handleProductSubmit = async (data: ProductFormData) => {
     try {
+      let productId: string
+      
       if (editingProduct && editingProduct.id) {
         // 编辑模式：更新商品
         await updateProduct(editingProduct.id, data)
+        productId = editingProduct.id
       } else {
         // 新建模式或复制模式：创建新商品
-        await addProduct(data)
+        const newProduct = await addProduct(data)
+        productId = newProduct.id
       }
+      
+      // 如果有色号数据，创建色号
+      if (data.colors && data.colors.length > 0) {
+        for (const colorData of data.colors) {
+          try {
+            await addColor(productId, colorData)
+          } catch (error: any) {
+            console.error('创建色号失败:', error)
+            // 继续创建其他色号，不中断流程
+          }
+        }
+        // 重新加载数据以更新界面
+        await loadAll()
+      }
+      
       setIsProductModalOpen(false)
       setEditingProduct(null)
     } catch (error: any) {

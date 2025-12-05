@@ -59,6 +59,7 @@ export interface ProductFormData {
   type: ProductType
   description?: string
   isWhiteYarn?: boolean
+  colors?: ColorFormData[] // 可选：创建商品时同时创建的色号
 }
 
 // 色号表单数据
