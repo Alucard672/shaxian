@@ -206,7 +206,7 @@ function DyeingCreate() {
   }, [colorItems, formData.processingPrice])
 
   // 提交表单
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     // 验证
     if (!formData.greyBatchId || !formData.greyBatchCode) {
       alert('请选择白坯缸号')
@@ -241,12 +241,16 @@ function DyeingCreate() {
       })),
     }
 
-    if (isEditMode && existingOrder) {
-      updateOrder(existingOrder.id, orderData)
-    } else {
-      addOrder(orderData)
+    try {
+      if (isEditMode && existingOrder) {
+        await updateOrder(existingOrder.id, orderData)
+      } else {
+        await addOrder(orderData)
+      }
+      navigate('/dyeing')
+    } catch (error: any) {
+      alert('保存失败: ' + (error.message || '未知错误'))
     }
-    navigate('/dyeing')
   }
 
   const selectedBatch = whiteYarnBatches.find((b) => b.batch.id === formData.greyBatchId)
