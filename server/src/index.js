@@ -58,14 +58,16 @@ async function startServer() {
     // 测试数据库连接
     const connection = await createConnection();
     console.log('✅ Database connected');
-    await connection.end();
+    connection.release(); // 使用 release() 而不是 end()
 
     app.listen(PORT, () => {
       console.log(`🚀 Server running on http://localhost:${PORT}`);
       console.log(`📝 API docs: http://localhost:${PORT}/health`);
+      console.log(`🌐 Health check: http://localhost:${PORT}/health`);
     });
   } catch (error) {
     console.error('❌ Failed to start server:', error);
+    console.error('Error details:', error.message);
     process.exit(1);
   }
 }
