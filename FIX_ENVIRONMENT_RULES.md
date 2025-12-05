@@ -90,3 +90,4 @@ https://github.com/Alucard672/shaxian/settings/environments
 3. 如果还是失败，检查是否有其他保护规则（如 Required reviewers）
 
 
+
