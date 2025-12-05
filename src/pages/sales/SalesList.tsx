@@ -27,7 +27,12 @@ import DateRangePicker from '../../components/ui/DateRangePicker'
 
 function SalesList() {
   const navigate = useNavigate()
-  const { orders, deleteOrder } = useSalesStore()
+  const { orders, loading, error, loadOrders, deleteOrder } = useSalesStore()
+  
+  // 加载数据
+  useEffect(() => {
+    loadOrders()
+  }, [loadOrders])
 
   const [searchKeyword, setSearchKeyword] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('全部')
@@ -123,9 +128,13 @@ function SalesList() {
   }, [filteredOrders, currentPage])
 
   // 操作处理
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     if (confirm('确定要删除这个销售单吗？')) {
-      deleteOrder(id)
+      try {
+        await deleteOrder(id)
+      } catch (error: any) {
+        alert('删除失败: ' + (error.message || '未知错误'))
+      }
     }
   }
 
@@ -345,6 +354,25 @@ function SalesList() {
       ),
     },
   ]
+
+  // 显示加载状态
+  if (loading && orders.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-gray-500">加载中...</div>
+      </div>
+    )
+  }
+
+  // 显示错误
+  if (error && orders.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-64 flex-col gap-4">
+        <div className="text-red-500">加载失败: {error}</div>
+        <Button onClick={() => loadOrders()}>重试</Button>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6">

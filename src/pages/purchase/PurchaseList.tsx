@@ -28,7 +28,12 @@ import DateRangePicker from '../../components/ui/DateRangePicker'
 
 function PurchaseList() {
   const navigate = useNavigate()
-  const { orders, deleteOrder } = usePurchaseStore()
+  const { orders, loading, error, loadOrders, deleteOrder } = usePurchaseStore()
+  
+  // 加载数据
+  useEffect(() => {
+    loadOrders()
+  }, [loadOrders])
 
   const [searchKeyword, setSearchKeyword] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('全部')
@@ -119,9 +124,13 @@ function PurchaseList() {
   }, [filteredOrders, currentPage])
 
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     if (confirm('确定要删除这个进货单吗？')) {
-      deleteOrder(id)
+      try {
+        await deleteOrder(id)
+      } catch (error: any) {
+        alert('删除失败: ' + (error.message || '未知错误'))
+      }
     }
   }
 
@@ -295,6 +304,25 @@ function PurchaseList() {
       ),
     },
   ]
+
+  // 显示加载状态
+  if (loading && orders.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-gray-500">加载中...</div>
+      </div>
+    )
+  }
+
+  // 显示错误
+  if (error && orders.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-64 flex-col gap-4">
+        <div className="text-red-500">加载失败: {error}</div>
+        <Button onClick={() => loadOrders()}>重试</Button>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6">
