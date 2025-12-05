@@ -381,6 +381,25 @@ function ProductManagement() {
     setSelectedProducts(newSelected)
   }
 
+  // 显示加载状态
+  if (loading && products.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-gray-500">加载中...</div>
+      </div>
+    )
+  }
+
+  // 显示错误
+  if (error && products.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-64 flex-col gap-4">
+        <div className="text-red-500">加载失败: {error}</div>
+        <Button onClick={() => loadAll()}>重试</Button>
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-6">
       {/* 页面标题 */}
