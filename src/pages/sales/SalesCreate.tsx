@@ -16,9 +16,9 @@ interface SalesOrderItemForm extends Omit<SalesOrderItem, 'id' | 'amount'> {
 function SalesCreate() {
   const navigate = useNavigate()
   const { id } = useParams<{ id: string }>()
-  const { generateOrderNumber, addOrder, updateOrder, getOrder, checkStock } = useSalesStore()
-  const { getCustomers } = useContactStore()
-  const { products, colors, batches, getColorsByProduct, getBatchesByColor } = useProductStore()
+  const { generateOrderNumber, addOrder, updateOrder, getOrder, checkStock, loadOrders } = useSalesStore()
+  const { getCustomers, loadAll: loadContacts } = useContactStore()
+  const { products, colors, batches, getColorsByProduct, getBatchesByColor, loadAll: loadProducts } = useProductStore()
 
   // 检查是否是复制模式
   const copyId = new URLSearchParams(window.location.search).get('copy')
@@ -27,6 +27,15 @@ function SalesCreate() {
 
   const isEditMode = !!id
   const existingOrder = isEditMode ? getOrder(id!) : null
+  
+  // 加载数据
+  useEffect(() => {
+    loadContacts()
+    loadProducts()
+    if (isEditMode) {
+      loadOrders()
+    }
+  }, [isEditMode, loadContacts, loadProducts, loadOrders])
 
   const orderNumber = useMemo(() => {
     if (isEditMode && existingOrder) {
