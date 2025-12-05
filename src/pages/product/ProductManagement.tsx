@@ -115,20 +115,25 @@ function ProductManagement() {
 
   const handleCopyProduct = (product: Product) => {
     // 复制商品信息，打开编辑模态框并预设数据
+    const timestamp = Date.now().toString().slice(-4)
     const copiedProduct: Product = {
       ...product,
       id: '', // 清空ID，作为新商品
       name: `${product.name} (副本)`,
-      code: `${product.code}-COPY`,
+      code: `${product.code}-COPY${timestamp}`, // 添加时间戳确保唯一性
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     }
     setEditingProduct(copiedProduct)
     setIsProductModalOpen(true)
   }
 
   const handleProductSubmit = (data: ProductFormData) => {
-    if (editingProduct) {
+    if (editingProduct && editingProduct.id) {
+      // 编辑模式：更新商品
       updateProduct(editingProduct.id, data)
     } else {
+      // 新建模式或复制模式：创建新商品
       addProduct(data)
     }
     setIsProductModalOpen(false)
@@ -274,6 +279,15 @@ function ProductManagement() {
             className="p-1"
           >
             <Edit className="w-4 h-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => handleCopyProduct(record)}
+            title="复制"
+            className="p-1"
+          >
+            <Copy className="w-4 h-4 text-blue-600" />
           </Button>
           <Button
             variant="ghost"

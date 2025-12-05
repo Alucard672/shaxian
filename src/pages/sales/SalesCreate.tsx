@@ -20,6 +20,11 @@ function SalesCreate() {
   const { getCustomers } = useContactStore()
   const { products, colors, batches, getColorsByProduct, getBatchesByColor } = useProductStore()
 
+  // 检查是否是复制模式
+  const copyId = new URLSearchParams(window.location.search).get('copy')
+  const isCopyMode = !!copyId
+  const copyOrder = isCopyMode ? getOrder(copyId) : null
+
   const isEditMode = !!id
   const existingOrder = isEditMode ? getOrder(id!) : null
 
@@ -49,25 +54,33 @@ function SalesCreate() {
 
   const [items, setItems] = useState<SalesOrderItemForm[]>([])
 
-  // 编辑模式下加载已有订单数据
+  // 加载订单数据（编辑模式或复制模式）
   useEffect(() => {
-    if (isEditMode && existingOrder) {
+    const orderToLoad = isCopyMode ? copyOrder : existingOrder
+    if (orderToLoad) {
+      // 编辑模式：检查是否可以编辑（只能编辑草稿状态）
+      if (isEditMode && orderToLoad.status !== '草稿') {
+        alert('只能编辑草稿状态的销售单')
+        navigate('/sales')
+        return
+      }
+
       setFormData({
-        customerId: existingOrder.customerId,
-        customerName: existingOrder.customerName,
-        salesDate: existingOrder.salesDate,
-        expectedDate: existingOrder.expectedDate || '',
-        remark: existingOrder.remark || '',
-        receivedAmount: existingOrder.receivedAmount || 0,
+        customerId: orderToLoad.customerId,
+        customerName: orderToLoad.customerName,
+        salesDate: isCopyMode ? format(new Date(), 'yyyy-MM-dd') : orderToLoad.salesDate,
+        expectedDate: orderToLoad.expectedDate || '',
+        remark: orderToLoad.remark || '',
+        receivedAmount: isCopyMode ? 0 : (orderToLoad.receivedAmount || 0),
       })
       // 加载订单明细
-      const loadedItems: SalesOrderItemForm[] = existingOrder.items.map((item) => ({
+      const loadedItems: SalesOrderItemForm[] = orderToLoad.items.map((item) => ({
         ...item,
         amount: item.amount,
       }))
       setItems(loadedItems)
     }
-  }, [isEditMode, existingOrder])
+  }, [isEditMode, isCopyMode, existingOrder, copyOrder, navigate])
 
   // 获取所有客户选项
   const customerOptions = useMemo(() => {
