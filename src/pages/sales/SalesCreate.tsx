@@ -211,7 +211,7 @@ function SalesCreate() {
   }
 
   // 保存销售单
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!formData.customerId) {
       alert('请选择客户')
       return
