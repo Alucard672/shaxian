@@ -28,6 +28,7 @@ function ProductManagement() {
     updateProduct,
     deleteProduct,
     getColorsByProduct,
+    addColor,
   } = useProductStore()
   
   // 加载数据
