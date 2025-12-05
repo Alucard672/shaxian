@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useAccountStore } from '@/store/accountStore'
 import { useContactStore } from '@/store/contactStore'
 import Card from '../../components/ui/Card'
@@ -35,8 +35,17 @@ function AccountManagement() {
     payables,
     receipts,
     payments,
+    loading,
+    error,
+    loadAll,
   } = useAccountStore()
-  const { customers, suppliers } = useContactStore()
+  const { customers, suppliers, loadAll: loadContacts } = useContactStore()
+  
+  // 加载数据
+  useEffect(() => {
+    loadAll()
+    loadContacts()
+  }, [loadAll, loadContacts])
 
   const [searchKeyword, setSearchKeyword] = useState('')
   const [tabType, setTabType] = useState<AccountType>('全部')

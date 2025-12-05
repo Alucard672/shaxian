@@ -142,12 +142,14 @@ export const accountApi = {
   getAllReceivables: (params) => api.get('/accounts/receivables', params),
   createReceivable: (data) => api.post('/accounts/receivables', data),
   getReceipts: (id) => api.get(`/accounts/receivables/${id}/receipts`),
+  getAllReceipts: (params) => api.get('/accounts/receipts', params),
   createReceipt: (id, data) => api.post(`/accounts/receivables/${id}/receipts`, data),
   
   // 应付账款
   getAllPayables: (params) => api.get('/accounts/payables', params),
   createPayable: (data) => api.post('/accounts/payables', data),
   getPayments: (id) => api.get(`/accounts/payables/${id}/payments`),
+  getAllPayments: (params) => api.get('/accounts/payments', params),
   createPayment: (id, data) => api.post(`/accounts/payables/${id}/payments`, data),
 };
 
