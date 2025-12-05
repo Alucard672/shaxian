@@ -28,6 +28,11 @@ async function apiRequest(endpoint, options = {}) {
 
     return await response.json();
   } catch (error) {
+    // 如果是连接错误，提供更友好的错误信息
+    if (error.message.includes('Failed to fetch') || error.message.includes('ERR_CONNECTION_REFUSED')) {
+      console.warn('后端服务器未运行，请启动后端服务:', error);
+      throw new Error('无法连接到后端服务器。请确保后端服务已启动（运行 npm run dev 在 server 目录下）');
+    }
     console.error('API Request Error:', error);
     throw error;
   }
