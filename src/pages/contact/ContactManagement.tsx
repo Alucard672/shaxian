@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useContactStore } from '@/store/contactStore'
 import { useAccountStore } from '@/store/accountStore'
@@ -27,7 +27,22 @@ type ContactType = '全部' | '客户' | '供应商' | 'VIP客户'
 
 function ContactManagement() {
   const navigate = useNavigate()
-  const { customers, suppliers, deleteCustomer, deleteSupplier, getCustomer, getSupplier } = useContactStore()
+  const { 
+    customers, 
+    suppliers, 
+    loading, 
+    error, 
+    loadAll, 
+    deleteCustomer, 
+    deleteSupplier, 
+    getCustomer, 
+    getSupplier 
+  } = useContactStore()
+  
+  // 加载数据
+  useEffect(() => {
+    loadAll()
+  }, [loadAll])
   const { receivables, payables } = useAccountStore()
   const { orders: salesOrders } = useSalesStore()
   const { orders: purchaseOrders } = usePurchaseStore()
@@ -410,6 +425,25 @@ function ContactManagement() {
       },
     },
   ]
+
+  // 显示加载状态
+  if (loading && customers.length === 0 && suppliers.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-gray-500">加载中...</div>
+      </div>
+    )
+  }
+
+  // 显示错误
+  if (error && customers.length === 0 && suppliers.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-64 flex-col gap-4">
+        <div className="text-red-500">加载失败: {error}</div>
+        <Button onClick={() => loadAll()}>重试</Button>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6">

@@ -87,46 +87,50 @@ function ContactForm() {
     }
   }, [isEditMode, existingContact, isCustomer, setValue])
 
-  const onSubmit = (data: ContactFormData) => {
-    if (isCustomer) {
-      const customerData = {
-        name: data.name,
-        code: data.code,
-        contactPerson: data.contactPerson,
-        phone: data.phone,
-        address: data.address,
-        type: data.type as CustomerType,
-        creditLimit: data.creditLimit,
-        status: data.status as CustomerStatus,
-        remark: data.remark,
+  const onSubmit = async (data: ContactFormData) => {
+    try {
+      if (isCustomer) {
+        const customerData = {
+          name: data.name,
+          code: data.code,
+          contactPerson: data.contactPerson,
+          phone: data.phone,
+          address: data.address,
+          type: data.type as CustomerType,
+          creditLimit: data.creditLimit,
+          status: data.status as CustomerStatus,
+          remark: data.remark,
+        }
+        
+        if (isEditMode && id) {
+          await updateCustomer(id, customerData)
+        } else {
+          await addCustomer(customerData)
+        }
+      } else {
+        const supplierData = {
+          name: data.name,
+          code: data.code,
+          contactPerson: data.contactPerson,
+          phone: data.phone,
+          address: data.address,
+          type: data.type as SupplierType,
+          settlementCycle: data.settlementCycle!,
+          status: data.status as SupplierStatus,
+          remark: data.remark,
+        }
+        
+        if (isEditMode && id) {
+          await updateSupplier(id, supplierData)
+        } else {
+          await addSupplier(supplierData)
+        }
       }
       
-      if (isEditMode && id) {
-        updateCustomer(id, customerData)
-      } else {
-        addCustomer(customerData)
-      }
-    } else {
-      const supplierData = {
-        name: data.name,
-        code: data.code,
-        contactPerson: data.contactPerson,
-        phone: data.phone,
-        address: data.address,
-        type: data.type as SupplierType,
-        settlementCycle: data.settlementCycle!,
-        status: data.status as SupplierStatus,
-        remark: data.remark,
-      }
-      
-      if (isEditMode && id) {
-        updateSupplier(id, supplierData)
-      } else {
-        addSupplier(supplierData)
-      }
+      navigate('/customer')
+    } catch (error: any) {
+      alert('保存失败: ' + (error.message || '未知错误'))
     }
-    
-    navigate('/customer')
   }
 
   const contactType = watch('type')

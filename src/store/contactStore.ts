@@ -8,92 +8,105 @@ import {
   SupplierStatus,
   SettlementCycle,
 } from '@/types/contact'
-// 移除硬编码数据，使用空数组作为初始值
+import { contactApi } from '@/api/client'
 
 interface ContactState {
   customers: Customer[]
   suppliers: Supplier[]
+  loading: boolean
+  error: string | null
+  
+  // 数据加载
+  loadCustomers: () => Promise<void>
+  loadSuppliers: () => Promise<void>
+  loadAll: () => Promise<void>
   
   // 客户操作
-  addCustomer: (data: Omit<Customer, 'id' | 'createdAt' | 'updatedAt'>) => Customer
-  updateCustomer: (id: string, data: Partial<Customer>) => void
-  deleteCustomer: (id: string) => void
+  addCustomer: (data: Omit<Customer, 'id' | 'createdAt' | 'updatedAt'>) => Promise<Customer>
+  updateCustomer: (id: string, data: Partial<Customer>) => Promise<void>
+  deleteCustomer: (id: string) => Promise<void>
   getCustomer: (id: string) => Customer | undefined
   getCustomers: () => Customer[]
   
   // 供应商操作
-  addSupplier: (data: Omit<Supplier, 'id' | 'createdAt' | 'updatedAt'>) => Supplier
-  updateSupplier: (id: string, data: Partial<Supplier>) => void
-  deleteSupplier: (id: string) => void
+  addSupplier: (data: Omit<Supplier, 'id' | 'createdAt' | 'updatedAt'>) => Promise<Supplier>
+  updateSupplier: (id: string, data: Partial<Supplier>) => Promise<void>
+  deleteSupplier: (id: string) => Promise<void>
   getSupplier: (id: string) => Supplier | undefined
   getSuppliers: () => Supplier[]
 }
 
-// 生成唯一ID
-const generateId = () => Date.now().toString(36) + Math.random().toString(36).substr(2)
-
-// 从localStorage加载数据，不再自动初始化硬编码数据
-const loadFromStorage = (key: string, defaultValue: any) => {
-  try {
-    const item = localStorage.getItem(key)
-    if (item) {
-      return JSON.parse(item)
-    }
-    // 如果没有数据，返回默认值（空数组），不自动写入
-    return defaultValue
-  } catch {
-    return defaultValue
-  }
-}
-
-// 保存到localStorage
-const saveToStorage = (key: string, value: any) => {
-  try {
-    localStorage.setItem(key, JSON.stringify(value))
-  } catch (error) {
-    console.error('Failed to save to localStorage:', error)
-  }
-}
-
 export const useContactStore = create<ContactState>((set, get) => ({
-  customers: loadFromStorage('customers', []),
-  suppliers: loadFromStorage('suppliers', []),
+  customers: [],
+  suppliers: [],
+  loading: false,
+  error: null,
 
-  addCustomer: (data) => {
-    const newCustomer: Customer = {
-      id: generateId(),
-      ...data,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+  // 加载所有客户
+  loadCustomers: async () => {
+    set({ loading: true, error: null })
+    try {
+      const customers = await contactApi.getAllCustomers()
+      set({ customers, loading: false })
+    } catch (error: any) {
+      set({ error: error.message || 'Failed to load customers', loading: false })
+      console.error('Failed to load customers:', error)
     }
-    
-    set((state) => {
-      const customers = [...state.customers, newCustomer]
-      saveToStorage('customers', customers)
-      return { customers }
-    })
-    
-    return newCustomer
   },
 
-  updateCustomer: (id, data) => {
-    set((state) => {
-      const customers = state.customers.map((c) =>
-        c.id === id
-          ? { ...c, ...data, updatedAt: new Date().toISOString() }
-          : c
-      )
-      saveToStorage('customers', customers)
-      return { customers }
-    })
+  // 加载所有供应商
+  loadSuppliers: async () => {
+    try {
+      const suppliers = await contactApi.getAllSuppliers()
+      set((state) => ({ ...state, suppliers }))
+    } catch (error: any) {
+      console.error('Failed to load suppliers:', error)
+      set((state) => ({ ...state, error: error.message || 'Failed to load suppliers' }))
+    }
   },
 
-  deleteCustomer: (id) => {
-    set((state) => {
-      const customers = state.customers.filter((c) => c.id !== id)
-      saveToStorage('customers', customers)
-      return { customers }
-    })
+  // 加载所有数据
+  loadAll: async () => {
+    await get().loadCustomers()
+    await get().loadSuppliers()
+  },
+
+  // 客户操作
+  addCustomer: async (data) => {
+    try {
+      const newCustomer = await contactApi.createCustomer(data)
+      set((state) => ({
+        customers: [...state.customers, newCustomer]
+      }))
+      return newCustomer
+    } catch (error: any) {
+      console.error('Failed to add customer:', error)
+      throw error
+    }
+  },
+
+  updateCustomer: async (id, data) => {
+    try {
+      const updated = await contactApi.updateCustomer(id, data)
+      set((state) => ({
+        customers: state.customers.map((c) => c.id === id ? updated : c)
+      }))
+    } catch (error: any) {
+      console.error('Failed to update customer:', error)
+      throw error
+    }
+  },
+
+  deleteCustomer: async (id) => {
+    try {
+      await contactApi.deleteCustomer(id)
+      set((state) => ({
+        customers: state.customers.filter((c) => c.id !== id)
+      }))
+    } catch (error: any) {
+      console.error('Failed to delete customer:', error)
+      throw error
+    }
   },
 
   getCustomer: (id) => {
@@ -104,41 +117,42 @@ export const useContactStore = create<ContactState>((set, get) => ({
     return get().customers
   },
 
-  addSupplier: (data) => {
-    const newSupplier: Supplier = {
-      id: generateId(),
-      ...data,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+  // 供应商操作
+  addSupplier: async (data) => {
+    try {
+      const newSupplier = await contactApi.createSupplier(data)
+      set((state) => ({
+        suppliers: [...state.suppliers, newSupplier]
+      }))
+      return newSupplier
+    } catch (error: any) {
+      console.error('Failed to add supplier:', error)
+      throw error
     }
-    
-    set((state) => {
-      const suppliers = [...state.suppliers, newSupplier]
-      saveToStorage('suppliers', suppliers)
-      return { suppliers }
-    })
-    
-    return newSupplier
   },
 
-  updateSupplier: (id, data) => {
-    set((state) => {
-      const suppliers = state.suppliers.map((s) =>
-        s.id === id
-          ? { ...s, ...data, updatedAt: new Date().toISOString() }
-          : s
-      )
-      saveToStorage('suppliers', suppliers)
-      return { suppliers }
-    })
+  updateSupplier: async (id, data) => {
+    try {
+      const updated = await contactApi.updateSupplier(id, data)
+      set((state) => ({
+        suppliers: state.suppliers.map((s) => s.id === id ? updated : s)
+      }))
+    } catch (error: any) {
+      console.error('Failed to update supplier:', error)
+      throw error
+    }
   },
 
-  deleteSupplier: (id) => {
-    set((state) => {
-      const suppliers = state.suppliers.filter((s) => s.id !== id)
-      saveToStorage('suppliers', suppliers)
-      return { suppliers }
-    })
+  deleteSupplier: async (id) => {
+    try {
+      await contactApi.deleteSupplier(id)
+      set((state) => ({
+        suppliers: state.suppliers.filter((s) => s.id !== id)
+      }))
+    } catch (error: any) {
+      console.error('Failed to delete supplier:', error)
+      throw error
+    }
   },
 
   getSupplier: (id) => {
@@ -149,9 +163,3 @@ export const useContactStore = create<ContactState>((set, get) => ({
     return get().suppliers
   },
 }))
-
-
-
-
-
-
