@@ -26,7 +26,15 @@ interface ContactFormData {
 function ContactForm() {
   const navigate = useNavigate()
   const { type, id } = useParams<{ type: ContactFormType; id?: string }>()
-  const { getCustomer, getSupplier, addCustomer, updateCustomer, addSupplier, updateSupplier } = useContactStore()
+  const { 
+    getCustomer, 
+    getSupplier, 
+    loadAll,
+    addCustomer, 
+    updateCustomer, 
+    addSupplier, 
+    updateSupplier 
+  } = useContactStore()
 
   const isEditMode = !!id
   const isCustomer = type === 'customer'
@@ -35,6 +43,13 @@ function ContactForm() {
   const existingContact = isEditMode 
     ? (isCustomer ? getCustomer(id!) : getSupplier(id!))
     : null
+
+  // 加载数据（编辑模式下如果数据不存在，先加载）
+  useEffect(() => {
+    if (isEditMode && !existingContact) {
+      loadAll()
+    }
+  }, [isEditMode, existingContact, loadAll])
 
   const {
     register,
