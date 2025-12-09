@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useSettingsStore } from '@/store/settingsStore'
 import Button from '@/components/ui/Button'
@@ -33,7 +33,7 @@ const permissionOptions = [
 
 function RoleManagement() {
   const navigate = useNavigate()
-  const { roles, addRole, updateRole, deleteRole } = useSettingsStore()
+  const { roles, addRole, updateRole, deleteRole, loadRoles } = useSettingsStore()
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingRole, setEditingRole] = useState<Role | null>(null)
   const [searchKeyword, setSearchKeyword] = useState('')
@@ -62,6 +62,11 @@ function RoleManagement() {
     const start = (currentPage - 1) * pageSize
     return filteredRoles.slice(start, start + pageSize)
   }, [filteredRoles, currentPage])
+
+  // 首次进入页面拉取角色列表
+  useEffect(() => {
+    loadRoles().catch((err) => console.error(err))
+  }, [])
 
   const handleOpenModal = (role?: Role) => {
     if (role) {
@@ -318,6 +323,7 @@ function RoleManagement() {
 }
 
 export default RoleManagement
+
 
 
 

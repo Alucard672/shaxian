@@ -35,9 +35,13 @@ export interface PrintTemplate {
   }
   productFields: {
     showTable: boolean // 显示表格
+    productCode: boolean // 商品编号/货号
     productName: boolean // 商品名称
+    specification: boolean // 规格
+    colorName: boolean // 颜色名称
     colorCode: boolean // 色号
     quantity: boolean // 数量/重量
+    unit: boolean // 单位
     unitPrice: boolean // 单价
     amount: boolean // 金额
     batchCode: boolean // 批号

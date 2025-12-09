@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { X, Edit, Trash2, Star, Plus } from 'lucide-react'
 import { useTemplateStore } from '@/store/templateStore'
 import { TemplateType } from '@/types/template'
@@ -20,6 +20,7 @@ function TemplateManagement({ isOpen, onClose }: TemplateManagementProps) {
     getTemplatesByType,
     setDefaultTemplate,
     deleteTemplate,
+    loadTemplates,
   } = useTemplateStore()
 
   const [filterType, setFilterType] = useState<TemplateType | '全部'>('全部')
@@ -43,6 +44,16 @@ function TemplateManagement({ isOpen, onClose }: TemplateManagementProps) {
   const filteredTemplates = useMemo(() => {
     return getTemplatesByType(filterType)
   }, [filterType, templates])
+
+  // 首次打开时拉取模板列表
+  useEffect(() => {
+    if (isOpen) {
+      // 只在模板列表为空时加载，避免重复请求
+      if (templates.length === 0) {
+        loadTemplates().catch((err) => console.error(err))
+      }
+    }
+  }, [isOpen]) // 只在弹窗打开状态变化时执行
 
   // 处理设为默认
   const handleSetDefault = (id: string) => {

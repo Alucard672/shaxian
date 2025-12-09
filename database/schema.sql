@@ -502,3 +502,4 @@ INSERT INTO inventory_alert_settings (enabled, auto_alert) VALUES (FALSE, FALSE)
 -- 初始化系统参数（默认值）
 INSERT INTO system_params (enable_dyeing_process) VALUES (FALSE);
 
+

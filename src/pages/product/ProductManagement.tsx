@@ -29,6 +29,7 @@ function ProductManagement() {
     deleteProduct,
     getColorsByProduct,
     addColor,
+    loadColorsByProduct,
   } = useProductStore()
   
   // 加载数据
@@ -165,9 +166,11 @@ function ProductManagement() {
             // 继续创建其他色号，不中断流程
           }
         }
-        // 重新加载数据以更新界面
-        await loadAll()
+        // 重新加载该商品的色号，确保数据同步
+        await loadColorsByProduct(productId)
       }
+      // 重新加载所有数据以更新界面
+      await loadAll()
       
       setIsProductModalOpen(false)
       setEditingProduct(null)

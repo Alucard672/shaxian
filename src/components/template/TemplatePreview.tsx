@@ -22,30 +22,42 @@ function TemplatePreview({ template, isOpen, onClose }: TemplatePreviewProps) {
     deliveryAddress: '浙江省杭州市余杭区创新路88号',
     items: [
       {
+        productCode: 'P-001',
         productName: '2/16NM 走锭全毛',
+        specification: '2/16NM',
+        colorName: '浅米',
         colorCode: '218003浅米',
         batchCode: 'B013018',
         quantity: 0.71,
-        unitPrice: 138.00,
+        unit: 'kg',
+        unitPrice: 138.0,
         amount: 97.98,
         remark: '125kg批色',
       },
       {
+        productCode: 'P-002',
         productName: '涤纶短纤20支',
+        specification: '20S',
+        colorName: '宝蓝',
         colorCode: 'C102 宝蓝',
         batchCode: 'P2025002',
         quantity: 300,
-        unitPrice: 38.50,
-        amount: 11550.00,
+        unit: 'kg',
+        unitPrice: 38.5,
+        amount: 11550.0,
         remark: '加急',
       },
       {
+        productCode: 'P-003',
         productName: '精梳棉纱40支',
+        specification: '40S',
+        colorName: '米白',
         colorCode: 'C005 米白',
         batchCode: 'P2025003',
         quantity: 200,
-        unitPrice: 52.00,
-        amount: 10400.00,
+        unit: 'kg',
+        unitPrice: 52.0,
+        amount: 10400.0,
         remark: '',
       },
     ],
@@ -64,19 +76,34 @@ function TemplatePreview({ template, isOpen, onClose }: TemplatePreviewProps) {
     },
   }
 
-  // 计算页面尺寸（转换为像素，1mm ≈ 3.779527559px）
-  const mmToPx = (mm: number) => mm * 3.779527559
-  const pageWidth = mmToPx(template.pageSettings.width)
-  const pageHeight = mmToPx(template.pageSettings.height)
+  // 单位转换函数
+  const mmToPx = (mm: number) => mm * 3.779527559 // 1mm ≈ 3.779527559px (96 DPI)
+  const inchToPx = (inch: number) => inch * 96 // 1英寸 = 96像素 (标准 DPI)
+  
+  // 根据单位转换尺寸
+  const unit = template.pageSettings.unit || 'mm'
+  const safeWidth = template.pageSettings.width || (unit === 'inch' ? 8.5 : 210)
+  const safeHeight = template.pageSettings.height || (unit === 'inch' ? 11 : 297)
+  const safeMargins = {
+    top: template.pageSettings.marginTop ?? (unit === 'inch' ? 0.5 : 10),
+    right: template.pageSettings.marginRight ?? (unit === 'inch' ? 0.5 : 10),
+    bottom: template.pageSettings.marginBottom ?? (unit === 'inch' ? 0.5 : 10),
+    left: template.pageSettings.marginLeft ?? (unit === 'inch' ? 0.5 : 10),
+  }
+  
+  // 根据单位转换为像素
+  const toPx = unit === 'inch' ? inchToPx : mmToPx
+  const pageWidth = toPx(safeWidth)
+  const pageHeight = toPx(safeHeight)
 
   // 计算内容区域
   const contentStyle = {
-    width: `${pageWidth - mmToPx(template.pageSettings.marginLeft + template.pageSettings.marginRight)}px`,
-    minHeight: `${pageHeight - mmToPx(template.pageSettings.marginTop + template.pageSettings.marginBottom)}px`,
-    paddingTop: `${mmToPx(template.pageSettings.marginTop)}px`,
-    paddingRight: `${mmToPx(template.pageSettings.marginRight)}px`,
-    paddingBottom: `${mmToPx(template.pageSettings.marginBottom)}px`,
-    paddingLeft: `${mmToPx(template.pageSettings.marginLeft)}px`,
+    width: `${pageWidth - toPx(safeMargins.left + safeMargins.right)}px`,
+    minHeight: `${pageHeight - toPx(safeMargins.top + safeMargins.bottom)}px`,
+    paddingTop: `${toPx(safeMargins.top)}px`,
+    paddingRight: `${toPx(safeMargins.right)}px`,
+    paddingBottom: `${toPx(safeMargins.bottom)}px`,
+    paddingLeft: `${toPx(safeMargins.left)}px`,
   }
 
   // 判断是否为三联单
@@ -213,9 +240,24 @@ function TemplatePreview({ template, isOpen, onClose }: TemplatePreviewProps) {
                           <th className="px-2 py-2 text-left font-semibold text-gray-900 border-r border-black" style={{ borderRight: '1px solid #000' }}>
                             序号
                           </th>
+                          {template.productFields.productCode && (
+                            <th className="px-2 py-2 text-left font-semibold text-gray-900 border-r border-black" style={{ borderRight: '1px solid #000' }}>
+                              编号
+                            </th>
+                          )}
                           {template.productFields.productName && (
                             <th className="px-2 py-2 text-left font-semibold text-gray-900 border-r border-black" style={{ borderRight: '1px solid #000' }}>
                               商品名称
+                            </th>
+                          )}
+                          {template.productFields.specification && (
+                            <th className="px-2 py-2 text-left font-semibold text-gray-900 border-r border-black" style={{ borderRight: '1px solid #000' }}>
+                              规格
+                            </th>
+                          )}
+                          {template.productFields.colorName && (
+                            <th className="px-2 py-2 text-left font-semibold text-gray-900 border-r border-black" style={{ borderRight: '1px solid #000' }}>
+                              颜色
                             </th>
                           )}
                           {template.productFields.colorCode && (
@@ -225,7 +267,12 @@ function TemplatePreview({ template, isOpen, onClose }: TemplatePreviewProps) {
                           )}
                           {template.productFields.quantity && (
                             <th className="px-2 py-2 text-center font-semibold text-gray-900 border-r border-black" style={{ borderRight: '1px solid #000' }}>
-                              数量
+                              数量/重量
+                            </th>
+                          )}
+                          {template.productFields.unit && (
+                            <th className="px-2 py-2 text-center font-semibold text-gray-900 border-r border-black" style={{ borderRight: '1px solid #000' }}>
+                              单位
                             </th>
                           )}
                           {template.productFields.unitPrice && (
@@ -256,9 +303,24 @@ function TemplatePreview({ template, isOpen, onClose }: TemplatePreviewProps) {
                             <td className="px-2 py-2 text-gray-900 border-r border-black" style={{ borderRight: '1px solid #000' }}>
                               {index + 1}
                             </td>
+                            {template.productFields.productCode && (
+                              <td className="px-2 py-2 text-gray-900 border-r border-black" style={{ borderRight: '1px solid #000' }}>
+                                {item.productCode}
+                              </td>
+                            )}
                             {template.productFields.productName && (
                               <td className="px-2 py-2 text-gray-900 border-r border-black" style={{ borderRight: '1px solid #000' }}>
                                 {item.productName}
+                              </td>
+                            )}
+                            {template.productFields.specification && (
+                              <td className="px-2 py-2 text-gray-900 border-r border-black" style={{ borderRight: '1px solid #000' }}>
+                                {item.specification}
+                              </td>
+                            )}
+                            {template.productFields.colorName && (
+                              <td className="px-2 py-2 text-gray-900 border-r border-black" style={{ borderRight: '1px solid #000' }}>
+                                {item.colorName}
                               </td>
                             )}
                             {template.productFields.colorCode && (
@@ -269,6 +331,11 @@ function TemplatePreview({ template, isOpen, onClose }: TemplatePreviewProps) {
                             {template.productFields.quantity && (
                               <td className="px-2 py-2 text-center text-gray-900 border-r border-black" style={{ borderRight: '1px solid #000' }}>
                                 {item.quantity}
+                              </td>
+                            )}
+                            {template.productFields.unit && (
+                              <td className="px-2 py-2 text-center text-gray-900 border-r border-black" style={{ borderRight: '1px solid #000' }}>
+                                {item.unit}
                               </td>
                             )}
                             {template.productFields.unitPrice && (
@@ -298,14 +365,16 @@ function TemplatePreview({ template, isOpen, onClose }: TemplatePreviewProps) {
 
                 {/* 合计信息 */}
                 <div className="mb-4 text-sm">
-                  <div className="flex justify-end space-x-8 mb-2">
-                    {template.summaryFields.totalAmount && (
+                  {/* 第一行：合计金额 */}
+                  {template.summaryFields.totalAmount && (
+                    <div className="flex justify-end mb-2">
                       <div>
                         <span className="text-gray-900 font-medium">合计：</span>
                         <span className="text-gray-900 font-bold ml-2">¥{mockData.totalAmount.toFixed(2)}</span>
                       </div>
-                    )}
-                  </div>
+                    </div>
+                  )}
+                  {/* 第二行：付款信息 */}
                   {template.summaryFields.paymentInfo && (
                     <div className="flex justify-end space-x-8 mb-2">
                       <div>
@@ -339,18 +408,33 @@ function TemplatePreview({ template, isOpen, onClose }: TemplatePreviewProps) {
                     </div>
                   )}
                   {template.summaryFields.customerSign && (
-                    <div>
-                      <span className="text-gray-900 font-medium">客户签收：</span>
-                      <div className="mt-8 border-b border-gray-400"></div>
+                    <div className="flex items-end gap-4">
+                      <div className="flex-1">
+                        <span className="text-gray-900 font-medium">客户签收：</span>
+                        <div className="mt-8 border-b border-gray-400"></div>
+                      </div>
+                      {/* 二维码 - 放在客户签收后面 */}
+                      {template.otherElements.qrcode && (
+                        <div className="flex items-center gap-2">
+                          {Array.from({ length: template.otherElements.qrcodeCount || 1 }).map((_, index) => (
+                            <div
+                              key={index}
+                              className="w-16 h-16 bg-gray-200 border-2 flex items-center justify-center text-xs text-gray-500"
+                              style={{ borderColor: '#ef4444' }}
+                            >
+                              二维码{index + 1}
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
 
-                {/* 公司信息和二维码 */}
-                <div className="mt-auto pt-4 border-t border-gray-400 flex items-start justify-between">
-                  {/* 公司信息 */}
-                  {template.otherElements.companyInfo && (
-                    <div className="text-xs text-gray-900 space-y-1 flex-1">
+                {/* 公司信息 */}
+                {template.otherElements.companyInfo && (
+                  <div className="mt-auto pt-4 border-t border-gray-400">
+                    <div className="text-xs text-gray-900 space-y-1">
                       <div className="font-medium">{mockData.companyInfo.name}：{mockData.companyInfo.address}</div>
                       <div>电话：{mockData.companyInfo.phone}</div>
                       <div>联系人：{mockData.companyInfo.contact}</div>
@@ -358,22 +442,8 @@ function TemplatePreview({ template, isOpen, onClose }: TemplatePreviewProps) {
                         <div className="font-medium mt-2">{mockData.companyInfo.notice}</div>
                       )}
                     </div>
-                  )}
-                  {/* 二维码区域 */}
-                  {template.otherElements.qrcode && (
-                    <div className="flex items-end gap-2 ml-4">
-                      {Array.from({ length: template.otherElements.qrcodeCount || 1 }).map((_, index) => (
-                        <div
-                          key={index}
-                          className="w-16 h-16 bg-gray-200 border-2 flex items-center justify-center text-xs text-gray-500"
-                          style={{ borderColor: '#ef4444' }}
-                        >
-                          二维码{index + 1}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
+                  </div>
+                )}
 
                 {/* 页码 */}
                 {template.otherElements.pageNumber && (

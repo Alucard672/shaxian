@@ -33,10 +33,12 @@ import RoleManagement from '../pages/settings/RoleManagement'
 import CustomQuerySettings from '../pages/settings/CustomQuerySettings'
 import InventoryAlertSettings from '../pages/settings/InventoryAlertSettings'
 import ClearData from '../pages/settings/ClearData'
+import Login from '../pages/auth/Login'
 
 function AppRoutes() {
   return (
     <Routes>
+      <Route path="/login" element={<Login />} />
       <Route path="/" element={<Dashboard />} />
       
       {/* 进货管理 */}

@@ -59,6 +59,20 @@ function Header() {
               <div className="text-xs text-gray-500">admin@example.com</div>
             </div>
           </div>
+          <button
+            onClick={() => {
+              // 清空所有本地存储
+              localStorage.clear()
+              sessionStorage.clear()
+              // 跳转到登录页
+              window.location.href = '/shaxian/login'
+            }}
+            className="flex items-center gap-2 px-3 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+            title="退出登录"
+          >
+            <LogOut className="w-4 h-4" />
+            <span className="text-sm">退出</span>
+          </button>
         </div>
 
         {/* 日期 */}

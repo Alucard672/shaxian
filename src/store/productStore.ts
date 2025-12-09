@@ -59,11 +59,15 @@ export const useProductStore = create<ProductState>((set, get) => ({
   // 加载所有色号
   loadColors: async () => {
     try {
-      // 色号需要从每个商品加载，或者后端提供批量接口
-      // 暂时通过商品接口获取
+      // 确保商品列表已加载
       const products = get().products
+      if (products.length === 0) {
+        // 如果商品列表为空，先加载商品
+        await get().loadProducts()
+      }
+      const allProducts = get().products
       const allColors: Color[] = []
-      for (const product of products) {
+      for (const product of allProducts) {
         try {
           const colors = await productApi.getColors(product.id)
           allColors.push(...colors)
@@ -157,9 +161,19 @@ export const useProductStore = create<ProductState>((set, get) => ({
   addColor: async (productId, data) => {
     try {
       const newColor = await productApi.createColor(productId, data)
-      set((state) => ({
-        colors: [...state.colors, newColor]
-      }))
+      set((state) => {
+        // 检查是否已存在（避免重复）
+        const exists = state.colors.some(c => c.id === newColor.id)
+        if (exists) {
+          // 如果已存在，更新它
+          return {
+            colors: state.colors.map(c => c.id === newColor.id ? newColor : c)
+          }
+        }
+        return {
+          colors: [...state.colors, newColor]
+        }
+      })
       return newColor
     } catch (error: any) {
       console.error('Failed to add color:', error)
@@ -203,11 +217,10 @@ export const useProductStore = create<ProductState>((set, get) => ({
     try {
       const colors = await productApi.getColors(productId)
       set((state) => {
-        // 合并新加载的色号，避免重复
-        const existingIds = new Set(state.colors.map(c => c.id))
-        const newColors = colors.filter(c => !existingIds.has(c.id))
+        // 替换该商品的所有色号，而不是只添加新的
+        const otherColors = state.colors.filter(c => c.productId !== productId)
         return {
-          colors: [...state.colors, ...newColors]
+          colors: [...otherColors, ...colors]
         }
       })
     } catch (error: any) {

@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useEffect } from 'react'
 import { Product } from '@/types/product'
 import { useProductStore } from '@/store/productStore'
 import Badge from '../ui/Badge'
@@ -13,7 +13,28 @@ interface ProductDetailProps {
 }
 
 function ProductDetail({ product, onEdit, onDelete, onClose }: ProductDetailProps) {
-  const { colors, batches, getBatchesByColor } = useProductStore()
+  const { colors, batches, getBatchesByColor, loadColorsByProduct, loadBatchesByColor } = useProductStore()
+
+  // 打开详情时，加载该商品的色号和缸号数据
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        await loadColorsByProduct(product.id)
+        // 等待一下，确保色号已加载到 store
+        await new Promise(resolve => setTimeout(resolve, 100))
+        // 重新获取色号列表
+        const { colors: updatedColors } = useProductStore.getState()
+        const productColors = updatedColors.filter((c) => c.productId === product.id)
+        // 加载每个色号的缸号
+        for (const color of productColors) {
+          await loadBatchesByColor(color.id)
+        }
+      } catch (error) {
+        console.error('Failed to load product details:', error)
+      }
+    }
+    loadData()
+  }, [product.id])
 
   // 获取商品关联的色号
   const productColors = useMemo(() => {

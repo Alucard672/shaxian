@@ -9,7 +9,7 @@ import { ArrowLeft, Save, Eye } from 'lucide-react'
 function TemplateEdit() {
   const navigate = useNavigate()
   const { id } = useParams<{ id: string }>()
-  const { getTemplate, addTemplate, updateTemplate } = useTemplateStore()
+  const { templates, getTemplate, addTemplate, updateTemplate, loadTemplates } = useTemplateStore()
 
   const isEditMode = !!id
   const existingTemplate = isEditMode ? getTemplate(id!) : null
@@ -47,9 +47,13 @@ function TemplateEdit() {
     },
     productFields: {
       showTable: true,
+      productCode: true,
       productName: true,
+      specification: true,
+      colorName: true,
       colorCode: true,
       quantity: true,
+      unit: true,
       unitPrice: true,
       amount: true,
       batchCode: true,
@@ -74,30 +78,41 @@ function TemplateEdit() {
     qrcodeImages: [],
   })
 
+  // 加载模板列表（只在首次加载时）
+  useEffect(() => {
+    if (templates.length === 0) {
+      loadTemplates().catch((err) => console.error('Failed to load templates:', err))
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []) // 只在组件挂载时执行一次，templates.length 变化时不需要重新加载
+
   // 加载编辑模式的数据
   useEffect(() => {
-    if (isEditMode && existingTemplate) {
-      setFormData({
-        name: existingTemplate.name,
-        type: existingTemplate.type,
-        description: existingTemplate.description || '',
-        documentType: existingTemplate.documentType,
-        pageSettings: {
-          ...existingTemplate.pageSettings,
-          unit: existingTemplate.pageSettings.unit || 'mm', // 兼容旧数据，默认使用mm
-        },
-        titleSettings: existingTemplate.titleSettings,
-        basicInfoFields: existingTemplate.basicInfoFields,
-        productFields: {
-          ...existingTemplate.productFields,
-          textAlign: existingTemplate.productFields.textAlign || 'left', // 兼容旧数据，默认左对齐
-        },
-        summaryFields: existingTemplate.summaryFields,
-        otherElements: existingTemplate.otherElements,
-        qrcodeImages: existingTemplate.qrcodeImages,
-      })
+    if (isEditMode && id) {
+      const template = getTemplate(id)
+      if (template) {
+        setFormData({
+          name: template.name,
+          type: template.type,
+          description: template.description || '',
+          documentType: template.documentType,
+          pageSettings: {
+            ...template.pageSettings,
+            unit: template.pageSettings.unit || 'mm', // 兼容旧数据，默认使用mm
+          },
+          titleSettings: template.titleSettings,
+          basicInfoFields: template.basicInfoFields,
+          productFields: {
+            ...template.productFields,
+            textAlign: template.productFields.textAlign || 'left', // 兼容旧数据，默认左对齐
+          },
+          summaryFields: template.summaryFields,
+          otherElements: template.otherElements,
+          qrcodeImages: template.qrcodeImages,
+        })
+      }
     }
-  }, [isEditMode, existingTemplate])
+  }, [id, templates.length]) // 只在ID或模板列表变化时执行
 
   // 处理保存
   const handleSave = () => {
@@ -485,7 +500,7 @@ function TemplateEdit() {
                   <input
                     type="checkbox"
                     id={`basicInfo_${key}`}
-                    checked={value}
+                    checked={typeof value === 'boolean' ? value : false}
                     onChange={(e) =>
                       setFormData({
                         ...formData,
@@ -499,7 +514,7 @@ function TemplateEdit() {
                   />
                   <label
                     htmlFor={`basicInfo_${key}`}
-                    className="text-sm font-medium text-gray-700"
+                    className="text-sm font-medium text-gray-700 cursor-pointer"
                   >
                     {key === 'documentNumber'
                       ? '单据编号'
@@ -556,7 +571,7 @@ function TemplateEdit() {
                           <input
                             type="checkbox"
                             id={`product_${key}`}
-                            checked={value as boolean}
+                            checked={typeof value === 'boolean' ? value : false}
                             onChange={(e) =>
                               setFormData({
                                 ...formData,
@@ -570,21 +585,29 @@ function TemplateEdit() {
                           />
                           <label
                             htmlFor={`product_${key}`}
-                            className="text-sm font-medium text-gray-700"
+                            className="text-sm font-medium text-gray-700 cursor-pointer"
                           >
-                            {key === 'productName'
-                              ? '商品名称'
-                              : key === 'colorCode'
-                                ? '色号'
-                                : key === 'quantity'
-                                  ? '数量/重量'
-                                  : key === 'unitPrice'
-                                    ? '单价'
-                                    : key === 'amount'
-                                      ? '金额'
-                                      : key === 'batchCode'
-                                        ? '批号'
-                                        : '备注'}
+                        {key === 'productCode'
+                          ? '商品编号'
+                          : key === 'productName'
+                            ? '商品名称'
+                            : key === 'specification'
+                              ? '规格'
+                              : key === 'colorName'
+                                ? '颜色'
+                                : key === 'colorCode'
+                                  ? '色号'
+                                  : key === 'quantity'
+                                    ? '数量/重量'
+                                    : key === 'unit'
+                                      ? '单位'
+                                      : key === 'unitPrice'
+                                        ? '单价'
+                                        : key === 'amount'
+                                          ? '金额'
+                                          : key === 'batchCode'
+                                            ? '批号'
+                                            : '备注'}
                           </label>
                         </div>
                       ))}
@@ -629,7 +652,7 @@ function TemplateEdit() {
                   <input
                     type="checkbox"
                     id={`summary_${key}`}
-                    checked={value}
+                    checked={typeof value === 'boolean' ? value : false}
                     onChange={(e) =>
                       setFormData({
                         ...formData,
@@ -643,7 +666,7 @@ function TemplateEdit() {
                   />
                   <label
                     htmlFor={`summary_${key}`}
-                    className="text-sm font-medium text-gray-700"
+                    className="text-sm font-medium text-gray-700 cursor-pointer"
                   >
                     {key === 'subtotal'
                       ? '小计信息'
@@ -674,7 +697,7 @@ function TemplateEdit() {
                       <input
                         type="checkbox"
                         id={`other_${key}`}
-                        checked={value as boolean}
+                        checked={typeof value === 'boolean' ? value : false}
                         onChange={(e) =>
                           setFormData({
                             ...formData,
@@ -686,7 +709,7 @@ function TemplateEdit() {
                         }
                         className="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
                       />
-                      <label htmlFor={`other_${key}`} className="text-sm font-medium text-gray-700">
+                      <label htmlFor={`other_${key}`} className="text-sm font-medium text-gray-700 cursor-pointer">
                         {key === 'qrcode'
                           ? '二维码'
                           : key === 'companyInfo'
