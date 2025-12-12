@@ -9,7 +9,7 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 
 @Repository
-public interface CustomQueryRepository extends JpaRepository<CustomQuery, String> {
+public interface CustomQueryRepository extends JpaRepository<CustomQuery, Long> {
     @Query("SELECT cq FROM CustomQuery cq WHERE " +
            "(:module IS NULL OR cq.module = :module) " +
            "ORDER BY cq.createdAt DESC")

@@ -29,7 +29,7 @@ public class PurchaseController {
             @RequestParam(required = false) String supplierId,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
-        List<PurchaseOrder> orders = purchaseService.getAllPurchases(status, supplierId, startDate, endDate);
+        List<PurchaseOrder> orders = purchaseService.getAllPurchases(status, supplierId != null ? Long.parseLong(supplierId) : null, startDate, endDate);
         // 加载明细
         orders.forEach(order -> {
             List<PurchaseOrderItem> items = purchaseService.getPurchaseById(order.getId())
@@ -41,7 +41,7 @@ public class PurchaseController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<PurchaseOrder> getPurchase(@PathVariable String id) {
+    public ResponseEntity<PurchaseOrder> getPurchase(@PathVariable Long id) {
         return purchaseService.getPurchaseById(id)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
@@ -52,7 +52,7 @@ public class PurchaseController {
         try {
             PurchaseOrder order = new PurchaseOrder();
             // 从 request 中提取订单信息并设置到 order 对象
-            if (request.containsKey("supplierId")) order.setSupplierId((String) request.get("supplierId"));
+            if (request.containsKey("supplierId")) order.setSupplierId(parseLong(request.get("supplierId")));
             if (request.containsKey("supplierName")) order.setSupplierName((String) request.get("supplierName"));
             if (request.containsKey("purchaseDate")) order.setPurchaseDate(LocalDate.parse((String) request.get("purchaseDate")));
             if (request.containsKey("expectedDate")) order.setExpectedDate(LocalDate.parse((String) request.get("expectedDate")));
@@ -68,10 +68,10 @@ public class PurchaseController {
             List<Map<String, Object>> itemsData = (List<Map<String, Object>>) request.get("items");
             List<PurchaseOrderItem> items = itemsData.stream().map(itemData -> {
                 PurchaseOrderItem item = new PurchaseOrderItem();
-                if (itemData.containsKey("productId")) item.setProductId((String) itemData.get("productId"));
+                if (itemData.containsKey("productId")) item.setProductId(parseLong(itemData.get("productId")));
                 if (itemData.containsKey("productName")) item.setProductName((String) itemData.get("productName"));
                 if (itemData.containsKey("productCode")) item.setProductCode((String) itemData.get("productCode"));
-                if (itemData.containsKey("colorId")) item.setColorId((String) itemData.get("colorId"));
+                if (itemData.containsKey("colorId")) item.setColorId(parseLong(itemData.get("colorId")));
                 if (itemData.containsKey("colorName")) item.setColorName((String) itemData.get("colorName"));
                 if (itemData.containsKey("colorCode")) item.setColorCode((String) itemData.get("colorCode"));
                 if (itemData.containsKey("batchCode")) item.setBatchCode((String) itemData.get("batchCode"));
@@ -92,10 +92,10 @@ public class PurchaseController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<?> updatePurchase(@PathVariable String id, @RequestBody Map<String, Object> request) {
+    public ResponseEntity<?> updatePurchase(@PathVariable Long id, @RequestBody Map<String, Object> request) {
         try {
             PurchaseOrder order = new PurchaseOrder();
-            if (request.containsKey("supplierId")) order.setSupplierId((String) request.get("supplierId"));
+            if (request.containsKey("supplierId")) order.setSupplierId(parseLong(request.get("supplierId")));
             if (request.containsKey("supplierName")) order.setSupplierName((String) request.get("supplierName"));
             if (request.containsKey("purchaseDate")) order.setPurchaseDate(LocalDate.parse((String) request.get("purchaseDate")));
             if (request.containsKey("expectedDate")) order.setExpectedDate(LocalDate.parse((String) request.get("expectedDate")));
@@ -110,10 +110,10 @@ public class PurchaseController {
             List<Map<String, Object>> itemsData = (List<Map<String, Object>>) request.get("items");
             List<PurchaseOrderItem> items = itemsData.stream().map(itemData -> {
                 PurchaseOrderItem item = new PurchaseOrderItem();
-                if (itemData.containsKey("productId")) item.setProductId((String) itemData.get("productId"));
+                if (itemData.containsKey("productId")) item.setProductId(parseLong(itemData.get("productId")));
                 if (itemData.containsKey("productName")) item.setProductName((String) itemData.get("productName"));
                 if (itemData.containsKey("productCode")) item.setProductCode((String) itemData.get("productCode"));
-                if (itemData.containsKey("colorId")) item.setColorId((String) itemData.get("colorId"));
+                if (itemData.containsKey("colorId")) item.setColorId(parseLong(itemData.get("colorId")));
                 if (itemData.containsKey("colorName")) item.setColorName((String) itemData.get("colorName"));
                 if (itemData.containsKey("colorCode")) item.setColorCode((String) itemData.get("colorCode"));
                 if (itemData.containsKey("batchCode")) item.setBatchCode((String) itemData.get("batchCode"));
@@ -134,7 +134,7 @@ public class PurchaseController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deletePurchase(@PathVariable String id) {
+    public ResponseEntity<Void> deletePurchase(@PathVariable Long id) {
         try {
             purchaseService.deletePurchase(id);
             return ResponseEntity.noContent().build();
@@ -143,5 +143,18 @@ public class PurchaseController {
         }
     }
 
+    private Long parseLong(Object value) {
+        if (value == null) return null;
+        if (value instanceof Long) return (Long) value;
+        if (value instanceof Integer) return ((Integer) value).longValue();
+        if (value instanceof String) {
+            try {
+                return Long.parseLong((String) value);
+            } catch (NumberFormatException e) {
+                return null;
+            }
+        }
+        return null;
+    }
 }
 

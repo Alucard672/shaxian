@@ -7,7 +7,7 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 
 @Repository
-public interface PaymentRecordRepository extends JpaRepository<PaymentRecord, String> {
-    List<PaymentRecord> findByAccountPayableIdOrderByPaymentDateDesc(String accountPayableId);
+public interface PaymentRecordRepository extends JpaRepository<PaymentRecord, Long> {
+    List<PaymentRecord> findByAccountPayableIdOrderByPaymentDateDesc(Long accountPayableId);
 }
 

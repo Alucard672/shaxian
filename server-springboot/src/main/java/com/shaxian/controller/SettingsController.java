@@ -4,7 +4,6 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.shaxian.entity.*;
 import com.shaxian.repository.*;
-import com.shaxian.util.UuidUtil;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -85,7 +84,7 @@ public class SettingsController {
     }
 
     @GetMapping("/employees/{id}")
-    public ResponseEntity<Employee> getEmployee(@PathVariable String id) {
+    public ResponseEntity<Employee> getEmployee(@PathVariable Long id) {
         return employeeRepository.findById(id)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
@@ -93,12 +92,11 @@ public class SettingsController {
 
     @PostMapping("/employees")
     public ResponseEntity<Employee> createEmployee(@RequestBody Employee employee) {
-        employee.setId(UuidUtil.generate());
         return ResponseEntity.status(HttpStatus.CREATED).body(employeeRepository.save(employee));
     }
 
     @PutMapping("/employees/{id}")
-    public ResponseEntity<Employee> updateEmployee(@PathVariable String id, @RequestBody Employee employee) {
+    public ResponseEntity<Employee> updateEmployee(@PathVariable Long id, @RequestBody Employee employee) {
         if (!employeeRepository.existsById(id)) {
             return ResponseEntity.notFound().build();
         }
@@ -109,7 +107,7 @@ public class SettingsController {
     }
 
     @DeleteMapping("/employees/{id}")
-    public ResponseEntity<Void> deleteEmployee(@PathVariable String id) {
+    public ResponseEntity<Void> deleteEmployee(@PathVariable Long id) {
         if (!employeeRepository.existsById(id)) {
             return ResponseEntity.notFound().build();
         }
@@ -126,7 +124,6 @@ public class SettingsController {
     @PostMapping("/roles")
     public ResponseEntity<Role> createRole(@RequestBody Map<String, Object> request) throws JsonProcessingException {
         Role role = new Role();
-        role.setId(UuidUtil.generate());
         role.setName((String) request.get("name"));
         if (request.containsKey("description")) role.setDescription((String) request.get("description"));
         if (request.containsKey("permissions")) {
@@ -136,7 +133,7 @@ public class SettingsController {
     }
 
     @PutMapping("/roles/{id}")
-    public ResponseEntity<Role> updateRole(@PathVariable String id, @RequestBody Map<String, Object> request) throws JsonProcessingException {
+    public ResponseEntity<Role> updateRole(@PathVariable Long id, @RequestBody Map<String, Object> request) throws JsonProcessingException {
         if (!roleRepository.existsById(id)) {
             return ResponseEntity.notFound().build();
         }
@@ -153,7 +150,7 @@ public class SettingsController {
     }
 
     @DeleteMapping("/roles/{id}")
-    public ResponseEntity<Void> deleteRole(@PathVariable String id) {
+    public ResponseEntity<Void> deleteRole(@PathVariable Long id) {
         if (!roleRepository.existsById(id)) {
             return ResponseEntity.notFound().build();
         }
@@ -173,7 +170,6 @@ public class SettingsController {
     @PostMapping("/queries")
     public ResponseEntity<CustomQuery> createQuery(@RequestBody Map<String, Object> request) throws JsonProcessingException {
         CustomQuery query = new CustomQuery();
-        query.setId(UuidUtil.generate());
         query.setName((String) request.get("name"));
         query.setModule((String) request.get("module"));
         if (request.containsKey("conditions")) {

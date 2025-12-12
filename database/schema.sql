@@ -5,7 +5,7 @@
 
 -- 商品表
 CREATE TABLE products (
-  id VARCHAR(50) PRIMARY KEY,
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
   name VARCHAR(200) NOT NULL,
   code VARCHAR(50) UNIQUE NOT NULL,
   specification VARCHAR(100),
@@ -23,8 +23,8 @@ CREATE TABLE products (
 
 -- 色号表
 CREATE TABLE colors (
-  id VARCHAR(50) PRIMARY KEY,
-  product_id VARCHAR(50) NOT NULL,
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  product_id BIGINT NOT NULL,
   code VARCHAR(50) NOT NULL,
   name VARCHAR(100) NOT NULL,
   color_value VARCHAR(20),
@@ -39,11 +39,11 @@ CREATE TABLE colors (
 
 -- 缸号表
 CREATE TABLE batches (
-  id VARCHAR(50) PRIMARY KEY,
-  color_id VARCHAR(50) NOT NULL,
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  color_id BIGINT NOT NULL,
   code VARCHAR(50) UNIQUE NOT NULL,
   production_date DATE,
-  supplier_id VARCHAR(50),
+  supplier_id BIGINT,
   supplier_name VARCHAR(200),
   purchase_price DECIMAL(10, 2),
   stock_quantity DECIMAL(10, 2) NOT NULL DEFAULT 0,
@@ -62,7 +62,7 @@ CREATE TABLE batches (
 
 -- 客户表
 CREATE TABLE customers (
-  id VARCHAR(50) PRIMARY KEY,
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
   name VARCHAR(200) NOT NULL,
   code VARCHAR(50) UNIQUE NOT NULL,
   contact_person VARCHAR(100),
@@ -80,7 +80,7 @@ CREATE TABLE customers (
 
 -- 供应商表
 CREATE TABLE suppliers (
-  id VARCHAR(50) PRIMARY KEY,
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
   name VARCHAR(200) NOT NULL,
   code VARCHAR(50) UNIQUE NOT NULL,
   contact_person VARCHAR(100),
@@ -100,9 +100,9 @@ CREATE TABLE suppliers (
 
 -- 进货单表
 CREATE TABLE purchase_orders (
-  id VARCHAR(50) PRIMARY KEY,
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
   order_number VARCHAR(50) UNIQUE NOT NULL,
-  supplier_id VARCHAR(50) NOT NULL,
+  supplier_id BIGINT NOT NULL,
   supplier_name VARCHAR(200) NOT NULL,
   purchase_date DATE NOT NULL,
   expected_date DATE,
@@ -123,12 +123,12 @@ CREATE TABLE purchase_orders (
 
 -- 进货单明细表
 CREATE TABLE purchase_order_items (
-  id VARCHAR(50) PRIMARY KEY,
-  order_id VARCHAR(50) NOT NULL,
-  product_id VARCHAR(50) NOT NULL,
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  order_id BIGINT NOT NULL,
+  product_id BIGINT NOT NULL,
   product_name VARCHAR(200) NOT NULL,
   product_code VARCHAR(50) NOT NULL,
-  color_id VARCHAR(50),
+  color_id BIGINT,
   color_name VARCHAR(100),
   color_code VARCHAR(50),
   batch_code VARCHAR(50) NOT NULL,
@@ -150,9 +150,9 @@ CREATE TABLE purchase_order_items (
 
 -- 销售单表
 CREATE TABLE sales_orders (
-  id VARCHAR(50) PRIMARY KEY,
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
   order_number VARCHAR(50) UNIQUE NOT NULL,
-  customer_id VARCHAR(50) NOT NULL,
+  customer_id BIGINT NOT NULL,
   customer_name VARCHAR(200) NOT NULL,
   sales_date DATE NOT NULL,
   expected_date DATE,
@@ -173,15 +173,15 @@ CREATE TABLE sales_orders (
 
 -- 销售单明细表
 CREATE TABLE sales_order_items (
-  id VARCHAR(50) PRIMARY KEY,
-  order_id VARCHAR(50) NOT NULL,
-  product_id VARCHAR(50) NOT NULL,
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  order_id BIGINT NOT NULL,
+  product_id BIGINT NOT NULL,
   product_name VARCHAR(200) NOT NULL,
   product_code VARCHAR(50) NOT NULL,
-  color_id VARCHAR(50) NOT NULL,
+  color_id BIGINT NOT NULL,
   color_name VARCHAR(100) NOT NULL,
   color_code VARCHAR(50) NOT NULL,
-  batch_id VARCHAR(50) NOT NULL,
+  batch_id BIGINT NOT NULL,
   batch_code VARCHAR(50) NOT NULL,
   quantity DECIMAL(10, 2) NOT NULL,
   unit VARCHAR(20) NOT NULL,
@@ -201,13 +201,13 @@ CREATE TABLE sales_order_items (
 
 -- 染色加工单表
 CREATE TABLE dyeing_orders (
-  id VARCHAR(50) PRIMARY KEY,
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
   order_number VARCHAR(50) UNIQUE NOT NULL,
-  product_id VARCHAR(50) NOT NULL,
+  product_id BIGINT NOT NULL,
   product_name VARCHAR(200) NOT NULL,
-  grey_batch_id VARCHAR(50) NOT NULL,
+  grey_batch_id BIGINT NOT NULL,
   grey_batch_code VARCHAR(50) NOT NULL,
-  factory_id VARCHAR(50),
+  factory_id BIGINT,
   factory_name VARCHAR(200) NOT NULL,
   factory_phone VARCHAR(50),
   shipment_date DATE NOT NULL,
@@ -229,9 +229,9 @@ CREATE TABLE dyeing_orders (
 
 -- 染色加工单明细表
 CREATE TABLE dyeing_order_items (
-  id VARCHAR(50) PRIMARY KEY,
-  order_id VARCHAR(50) NOT NULL,
-  target_color_id VARCHAR(50) NOT NULL,
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  order_id BIGINT NOT NULL,
+  target_color_id BIGINT NOT NULL,
   target_color_code VARCHAR(50) NOT NULL,
   target_color_name VARCHAR(100) NOT NULL,
   target_color_value VARCHAR(20),
@@ -247,10 +247,10 @@ CREATE TABLE dyeing_order_items (
 
 -- 应收账款表
 CREATE TABLE account_receivables (
-  id VARCHAR(50) PRIMARY KEY,
-  customer_id VARCHAR(50) NOT NULL,
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  customer_id BIGINT NOT NULL,
   customer_name VARCHAR(200) NOT NULL,
-  sales_order_id VARCHAR(50) NOT NULL,
+  sales_order_id BIGINT NOT NULL,
   sales_order_number VARCHAR(50) NOT NULL,
   receivable_amount DECIMAL(12, 2) NOT NULL,
   received_amount DECIMAL(12, 2) NOT NULL DEFAULT 0,
@@ -268,8 +268,8 @@ CREATE TABLE account_receivables (
 
 -- 收款记录表
 CREATE TABLE receipt_records (
-  id VARCHAR(50) PRIMARY KEY,
-  account_receivable_id VARCHAR(50) NOT NULL,
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  account_receivable_id BIGINT NOT NULL,
   amount DECIMAL(12, 2) NOT NULL,
   payment_method ENUM('现金', '转账', '支票', '其他') NOT NULL DEFAULT '转账',
   receipt_date DATE NOT NULL,
@@ -283,10 +283,10 @@ CREATE TABLE receipt_records (
 
 -- 应付账款表
 CREATE TABLE account_payables (
-  id VARCHAR(50) PRIMARY KEY,
-  supplier_id VARCHAR(50) NOT NULL,
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  supplier_id BIGINT NOT NULL,
   supplier_name VARCHAR(200) NOT NULL,
-  purchase_order_id VARCHAR(50) NOT NULL,
+  purchase_order_id BIGINT NOT NULL,
   purchase_order_number VARCHAR(50) NOT NULL,
   payable_amount DECIMAL(12, 2) NOT NULL,
   paid_amount DECIMAL(12, 2) NOT NULL DEFAULT 0,
@@ -304,8 +304,8 @@ CREATE TABLE account_payables (
 
 -- 付款记录表
 CREATE TABLE payment_records (
-  id VARCHAR(50) PRIMARY KEY,
-  account_payable_id VARCHAR(50) NOT NULL,
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  account_payable_id BIGINT NOT NULL,
   amount DECIMAL(12, 2) NOT NULL,
   payment_method ENUM('现金', '转账', '支票', '其他') NOT NULL DEFAULT '转账',
   payment_date DATE NOT NULL,
@@ -321,7 +321,7 @@ CREATE TABLE payment_records (
 
 -- 库存调整单表
 CREATE TABLE adjustment_orders (
-  id VARCHAR(50) PRIMARY KEY,
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
   order_number VARCHAR(50) UNIQUE NOT NULL,
   type ENUM('调增', '调减', '盘盈', '盘亏', '报损', '其他') NOT NULL,
   adjustment_date DATE NOT NULL,
@@ -338,13 +338,13 @@ CREATE TABLE adjustment_orders (
 
 -- 库存调整单明细表
 CREATE TABLE adjustment_order_items (
-  id VARCHAR(50) PRIMARY KEY,
-  order_id VARCHAR(50) NOT NULL,
-  batch_id VARCHAR(50) NOT NULL,
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  order_id BIGINT NOT NULL,
+  batch_id BIGINT NOT NULL,
   batch_code VARCHAR(50) NOT NULL,
-  product_id VARCHAR(50) NOT NULL,
+  product_id BIGINT NOT NULL,
   product_name VARCHAR(200) NOT NULL,
-  color_id VARCHAR(50) NOT NULL,
+  color_id BIGINT NOT NULL,
   color_name VARCHAR(100) NOT NULL,
   color_code VARCHAR(50) NOT NULL,
   quantity DECIMAL(10, 2) NOT NULL,
@@ -359,7 +359,7 @@ CREATE TABLE adjustment_order_items (
 
 -- 盘点单表
 CREATE TABLE inventory_check_orders (
-  id VARCHAR(50) PRIMARY KEY,
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
   order_number VARCHAR(50) UNIQUE NOT NULL,
   name VARCHAR(200) NOT NULL,
   warehouse VARCHAR(100) NOT NULL,
@@ -380,13 +380,13 @@ CREATE TABLE inventory_check_orders (
 
 -- 盘点单明细表
 CREATE TABLE inventory_check_items (
-  id VARCHAR(50) PRIMARY KEY,
-  order_id VARCHAR(50) NOT NULL,
-  batch_id VARCHAR(50) NOT NULL,
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  order_id BIGINT NOT NULL,
+  batch_id BIGINT NOT NULL,
   batch_code VARCHAR(50) NOT NULL,
-  product_id VARCHAR(50) NOT NULL,
+  product_id BIGINT NOT NULL,
   product_name VARCHAR(200) NOT NULL,
-  color_id VARCHAR(50) NOT NULL,
+  color_id BIGINT NOT NULL,
   color_name VARCHAR(100) NOT NULL,
   color_code VARCHAR(50) NOT NULL,
   system_quantity DECIMAL(10, 2) NOT NULL,
@@ -405,7 +405,7 @@ CREATE TABLE inventory_check_items (
 
 -- 门店信息表（单条记录）
 CREATE TABLE store_info (
-  id INT PRIMARY KEY AUTO_INCREMENT,
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
   name VARCHAR(200),
   code VARCHAR(50),
   address TEXT,
@@ -419,7 +419,7 @@ CREATE TABLE store_info (
 
 -- 员工表
 CREATE TABLE employees (
-  id VARCHAR(50) PRIMARY KEY,
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
   name VARCHAR(100) NOT NULL,
   position VARCHAR(100),
   phone VARCHAR(50),
@@ -433,7 +433,7 @@ CREATE TABLE employees (
 
 -- 角色表
 CREATE TABLE roles (
-  id VARCHAR(50) PRIMARY KEY,
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
   name VARCHAR(100) NOT NULL,
   description TEXT,
   permissions TEXT, -- JSON 格式存储权限数组
@@ -443,7 +443,7 @@ CREATE TABLE roles (
 
 -- 自定义查询表
 CREATE TABLE custom_queries (
-  id VARCHAR(50) PRIMARY KEY,
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
   name VARCHAR(200) NOT NULL,
   module VARCHAR(50) NOT NULL,
   conditions TEXT, -- JSON 格式存储查询条件
@@ -454,7 +454,7 @@ CREATE TABLE custom_queries (
 
 -- 库存预警设置表（单条记录）
 CREATE TABLE inventory_alert_settings (
-  id INT PRIMARY KEY AUTO_INCREMENT,
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
   enabled BOOLEAN NOT NULL DEFAULT FALSE,
   threshold DECIMAL(10, 2),
   auto_alert BOOLEAN NOT NULL DEFAULT FALSE,
@@ -463,7 +463,7 @@ CREATE TABLE inventory_alert_settings (
 
 -- 系统参数表（单条记录）
 CREATE TABLE system_params (
-  id INT PRIMARY KEY AUTO_INCREMENT,
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
   enable_dyeing_process BOOLEAN NOT NULL DEFAULT FALSE,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
@@ -472,7 +472,7 @@ CREATE TABLE system_params (
 
 -- 打印模板表
 CREATE TABLE print_templates (
-  id VARCHAR(50) PRIMARY KEY,
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
   name VARCHAR(200) NOT NULL,
   type ENUM('A4模板', '三联单') NOT NULL,
   description TEXT,

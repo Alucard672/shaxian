@@ -3,7 +3,6 @@ package com.shaxian.controller;
 import com.shaxian.entity.*;
 import com.shaxian.repository.*;
 import com.shaxian.util.OrderNumberGenerator;
-import com.shaxian.util.UuidUtil;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.transaction.annotation.Transactional;
@@ -48,7 +47,7 @@ public class InventoryController {
     }
 
     @GetMapping("/adjustments/{id}")
-    public ResponseEntity<AdjustmentOrder> getAdjustment(@PathVariable String id) {
+    public ResponseEntity<AdjustmentOrder> getAdjustment(@PathVariable Long id) {
         Optional<AdjustmentOrder> order = adjustmentOrderRepository.findById(id);
         if (order.isPresent()) {
             order.get().setItems(adjustmentOrderItemRepository.findByOrderId(id));
@@ -62,7 +61,6 @@ public class InventoryController {
     public ResponseEntity<?> createAdjustment(@RequestBody Map<String, Object> request) {
         try {
             AdjustmentOrder order = new AdjustmentOrder();
-            order.setId(UuidUtil.generate());
             order.setOrderNumber(OrderNumberGenerator.generateAdjustmentOrderNumber());
             if (request.containsKey("type")) {
                 order.setType(AdjustmentOrder.AdjustmentType.valueOf((String) request.get("type")));
@@ -86,18 +84,17 @@ public class InventoryController {
 
             List<AdjustmentOrderItem> items = itemsData.stream().map(itemData -> {
                 AdjustmentOrderItem item = new AdjustmentOrderItem();
-                item.setId(UuidUtil.generate());
                 item.setOrderId(saved.getId());
                 if (itemData.containsKey("batchId"))
-                    item.setBatchId((String) itemData.get("batchId"));
+                    item.setBatchId((Long) itemData.get("batchId"));
                 if (itemData.containsKey("batchCode"))
                     item.setBatchCode((String) itemData.get("batchCode"));
                 if (itemData.containsKey("productId"))
-                    item.setProductId((String) itemData.get("productId"));
+                    item.setProductId((Long) itemData.get("productId"));
                 if (itemData.containsKey("productName"))
                     item.setProductName((String) itemData.get("productName"));
                 if (itemData.containsKey("colorId"))
-                    item.setColorId((String) itemData.get("colorId"));
+                    item.setColorId((Long) itemData.get("colorId"));
                 if (itemData.containsKey("colorName"))
                     item.setColorName((String) itemData.get("colorName"));
                 if (itemData.containsKey("colorCode"))
@@ -128,7 +125,7 @@ public class InventoryController {
 
     @PutMapping("/adjustments/{id}")
     @Transactional
-    public ResponseEntity<?> updateAdjustment(@PathVariable String id, @RequestBody Map<String, Object> request) {
+    public ResponseEntity<?> updateAdjustment(@PathVariable Long id, @RequestBody Map<String, Object> request) {
         try {
             AdjustmentOrder order = adjustmentOrderRepository.findById(id)
                     .orElseThrow(() -> new IllegalArgumentException("库存调整单不存在"));
@@ -165,18 +162,17 @@ public class InventoryController {
 
             List<AdjustmentOrderItem> items = itemsData.stream().map(itemData -> {
                 AdjustmentOrderItem item = new AdjustmentOrderItem();
-                item.setId(UuidUtil.generate());
                 item.setOrderId(id);
                 if (itemData.containsKey("batchId"))
-                    item.setBatchId((String) itemData.get("batchId"));
+                    item.setBatchId(parseLong(itemData.get("batchId")));
                 if (itemData.containsKey("batchCode"))
                     item.setBatchCode((String) itemData.get("batchCode"));
                 if (itemData.containsKey("productId"))
-                    item.setProductId((String) itemData.get("productId"));
+                    item.setProductId(parseLong(itemData.get("productId")));
                 if (itemData.containsKey("productName"))
                     item.setProductName((String) itemData.get("productName"));
                 if (itemData.containsKey("colorId"))
-                    item.setColorId((String) itemData.get("colorId"));
+                    item.setColorId(parseLong(itemData.get("colorId")));
                 if (itemData.containsKey("colorName"))
                     item.setColorName((String) itemData.get("colorName"));
                 if (itemData.containsKey("colorCode"))
@@ -217,7 +213,7 @@ public class InventoryController {
     }
 
     @GetMapping("/checks/{id}")
-    public ResponseEntity<InventoryCheckOrder> getCheck(@PathVariable String id) {
+    public ResponseEntity<InventoryCheckOrder> getCheck(@PathVariable Long id) {
         Optional<InventoryCheckOrder> order = inventoryCheckOrderRepository.findById(id);
         if (order.isPresent()) {
             order.get().setItems(inventoryCheckItemRepository.findByOrderId(id));
@@ -231,7 +227,6 @@ public class InventoryController {
     public ResponseEntity<?> createCheck(@RequestBody Map<String, Object> request) {
         try {
             InventoryCheckOrder order = new InventoryCheckOrder();
-            order.setId(UuidUtil.generate());
             order.setOrderNumber(OrderNumberGenerator.generateInventoryCheckOrderNumber());
             order.setName((String) request.get("name"));
             order.setWarehouse((String) request.get("warehouse"));
@@ -274,18 +269,17 @@ public class InventoryController {
 
             List<InventoryCheckItem> items = itemsData.stream().map(itemData -> {
                 InventoryCheckItem item = new InventoryCheckItem();
-                item.setId(UuidUtil.generate());
                 item.setOrderId(saved.getId());
                 if (itemData.containsKey("batchId"))
-                    item.setBatchId((String) itemData.get("batchId"));
+                    item.setBatchId(parseLong(itemData.get("batchId")));
                 if (itemData.containsKey("batchCode"))
                     item.setBatchCode((String) itemData.get("batchCode"));
                 if (itemData.containsKey("productId"))
-                    item.setProductId((String) itemData.get("productId"));
+                    item.setProductId(parseLong(itemData.get("productId")));
                 if (itemData.containsKey("productName"))
                     item.setProductName((String) itemData.get("productName"));
                 if (itemData.containsKey("colorId"))
-                    item.setColorId((String) itemData.get("colorId"));
+                    item.setColorId(parseLong(itemData.get("colorId")));
                 if (itemData.containsKey("colorName"))
                     item.setColorName((String) itemData.get("colorName"));
                 if (itemData.containsKey("colorCode"))
@@ -314,7 +308,7 @@ public class InventoryController {
 
     @PutMapping("/checks/{id}")
     @Transactional
-    public ResponseEntity<?> updateCheck(@PathVariable String id, @RequestBody Map<String, Object> request) {
+    public ResponseEntity<?> updateCheck(@PathVariable Long id, @RequestBody Map<String, Object> request) {
         try {
             InventoryCheckOrder order = inventoryCheckOrderRepository.findById(id)
                     .orElseThrow(() -> new IllegalArgumentException("盘点单不存在"));
@@ -362,18 +356,17 @@ public class InventoryController {
 
             List<InventoryCheckItem> items = itemsData.stream().map(itemData -> {
                 InventoryCheckItem item = new InventoryCheckItem();
-                item.setId(UuidUtil.generate());
                 item.setOrderId(id);
                 if (itemData.containsKey("batchId"))
-                    item.setBatchId((String) itemData.get("batchId"));
+                    item.setBatchId(parseLong(itemData.get("batchId")));
                 if (itemData.containsKey("batchCode"))
                     item.setBatchCode((String) itemData.get("batchCode"));
                 if (itemData.containsKey("productId"))
-                    item.setProductId((String) itemData.get("productId"));
+                    item.setProductId(parseLong(itemData.get("productId")));
                 if (itemData.containsKey("productName"))
                     item.setProductName((String) itemData.get("productName"));
                 if (itemData.containsKey("colorId"))
-                    item.setColorId((String) itemData.get("colorId"));
+                    item.setColorId(parseLong(itemData.get("colorId")));
                 if (itemData.containsKey("colorName"))
                     item.setColorName((String) itemData.get("colorName"));
                 if (itemData.containsKey("colorCode"))
@@ -402,11 +395,25 @@ public class InventoryController {
     }
 
     @DeleteMapping("/checks/{id}")
-    public ResponseEntity<Void> deleteCheck(@PathVariable String id) {
+    public ResponseEntity<Void> deleteCheck(@PathVariable Long id) {
         if (!inventoryCheckOrderRepository.existsById(id)) {
             return ResponseEntity.notFound().build();
         }
         inventoryCheckOrderRepository.deleteById(id);
         return ResponseEntity.noContent().build();
+    }
+
+    private Long parseLong(Object value) {
+        if (value == null) return null;
+        if (value instanceof Long) return (Long) value;
+        if (value instanceof Integer) return ((Integer) value).longValue();
+        if (value instanceof String) {
+            try {
+                return Long.parseLong((String) value);
+            } catch (NumberFormatException e) {
+                return null;
+            }
+        }
+        return null;
     }
 }

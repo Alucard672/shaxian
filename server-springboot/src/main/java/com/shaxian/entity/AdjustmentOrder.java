@@ -1,17 +1,19 @@
 package com.shaxian.entity;
 
 import jakarta.persistence.*;
+import lombok.Data;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
+@Data
 @Entity
 @Table(name = "adjustment_orders")
 public class AdjustmentOrder {
     @Id
-    @Column(length = 50)
-    private String id;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
     @Column(name = "order_number", nullable = false, unique = true, length = 50)
     private String orderNumber;
@@ -63,95 +65,4 @@ public class AdjustmentOrder {
     public enum OrderStatus {
         草稿, 已完成
     }
-
-    // Getters and Setters
-
-    public String getId() {
-        return id;
-    }
-
-    public void setId(String id) {
-        this.id = id;
-    }
-
-    public String getOrderNumber() {
-        return orderNumber;
-    }
-
-    public void setOrderNumber(String orderNumber) {
-        this.orderNumber = orderNumber;
-    }
-
-    public AdjustmentType getType() {
-        return type;
-    }
-
-    public void setType(AdjustmentType type) {
-        this.type = type;
-    }
-
-    public LocalDate getAdjustmentDate() {
-        return adjustmentDate;
-    }
-
-    public void setAdjustmentDate(LocalDate adjustmentDate) {
-        this.adjustmentDate = adjustmentDate;
-    }
-
-    public BigDecimal getTotalQuantity() {
-        return totalQuantity;
-    }
-
-    public void setTotalQuantity(BigDecimal totalQuantity) {
-        this.totalQuantity = totalQuantity;
-    }
-
-    public OrderStatus getStatus() {
-        return status;
-    }
-
-    public void setStatus(OrderStatus status) {
-        this.status = status;
-    }
-
-    public String getOperator() {
-        return operator;
-    }
-
-    public void setOperator(String operator) {
-        this.operator = operator;
-    }
-
-    public String getRemark() {
-        return remark;
-    }
-
-    public void setRemark(String remark) {
-        this.remark = remark;
-    }
-
-    public LocalDateTime getCreatedAt() {
-        return createdAt;
-    }
-
-    public void setCreatedAt(LocalDateTime createdAt) {
-        this.createdAt = createdAt;
-    }
-
-    public LocalDateTime getUpdatedAt() {
-        return updatedAt;
-    }
-
-    public void setUpdatedAt(LocalDateTime updatedAt) {
-        this.updatedAt = updatedAt;
-    }
-
-    public List<AdjustmentOrderItem> getItems() {
-        return items;
-    }
-
-    public void setItems(List<AdjustmentOrderItem> items) {
-        this.items = items;
-    }
-
 }

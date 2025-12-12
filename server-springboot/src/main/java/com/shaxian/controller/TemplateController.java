@@ -4,7 +4,6 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.shaxian.entity.PrintTemplate;
 import com.shaxian.repository.PrintTemplateRepository;
-import com.shaxian.util.UuidUtil;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -36,7 +35,7 @@ public class TemplateController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<PrintTemplate> getTemplate(@PathVariable String id) {
+    public ResponseEntity<PrintTemplate> getTemplate(@PathVariable Long id) {
         return printTemplateRepository.findById(id)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
@@ -46,7 +45,6 @@ public class TemplateController {
     public ResponseEntity<?> createTemplate(@RequestBody Map<String, Object> request) {
         try {
             PrintTemplate template = new PrintTemplate();
-            template.setId(UuidUtil.generate());
             template.setName((String) request.get("name"));
             if (request.containsKey("type")) {
                 template.setType(PrintTemplate.TemplateType.valueOf((String) request.get("type")));
@@ -82,7 +80,7 @@ public class TemplateController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<?> updateTemplate(@PathVariable String id, @RequestBody Map<String, Object> request) {
+    public ResponseEntity<?> updateTemplate(@PathVariable Long id, @RequestBody Map<String, Object> request) {
         try {
             PrintTemplate template = printTemplateRepository.findById(id)
                     .orElseThrow(() -> new IllegalArgumentException("模板不存在"));
@@ -122,7 +120,7 @@ public class TemplateController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteTemplate(@PathVariable String id) {
+    public ResponseEntity<Void> deleteTemplate(@PathVariable Long id) {
         if (!printTemplateRepository.existsById(id)) {
             return ResponseEntity.notFound().build();
         }
@@ -131,7 +129,7 @@ public class TemplateController {
     }
 
     @PostMapping("/{id}/usage")
-    public ResponseEntity<?> incrementUsage(@PathVariable String id) {
+    public ResponseEntity<?> incrementUsage(@PathVariable Long id) {
         Optional<PrintTemplate> templateOpt = printTemplateRepository.findById(id);
         if (templateOpt.isEmpty()) {
             return ResponseEntity.notFound().build();

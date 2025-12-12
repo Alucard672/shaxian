@@ -7,7 +7,6 @@ import com.shaxian.repository.BatchRepository;
 import com.shaxian.repository.SalesOrderRepository;
 import com.shaxian.repository.SalesOrderItemRepository;
 import com.shaxian.util.OrderNumberGenerator;
-import com.shaxian.util.UuidUtil;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -32,11 +31,11 @@ public class SalesService {
     }
 
 
-    public List<SalesOrder> getAllSales(String status, String customerId, LocalDate startDate, LocalDate endDate) {
+    public List<SalesOrder> getAllSales(String status, Long customerId, LocalDate startDate, LocalDate endDate) {
         return salesOrderRepository.findByFilters(status, customerId, startDate, endDate);
     }
 
-    public Optional<SalesOrder> getSalesById(String id) {
+    public Optional<SalesOrder> getSalesById(Long id) {
         Optional<SalesOrder> order = salesOrderRepository.findById(id);
         order.ifPresent(o -> o.setItems(salesOrderItemRepository.findByOrderId(id)));
         return order;
@@ -44,7 +43,6 @@ public class SalesService {
 
     @Transactional
     public SalesOrder createSales(SalesOrder order, List<SalesOrderItem> items) {
-        order.setId(UuidUtil.generate());
         order.setOrderNumber(OrderNumberGenerator.generateSalesOrderNumber());
         
         BigDecimal totalAmount = items.stream()
@@ -59,7 +57,6 @@ public class SalesService {
         SalesOrder saved = salesOrderRepository.save(order);
         
         for (SalesOrderItem item : items) {
-            item.setId(UuidUtil.generate());
             item.setOrderId(saved.getId());
             item.setAmount(item.getQuantity().multiply(item.getPrice()));
         }
@@ -77,7 +74,7 @@ public class SalesService {
     }
 
     @Transactional
-    public SalesOrder updateSales(String id, SalesOrder order, List<SalesOrderItem> items) {
+    public SalesOrder updateSales(Long id, SalesOrder order, List<SalesOrderItem> items) {
         SalesOrder existing = salesOrderRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("销售单不存在"));
         
@@ -100,7 +97,6 @@ public class SalesService {
         salesOrderItemRepository.deleteByOrderId(id);
         
         for (SalesOrderItem item : items) {
-            item.setId(UuidUtil.generate());
             item.setOrderId(id);
             item.setAmount(item.getQuantity().multiply(item.getPrice()));
         }
@@ -112,7 +108,7 @@ public class SalesService {
     }
 
     @Transactional
-    public void deleteSales(String id) {
+    public void deleteSales(Long id) {
         SalesOrder order = salesOrderRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("销售单不存在"));
         

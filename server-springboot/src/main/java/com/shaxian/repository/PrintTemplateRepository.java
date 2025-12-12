@@ -9,7 +9,7 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 
 @Repository
-public interface PrintTemplateRepository extends JpaRepository<PrintTemplate, String> {
+public interface PrintTemplateRepository extends JpaRepository<PrintTemplate, Long> {
     @Query("SELECT pt FROM PrintTemplate pt WHERE " +
            "(:documentType IS NULL OR CAST(pt.documentType AS string) = :documentType) " +
            "ORDER BY pt.createdAt DESC")

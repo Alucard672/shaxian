@@ -4,7 +4,6 @@ import com.shaxian.entity.Customer;
 import com.shaxian.entity.Supplier;
 import com.shaxian.repository.CustomerRepository;
 import com.shaxian.repository.SupplierRepository;
-import com.shaxian.util.UuidUtil;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -33,7 +32,7 @@ public class ContactController {
     }
 
     @GetMapping("/customers/{id}")
-    public ResponseEntity<Customer> getCustomer(@PathVariable String id) {
+    public ResponseEntity<Customer> getCustomer(@PathVariable Long id) {
         return customerRepository.findById(id)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
@@ -44,12 +43,11 @@ public class ContactController {
         if (customerRepository.existsByCode(customer.getCode())) {
             return ResponseEntity.badRequest().build();
         }
-        customer.setId(UuidUtil.generate());
         return ResponseEntity.status(HttpStatus.CREATED).body(customerRepository.save(customer));
     }
 
     @PutMapping("/customers/{id}")
-    public ResponseEntity<Customer> updateCustomer(@PathVariable String id, @RequestBody Customer customer) {
+    public ResponseEntity<Customer> updateCustomer(@PathVariable Long id, @RequestBody Customer customer) {
         if (!customerRepository.existsById(id)) {
             return ResponseEntity.notFound().build();
         }
@@ -64,7 +62,7 @@ public class ContactController {
     }
 
     @DeleteMapping("/customers/{id}")
-    public ResponseEntity<Void> deleteCustomer(@PathVariable String id) {
+    public ResponseEntity<Void> deleteCustomer(@PathVariable Long id) {
         if (!customerRepository.existsById(id)) {
             return ResponseEntity.notFound().build();
         }
@@ -79,7 +77,7 @@ public class ContactController {
     }
 
     @GetMapping("/suppliers/{id}")
-    public ResponseEntity<Supplier> getSupplier(@PathVariable String id) {
+    public ResponseEntity<Supplier> getSupplier(@PathVariable Long id) {
         return supplierRepository.findById(id)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
@@ -90,12 +88,11 @@ public class ContactController {
         if (supplierRepository.existsByCode(supplier.getCode())) {
             return ResponseEntity.badRequest().build();
         }
-        supplier.setId(UuidUtil.generate());
         return ResponseEntity.status(HttpStatus.CREATED).body(supplierRepository.save(supplier));
     }
 
     @PutMapping("/suppliers/{id}")
-    public ResponseEntity<Supplier> updateSupplier(@PathVariable String id, @RequestBody Supplier supplier) {
+    public ResponseEntity<Supplier> updateSupplier(@PathVariable Long id, @RequestBody Supplier supplier) {
         if (!supplierRepository.existsById(id)) {
             return ResponseEntity.notFound().build();
         }
@@ -110,7 +107,7 @@ public class ContactController {
     }
 
     @DeleteMapping("/suppliers/{id}")
-    public ResponseEntity<Void> deleteSupplier(@PathVariable String id) {
+    public ResponseEntity<Void> deleteSupplier(@PathVariable Long id) {
         if (!supplierRepository.existsById(id)) {
             return ResponseEntity.notFound().build();
         }

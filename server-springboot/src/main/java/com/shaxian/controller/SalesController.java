@@ -35,7 +35,7 @@ public class SalesController {
             @RequestParam(required = false) String customerId,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
-        List<SalesOrder> orders = salesService.getAllSales(status, customerId, startDate, endDate);
+        List<SalesOrder> orders = salesService.getAllSales(status, customerId != null ? Long.parseLong(customerId) : null, startDate, endDate);
         orders.forEach(order -> {
             List<SalesOrderItem> items = salesService.getSalesById(order.getId())
                     .map(SalesOrder::getItems)
@@ -46,7 +46,7 @@ public class SalesController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<SalesOrder> getSales(@PathVariable String id) {
+    public ResponseEntity<SalesOrder> getSales(@PathVariable Long id) {
         return salesService.getSalesById(id)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
@@ -56,7 +56,7 @@ public class SalesController {
     public ResponseEntity<?> createSales(@RequestBody Map<String, Object> request) {
         try {
             SalesOrder order = new SalesOrder();
-            if (request.containsKey("customerId")) order.setCustomerId((String) request.get("customerId"));
+            if (request.containsKey("customerId")) order.setCustomerId(parseLong(request.get("customerId")));
             if (request.containsKey("customerName")) order.setCustomerName((String) request.get("customerName"));
             if (request.containsKey("salesDate")) order.setSalesDate(LocalDate.parse((String) request.get("salesDate")));
             if (request.containsKey("expectedDate")) order.setExpectedDate(LocalDate.parse((String) request.get("expectedDate")));
@@ -72,13 +72,13 @@ public class SalesController {
             List<Map<String, Object>> itemsData = (List<Map<String, Object>>) request.get("items");
             List<SalesOrderItem> items = itemsData.stream().map(itemData -> {
                 SalesOrderItem item = new SalesOrderItem();
-                if (itemData.containsKey("productId")) item.setProductId((String) itemData.get("productId"));
+                if (itemData.containsKey("productId")) item.setProductId(parseLong(itemData.get("productId")));
                 if (itemData.containsKey("productName")) item.setProductName((String) itemData.get("productName"));
                 if (itemData.containsKey("productCode")) item.setProductCode((String) itemData.get("productCode"));
-                if (itemData.containsKey("colorId")) item.setColorId((String) itemData.get("colorId"));
+                if (itemData.containsKey("colorId")) item.setColorId(parseLong(itemData.get("colorId")));
                 if (itemData.containsKey("colorName")) item.setColorName((String) itemData.get("colorName"));
                 if (itemData.containsKey("colorCode")) item.setColorCode((String) itemData.get("colorCode"));
-                if (itemData.containsKey("batchId")) item.setBatchId((String) itemData.get("batchId"));
+                if (itemData.containsKey("batchId")) item.setBatchId(parseLong(itemData.get("batchId")));
                 if (itemData.containsKey("batchCode")) item.setBatchCode((String) itemData.get("batchCode"));
                 if (itemData.containsKey("quantity")) item.setQuantity(new BigDecimal(itemData.get("quantity").toString()));
                 if (itemData.containsKey("unit")) item.setUnit((String) itemData.get("unit"));
@@ -95,10 +95,10 @@ public class SalesController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<?> updateSales(@PathVariable String id, @RequestBody Map<String, Object> request) {
+    public ResponseEntity<?> updateSales(@PathVariable Long id, @RequestBody Map<String, Object> request) {
         try {
             SalesOrder order = new SalesOrder();
-            if (request.containsKey("customerId")) order.setCustomerId((String) request.get("customerId"));
+            if (request.containsKey("customerId")) order.setCustomerId(parseLong(request.get("customerId")));
             if (request.containsKey("customerName")) order.setCustomerName((String) request.get("customerName"));
             if (request.containsKey("salesDate")) order.setSalesDate(LocalDate.parse((String) request.get("salesDate")));
             if (request.containsKey("expectedDate")) order.setExpectedDate(LocalDate.parse((String) request.get("expectedDate")));
@@ -113,13 +113,13 @@ public class SalesController {
             List<Map<String, Object>> itemsData = (List<Map<String, Object>>) request.get("items");
             List<SalesOrderItem> items = itemsData.stream().map(itemData -> {
                 SalesOrderItem item = new SalesOrderItem();
-                if (itemData.containsKey("productId")) item.setProductId((String) itemData.get("productId"));
+                if (itemData.containsKey("productId")) item.setProductId(parseLong(itemData.get("productId")));
                 if (itemData.containsKey("productName")) item.setProductName((String) itemData.get("productName"));
                 if (itemData.containsKey("productCode")) item.setProductCode((String) itemData.get("productCode"));
-                if (itemData.containsKey("colorId")) item.setColorId((String) itemData.get("colorId"));
+                if (itemData.containsKey("colorId")) item.setColorId(parseLong(itemData.get("colorId")));
                 if (itemData.containsKey("colorName")) item.setColorName((String) itemData.get("colorName"));
                 if (itemData.containsKey("colorCode")) item.setColorCode((String) itemData.get("colorCode"));
-                if (itemData.containsKey("batchId")) item.setBatchId((String) itemData.get("batchId"));
+                if (itemData.containsKey("batchId")) item.setBatchId(parseLong(itemData.get("batchId")));
                 if (itemData.containsKey("batchCode")) item.setBatchCode((String) itemData.get("batchCode"));
                 if (itemData.containsKey("quantity")) item.setQuantity(new BigDecimal(itemData.get("quantity").toString()));
                 if (itemData.containsKey("unit")) item.setUnit((String) itemData.get("unit"));
@@ -136,7 +136,7 @@ public class SalesController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteSales(@PathVariable String id) {
+    public ResponseEntity<Void> deleteSales(@PathVariable Long id) {
         try {
             salesService.deleteSales(id);
             return ResponseEntity.noContent().build();
@@ -147,7 +147,7 @@ public class SalesController {
 
     @PostMapping("/check-stock")
     public ResponseEntity<?> checkStock(@RequestBody Map<String, Object> request) {
-        String batchId = (String) request.get("batchId");
+        Long batchId = parseLong(request.get("batchId"));
         BigDecimal quantity = new BigDecimal(request.get("quantity").toString());
         
         Batch batch = batchRepository.findById(batchId)
@@ -158,6 +158,20 @@ public class SalesController {
             "available", available,
             "stockQuantity", batch.getStockQuantity()
         ));
+    }
+
+    private Long parseLong(Object value) {
+        if (value == null) return null;
+        if (value instanceof Long) return (Long) value;
+        if (value instanceof Integer) return ((Integer) value).longValue();
+        if (value instanceof String) {
+            try {
+                return Long.parseLong((String) value);
+            } catch (NumberFormatException e) {
+                return null;
+            }
+        }
+        return null;
     }
 }
 

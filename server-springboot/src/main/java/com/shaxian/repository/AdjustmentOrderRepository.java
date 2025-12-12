@@ -9,7 +9,7 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 
 @Repository
-public interface AdjustmentOrderRepository extends JpaRepository<AdjustmentOrder, String> {
+public interface AdjustmentOrderRepository extends JpaRepository<AdjustmentOrder, Long> {
     @Query("SELECT ao FROM AdjustmentOrder ao WHERE " +
            "(:status IS NULL OR CAST(ao.status AS string) = :status) AND " +
            "(:type IS NULL OR CAST(ao.type AS string) = :type) " +

@@ -7,7 +7,7 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 
 @Repository
-public interface ReceiptRecordRepository extends JpaRepository<ReceiptRecord, String> {
-    List<ReceiptRecord> findByAccountReceivableIdOrderByReceiptDateDesc(String accountReceivableId);
+public interface ReceiptRecordRepository extends JpaRepository<ReceiptRecord, Long> {
+    List<ReceiptRecord> findByAccountReceivableIdOrderByReceiptDateDesc(Long accountReceivableId);
 }
 

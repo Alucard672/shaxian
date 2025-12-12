@@ -10,7 +10,7 @@ import java.time.LocalDate;
 import java.util.List;
 
 @Repository
-public interface PurchaseOrderRepository extends JpaRepository<PurchaseOrder, String> {
+public interface PurchaseOrderRepository extends JpaRepository<PurchaseOrder, Long> {
     @Query("SELECT po FROM PurchaseOrder po WHERE " +
            "(:status IS NULL OR CAST(po.status AS string) = :status) AND " +
            "(:supplierId IS NULL OR po.supplierId = :supplierId) AND " +
@@ -18,7 +18,7 @@ public interface PurchaseOrderRepository extends JpaRepository<PurchaseOrder, St
            "(:endDate IS NULL OR po.purchaseDate <= :endDate) " +
            "ORDER BY po.createdAt DESC")
     List<PurchaseOrder> findByFilters(@Param("status") String status,
-                                      @Param("supplierId") String supplierId,
+                                      @Param("supplierId") Long supplierId,
                                       @Param("startDate") LocalDate startDate,
                                       @Param("endDate") LocalDate endDate);
 }

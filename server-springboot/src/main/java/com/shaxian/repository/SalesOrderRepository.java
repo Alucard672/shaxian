@@ -10,7 +10,7 @@ import java.time.LocalDate;
 import java.util.List;
 
 @Repository
-public interface SalesOrderRepository extends JpaRepository<SalesOrder, String> {
+public interface SalesOrderRepository extends JpaRepository<SalesOrder, Long> {
     @Query("SELECT so FROM SalesOrder so WHERE " +
            "(:status IS NULL OR CAST(so.status AS string) = :status) AND " +
            "(:customerId IS NULL OR so.customerId = :customerId) AND " +
@@ -18,7 +18,7 @@ public interface SalesOrderRepository extends JpaRepository<SalesOrder, String> 
            "(:endDate IS NULL OR so.salesDate <= :endDate) " +
            "ORDER BY so.createdAt DESC")
     List<SalesOrder> findByFilters(@Param("status") String status,
-                                   @Param("customerId") String customerId,
+                                   @Param("customerId") Long customerId,
                                    @Param("startDate") LocalDate startDate,
                                    @Param("endDate") LocalDate endDate);
 }

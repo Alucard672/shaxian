@@ -7,7 +7,7 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 
 @Repository
-public interface ColorRepository extends JpaRepository<Color, String> {
-    List<Color> findByProductIdOrderByCode(String productId);
+public interface ColorRepository extends JpaRepository<Color, Long> {
+    List<Color> findByProductIdOrderByCode(Long productId);
 }
 

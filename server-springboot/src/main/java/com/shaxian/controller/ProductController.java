@@ -6,7 +6,6 @@ import com.shaxian.entity.Product;
 import com.shaxian.repository.BatchRepository;
 import com.shaxian.repository.ColorRepository;
 import com.shaxian.service.ProductService;
-import com.shaxian.util.UuidUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -34,7 +33,7 @@ public class ProductController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Product> getProduct(@PathVariable String id) {
+    public ResponseEntity<Product> getProduct(@PathVariable Long id) {
         return productService.getProductById(id)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
@@ -51,7 +50,7 @@ public class ProductController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Product> updateProduct(@PathVariable String id, @RequestBody Product product) {
+    public ResponseEntity<Product> updateProduct(@PathVariable Long id, @RequestBody Product product) {
         try {
             Product updated = productService.updateProduct(id, product);
             return ResponseEntity.ok(updated);
@@ -61,7 +60,7 @@ public class ProductController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteProduct(@PathVariable String id) {
+    public ResponseEntity<Void> deleteProduct(@PathVariable Long id) {
         try {
             productService.deleteProduct(id);
             return ResponseEntity.noContent().build();
@@ -72,19 +71,18 @@ public class ProductController {
 
     // ========== 色号管理 ==========
     @GetMapping("/{id}/colors")
-    public ResponseEntity<List<Color>> getColors(@PathVariable String id) {
+    public ResponseEntity<List<Color>> getColors(@PathVariable Long id) {
         return ResponseEntity.ok(colorRepository.findByProductIdOrderByCode(id));
     }
 
     @PostMapping("/{id}/colors")
-    public ResponseEntity<Color> createColor(@PathVariable String id, @RequestBody Color color) {
-        color.setId(UuidUtil.generate());
+    public ResponseEntity<Color> createColor(@PathVariable Long id, @RequestBody Color color) {
         color.setProductId(id);
         return ResponseEntity.status(HttpStatus.CREATED).body(colorRepository.save(color));
     }
 
     @PutMapping("/colors/{id}")
-    public ResponseEntity<Color> updateColor(@PathVariable String id, @RequestBody Color color) {
+    public ResponseEntity<Color> updateColor(@PathVariable Long id, @RequestBody Color color) {
         if (!colorRepository.existsById(id)) {
             return ResponseEntity.notFound().build();
         }
@@ -96,7 +94,7 @@ public class ProductController {
     }
 
     @DeleteMapping("/colors/{id}")
-    public ResponseEntity<Void> deleteColor(@PathVariable String id) {
+    public ResponseEntity<Void> deleteColor(@PathVariable Long id) {
         if (!colorRepository.existsById(id)) {
             return ResponseEntity.notFound().build();
         }
@@ -106,13 +104,12 @@ public class ProductController {
 
     // ========== 缸号管理 ==========
     @GetMapping("/colors/{colorId}/batches")
-    public ResponseEntity<List<Batch>> getBatches(@PathVariable String colorId) {
+    public ResponseEntity<List<Batch>> getBatches(@PathVariable Long colorId) {
         return ResponseEntity.ok(batchRepository.findByColorIdOrderByCode(colorId));
     }
 
     @PostMapping("/colors/{colorId}/batches")
-    public ResponseEntity<Batch> createBatch(@PathVariable String colorId, @RequestBody Batch batch) {
-        batch.setId(UuidUtil.generate());
+    public ResponseEntity<Batch> createBatch(@PathVariable Long colorId, @RequestBody Batch batch) {
         batch.setColorId(colorId);
         if (batch.getStockQuantity() == null) {
             batch.setStockQuantity(batch.getInitialQuantity() != null ? batch.getInitialQuantity() : java.math.BigDecimal.ZERO);
@@ -121,7 +118,7 @@ public class ProductController {
     }
 
     @PutMapping("/batches/{id}")
-    public ResponseEntity<Batch> updateBatch(@PathVariable String id, @RequestBody Batch batch) {
+    public ResponseEntity<Batch> updateBatch(@PathVariable Long id, @RequestBody Batch batch) {
         if (!batchRepository.existsById(id)) {
             return ResponseEntity.notFound().build();
         }
@@ -133,7 +130,7 @@ public class ProductController {
     }
 
     @DeleteMapping("/batches/{id}")
-    public ResponseEntity<Void> deleteBatch(@PathVariable String id) {
+    public ResponseEntity<Void> deleteBatch(@PathVariable Long id) {
         if (!batchRepository.existsById(id)) {
             return ResponseEntity.notFound().build();
         }

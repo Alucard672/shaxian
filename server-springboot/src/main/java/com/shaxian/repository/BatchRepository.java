@@ -12,16 +12,16 @@ import java.util.List;
 import java.util.Optional;
 
 @Repository
-public interface BatchRepository extends JpaRepository<Batch, String> {
-    List<Batch> findByColorIdOrderByCode(String colorId);
+public interface BatchRepository extends JpaRepository<Batch, Long> {
+    List<Batch> findByColorIdOrderByCode(Long colorId);
     Optional<Batch> findByCode(String code);
     boolean existsByCode(String code);
     
     @Modifying
     @Query("UPDATE Batch b SET b.stockQuantity = b.stockQuantity - :quantity WHERE b.id = :batchId")
-    void decreaseStock(@Param("batchId") String batchId, @Param("quantity") BigDecimal quantity);
+    void decreaseStock(@Param("batchId") Long batchId, @Param("quantity") BigDecimal quantity);
     
     @Modifying
     @Query("UPDATE Batch b SET b.stockQuantity = b.stockQuantity + :quantity WHERE b.id = :batchId")
-    void increaseStock(@Param("batchId") String batchId, @Param("quantity") BigDecimal quantity);
+    void increaseStock(@Param("batchId") Long batchId, @Param("quantity") BigDecimal quantity);
 }

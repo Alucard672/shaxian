@@ -2,7 +2,6 @@ package com.shaxian.controller;
 
 import com.shaxian.entity.*;
 import com.shaxian.repository.*;
-import com.shaxian.util.UuidUtil;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.transaction.annotation.Transactional;
@@ -38,16 +37,15 @@ public class AccountController {
     public ResponseEntity<List<AccountReceivable>> getReceivables(
             @RequestParam(required = false) String customerId,
             @RequestParam(required = false) String status) {
-        return ResponseEntity.ok(accountReceivableRepository.findByFilters(customerId, status));
+        return ResponseEntity.ok(accountReceivableRepository.findByFilters(customerId != null ? Long.parseLong(customerId) : null, status));
     }
 
     @PostMapping("/receivables")
     public ResponseEntity<AccountReceivable> createReceivable(@RequestBody Map<String, Object> request) {
         AccountReceivable receivable = new AccountReceivable();
-        receivable.setId(UuidUtil.generate());
-        receivable.setCustomerId((String) request.get("customerId"));
+        receivable.setCustomerId(parseLong(request.get("customerId")));
         receivable.setCustomerName((String) request.get("customerName"));
-        receivable.setSalesOrderId((String) request.get("salesOrderId"));
+        receivable.setSalesOrderId(parseLong(request.get("salesOrderId")));
         receivable.setSalesOrderNumber((String) request.get("salesOrderNumber"));
         receivable.setReceivableAmount(new BigDecimal(request.get("receivableAmount").toString()));
         BigDecimal receivedAmount = request.containsKey("receivedAmount") ? 
@@ -64,15 +62,14 @@ public class AccountController {
     }
 
     @GetMapping("/receivables/{id}/receipts")
-    public ResponseEntity<List<ReceiptRecord>> getReceipts(@PathVariable String id) {
+    public ResponseEntity<List<ReceiptRecord>> getReceipts(@PathVariable Long id) {
         return ResponseEntity.ok(receiptRecordRepository.findByAccountReceivableIdOrderByReceiptDateDesc(id));
     }
 
     @PostMapping("/receivables/{id}/receipts")
     @Transactional
-    public ResponseEntity<ReceiptRecord> createReceipt(@PathVariable String id, @RequestBody Map<String, Object> request) {
+    public ResponseEntity<ReceiptRecord> createReceipt(@PathVariable Long id, @RequestBody Map<String, Object> request) {
         ReceiptRecord receipt = new ReceiptRecord();
-        receipt.setId(UuidUtil.generate());
         receipt.setAccountReceivableId(id);
         receipt.setAmount(new BigDecimal(request.get("amount").toString()));
         if (request.containsKey("paymentMethod")) {
@@ -101,16 +98,15 @@ public class AccountController {
     public ResponseEntity<List<AccountPayable>> getPayables(
             @RequestParam(required = false) String supplierId,
             @RequestParam(required = false) String status) {
-        return ResponseEntity.ok(accountPayableRepository.findByFilters(supplierId, status));
+        return ResponseEntity.ok(accountPayableRepository.findByFilters(supplierId != null ? Long.parseLong(supplierId) : null, status));
     }
 
     @PostMapping("/payables")
     public ResponseEntity<AccountPayable> createPayable(@RequestBody Map<String, Object> request) {
         AccountPayable payable = new AccountPayable();
-        payable.setId(UuidUtil.generate());
-        payable.setSupplierId((String) request.get("supplierId"));
+        payable.setSupplierId(parseLong(request.get("supplierId")));
         payable.setSupplierName((String) request.get("supplierName"));
-        payable.setPurchaseOrderId((String) request.get("purchaseOrderId"));
+        payable.setPurchaseOrderId(parseLong(request.get("purchaseOrderId")));
         payable.setPurchaseOrderNumber((String) request.get("purchaseOrderNumber"));
         payable.setPayableAmount(new BigDecimal(request.get("payableAmount").toString()));
         BigDecimal paidAmount = request.containsKey("paidAmount") ? 
@@ -127,15 +123,14 @@ public class AccountController {
     }
 
     @GetMapping("/payables/{id}/payments")
-    public ResponseEntity<List<PaymentRecord>> getPayments(@PathVariable String id) {
+    public ResponseEntity<List<PaymentRecord>> getPayments(@PathVariable Long id) {
         return ResponseEntity.ok(paymentRecordRepository.findByAccountPayableIdOrderByPaymentDateDesc(id));
     }
 
     @PostMapping("/payables/{id}/payments")
     @Transactional
-    public ResponseEntity<PaymentRecord> createPayment(@PathVariable String id, @RequestBody Map<String, Object> request) {
+    public ResponseEntity<PaymentRecord> createPayment(@PathVariable Long id, @RequestBody Map<String, Object> request) {
         PaymentRecord payment = new PaymentRecord();
-        payment.setId(UuidUtil.generate());
         payment.setAccountPayableId(id);
         payment.setAmount(new BigDecimal(request.get("amount").toString()));
         if (request.containsKey("paymentMethod")) {
@@ -157,6 +152,20 @@ public class AccountController {
         accountPayableRepository.save(payable);
         
         return ResponseEntity.status(HttpStatus.CREATED).body(saved);
+    }
+
+    private Long parseLong(Object value) {
+        if (value == null) return null;
+        if (value instanceof Long) return (Long) value;
+        if (value instanceof Integer) return ((Integer) value).longValue();
+        if (value instanceof String) {
+            try {
+                return Long.parseLong((String) value);
+            } catch (NumberFormatException e) {
+                return null;
+            }
+        }
+        return null;
     }
 }
 

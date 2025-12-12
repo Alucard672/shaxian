@@ -7,8 +7,8 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 
 @Repository
-public interface PurchaseOrderItemRepository extends JpaRepository<PurchaseOrderItem, String> {
-    List<PurchaseOrderItem> findByOrderId(String orderId);
-    void deleteByOrderId(String orderId);
+public interface PurchaseOrderItemRepository extends JpaRepository<PurchaseOrderItem, Long> {
+    List<PurchaseOrderItem> findByOrderId(Long orderId);
+    void deleteByOrderId(Long orderId);
 }
 

@@ -6,7 +6,6 @@ import com.shaxian.entity.DyeingOrderItem;
 import com.shaxian.repository.DyeingOrderItemRepository;
 import com.shaxian.repository.DyeingOrderRepository;
 import com.shaxian.util.OrderNumberGenerator;
-import com.shaxian.util.UuidUtil;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -38,13 +37,13 @@ public class DyeingController {
     public ResponseEntity<List<DyeingOrder>> getAllDyeingOrders(
             @RequestParam(required = false) String status,
             @RequestParam(required = false) String productId) {
-        List<DyeingOrder> orders = dyeingOrderRepository.findByFilters(status, productId);
+        List<DyeingOrder> orders = dyeingOrderRepository.findByFilters(status, productId != null ? Long.parseLong(productId) : null);
         orders.forEach(order -> order.setItems(dyeingOrderItemRepository.findByOrderId(order.getId())));
         return ResponseEntity.ok(orders);
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<DyeingOrder> getDyeingOrder(@PathVariable String id) {
+    public ResponseEntity<DyeingOrder> getDyeingOrder(@PathVariable Long id) {
         Optional<DyeingOrder> order = dyeingOrderRepository.findById(id);
         if (order.isPresent()) {
             order.get().setItems(dyeingOrderItemRepository.findByOrderId(id));
@@ -57,14 +56,13 @@ public class DyeingController {
     public ResponseEntity<?> createDyeingOrder(@RequestBody Map<String, Object> request) {
         try {
             DyeingOrder order = new DyeingOrder();
-            order.setId(UuidUtil.generate());
             order.setOrderNumber(OrderNumberGenerator.generateDyeingOrderNumber());
             
-            if (request.containsKey("productId")) order.setProductId((String) request.get("productId"));
+            if (request.containsKey("productId")) order.setProductId(parseLong(request.get("productId")));
             if (request.containsKey("productName")) order.setProductName((String) request.get("productName"));
-            if (request.containsKey("greyBatchId")) order.setGreyBatchId((String) request.get("greyBatchId"));
+            if (request.containsKey("greyBatchId")) order.setGreyBatchId(parseLong(request.get("greyBatchId")));
             if (request.containsKey("greyBatchCode")) order.setGreyBatchCode((String) request.get("greyBatchCode"));
-            if (request.containsKey("factoryId")) order.setFactoryId((String) request.get("factoryId"));
+            if (request.containsKey("factoryId")) order.setFactoryId(parseLong(request.get("factoryId")));
             if (request.containsKey("factoryName")) order.setFactoryName((String) request.get("factoryName"));
             if (request.containsKey("factoryPhone")) order.setFactoryPhone((String) request.get("factoryPhone"));
             if (request.containsKey("shipmentDate")) order.setShipmentDate(LocalDate.parse((String) request.get("shipmentDate")));
@@ -87,9 +85,8 @@ public class DyeingController {
             
             List<DyeingOrderItem> items = itemsData.stream().map(itemData -> {
                 DyeingOrderItem item = new DyeingOrderItem();
-                item.setId(UuidUtil.generate());
                 item.setOrderId(saved.getId());
-                if (itemData.containsKey("targetColorId")) item.setTargetColorId((String) itemData.get("targetColorId"));
+                if (itemData.containsKey("targetColorId")) item.setTargetColorId(parseLong(itemData.get("targetColorId")));
                 if (itemData.containsKey("targetColorCode")) item.setTargetColorCode((String) itemData.get("targetColorCode"));
                 if (itemData.containsKey("targetColorName")) item.setTargetColorName((String) itemData.get("targetColorName"));
                 if (itemData.containsKey("targetColorValue")) item.setTargetColorValue((String) itemData.get("targetColorValue"));
@@ -107,16 +104,16 @@ public class DyeingController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<?> updateDyeingOrder(@PathVariable String id, @RequestBody Map<String, Object> request) {
+    public ResponseEntity<?> updateDyeingOrder(@PathVariable Long id, @RequestBody Map<String, Object> request) {
         try {
             DyeingOrder order = dyeingOrderRepository.findById(id)
                     .orElseThrow(() -> new IllegalArgumentException("染色加工单不存在"));
             
-            if (request.containsKey("productId")) order.setProductId((String) request.get("productId"));
+            if (request.containsKey("productId")) order.setProductId(parseLong(request.get("productId")));
             if (request.containsKey("productName")) order.setProductName((String) request.get("productName"));
-            if (request.containsKey("greyBatchId")) order.setGreyBatchId((String) request.get("greyBatchId"));
+            if (request.containsKey("greyBatchId")) order.setGreyBatchId(parseLong(request.get("greyBatchId")));
             if (request.containsKey("greyBatchCode")) order.setGreyBatchCode((String) request.get("greyBatchCode"));
-            if (request.containsKey("factoryId")) order.setFactoryId((String) request.get("factoryId"));
+            if (request.containsKey("factoryId")) order.setFactoryId(parseLong(request.get("factoryId")));
             if (request.containsKey("factoryName")) order.setFactoryName((String) request.get("factoryName"));
             if (request.containsKey("factoryPhone")) order.setFactoryPhone((String) request.get("factoryPhone"));
             if (request.containsKey("shipmentDate")) order.setShipmentDate(LocalDate.parse((String) request.get("shipmentDate")));
@@ -139,9 +136,8 @@ public class DyeingController {
             
             List<DyeingOrderItem> items = itemsData.stream().map(itemData -> {
                 DyeingOrderItem item = new DyeingOrderItem();
-                item.setId(UuidUtil.generate());
                 item.setOrderId(id);
-                if (itemData.containsKey("targetColorId")) item.setTargetColorId((String) itemData.get("targetColorId"));
+                if (itemData.containsKey("targetColorId")) item.setTargetColorId(parseLong(itemData.get("targetColorId")));
                 if (itemData.containsKey("targetColorCode")) item.setTargetColorCode((String) itemData.get("targetColorCode"));
                 if (itemData.containsKey("targetColorName")) item.setTargetColorName((String) itemData.get("targetColorName"));
                 if (itemData.containsKey("targetColorValue")) item.setTargetColorValue((String) itemData.get("targetColorValue"));
@@ -160,12 +156,26 @@ public class DyeingController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteDyeingOrder(@PathVariable String id) {
+    public ResponseEntity<Void> deleteDyeingOrder(@PathVariable Long id) {
         if (!dyeingOrderRepository.existsById(id)) {
             return ResponseEntity.notFound().build();
         }
         dyeingOrderRepository.deleteById(id);
         return ResponseEntity.noContent().build();
+    }
+
+    private Long parseLong(Object value) {
+        if (value == null) return null;
+        if (value instanceof Long) return (Long) value;
+        if (value instanceof Integer) return ((Integer) value).longValue();
+        if (value instanceof String) {
+            try {
+                return Long.parseLong((String) value);
+            } catch (NumberFormatException e) {
+                return null;
+            }
+        }
+        return null;
     }
 }
 

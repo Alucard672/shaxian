@@ -11,11 +11,11 @@ import java.time.LocalDateTime;
 @Data
 public class Batch {
     @Id
-    @Column(length = 50)
-    private String id;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
-    @Column(name = "color_id", nullable = false, length = 50)
-    private String colorId;
+    @Column(name = "color_id", nullable = false)
+    private Long colorId;
 
     @Column(nullable = false, unique = true, length = 50)
     private String code;
@@ -23,8 +23,8 @@ public class Batch {
     @Column(name = "production_date")
     private LocalDate productionDate;
 
-    @Column(name = "supplier_id", length = 50)
-    private String supplierId;
+    @Column(name = "supplier_id")
+    private Long supplierId;
 
     @Column(name = "supplier_name", length = 200)
     private String supplierName;
@@ -69,20 +69,28 @@ public class Batch {
     }
 
     // 手动添加getter/setter方法以确保编译通过
-    public String getId() {
+    public Long getId() {
         return id;
     }
 
-    public void setId(String id) {
+    public void setId(Long id) {
         this.id = id;
     }
 
-    public String getColorId() {
+    public Long getColorId() {
         return colorId;
     }
 
-    public void setColorId(String colorId) {
+    public void setColorId(Long colorId) {
         this.colorId = colorId;
+    }
+
+    public Long getSupplierId() {
+        return supplierId;
+    }
+
+    public void setSupplierId(Long supplierId) {
+        this.supplierId = supplierId;
     }
 
     public BigDecimal getStockQuantity() {

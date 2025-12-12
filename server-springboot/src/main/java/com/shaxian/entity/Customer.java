@@ -1,15 +1,17 @@
 package com.shaxian.entity;
 
 import jakarta.persistence.*;
+import lombok.Data;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
+@Data
 @Entity
 @Table(name = "customers")
 public class Customer {
     @Id
-    @Column(length = 50)
-    private String id;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
     @Column(nullable = false, length = 200)
     private String name;
@@ -64,104 +66,5 @@ public class Customer {
     public enum CustomerStatus {
         正常, 冻结
     }
-
-    // Getters and Setters
-
-    public String getId() {
-        return id;
-    }
-
-    public void setId(String id) {
-        this.id = id;
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public void setName(String name) {
-        this.name = name;
-    }
-
-    public String getCode() {
-        return code;
-    }
-
-    public void setCode(String code) {
-        this.code = code;
-    }
-
-    public String getContactPerson() {
-        return contactPerson;
-    }
-
-    public void setContactPerson(String contactPerson) {
-        this.contactPerson = contactPerson;
-    }
-
-    public String getPhone() {
-        return phone;
-    }
-
-    public void setPhone(String phone) {
-        this.phone = phone;
-    }
-
-    public String getAddress() {
-        return address;
-    }
-
-    public void setAddress(String address) {
-        this.address = address;
-    }
-
-    public CustomerType getType() {
-        return type;
-    }
-
-    public void setType(CustomerType type) {
-        this.type = type;
-    }
-
-    public BigDecimal getCreditLimit() {
-        return creditLimit;
-    }
-
-    public void setCreditLimit(BigDecimal creditLimit) {
-        this.creditLimit = creditLimit;
-    }
-
-    public CustomerStatus getStatus() {
-        return status;
-    }
-
-    public void setStatus(CustomerStatus status) {
-        this.status = status;
-    }
-
-    public String getRemark() {
-        return remark;
-    }
-
-    public void setRemark(String remark) {
-        this.remark = remark;
-    }
-
-    public LocalDateTime getCreatedAt() {
-        return createdAt;
-    }
-
-    public void setCreatedAt(LocalDateTime createdAt) {
-        this.createdAt = createdAt;
-    }
-
-    public LocalDateTime getUpdatedAt() {
-        return updatedAt;
-    }
-
-    public void setUpdatedAt(LocalDateTime updatedAt) {
-        this.updatedAt = updatedAt;
-    }
-
 }
 

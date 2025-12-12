@@ -5,7 +5,6 @@ import com.shaxian.entity.PurchaseOrderItem;
 import com.shaxian.repository.PurchaseOrderRepository;
 import com.shaxian.repository.PurchaseOrderItemRepository;
 import com.shaxian.util.OrderNumberGenerator;
-import com.shaxian.util.UuidUtil;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,11 +26,11 @@ public class PurchaseService {
     }
 
 
-    public List<PurchaseOrder> getAllPurchases(String status, String supplierId, LocalDate startDate, LocalDate endDate) {
+    public List<PurchaseOrder> getAllPurchases(String status, Long supplierId, LocalDate startDate, LocalDate endDate) {
         return purchaseOrderRepository.findByFilters(status, supplierId, startDate, endDate);
     }
 
-    public Optional<PurchaseOrder> getPurchaseById(String id) {
+    public Optional<PurchaseOrder> getPurchaseById(Long id) {
         Optional<PurchaseOrder> order = purchaseOrderRepository.findById(id);
         order.ifPresent(o -> o.setItems(purchaseOrderItemRepository.findByOrderId(id)));
         return order;
@@ -39,7 +38,6 @@ public class PurchaseService {
 
     @Transactional
     public PurchaseOrder createPurchase(PurchaseOrder order, List<PurchaseOrderItem> items) {
-        order.setId(UuidUtil.generate());
         order.setOrderNumber(OrderNumberGenerator.generatePurchaseOrderNumber());
         
         // 计算总金额
@@ -56,7 +54,6 @@ public class PurchaseService {
         
         // 保存明细
         for (PurchaseOrderItem item : items) {
-            item.setId(UuidUtil.generate());
             item.setOrderId(saved.getId());
             item.setAmount(item.getQuantity().multiply(item.getPrice()));
         }
@@ -67,7 +64,7 @@ public class PurchaseService {
     }
 
     @Transactional
-    public PurchaseOrder updatePurchase(String id, PurchaseOrder order, List<PurchaseOrderItem> items) {
+    public PurchaseOrder updatePurchase(Long id, PurchaseOrder order, List<PurchaseOrderItem> items) {
         PurchaseOrder existing = purchaseOrderRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("进货单不存在"));
         
@@ -93,7 +90,6 @@ public class PurchaseService {
         
         // 保存新明细
         for (PurchaseOrderItem item : items) {
-            item.setId(UuidUtil.generate());
             item.setOrderId(id);
             item.setAmount(item.getQuantity().multiply(item.getPrice()));
         }
@@ -105,7 +101,7 @@ public class PurchaseService {
     }
 
     @Transactional
-    public void deletePurchase(String id) {
+    public void deletePurchase(Long id) {
         PurchaseOrder order = purchaseOrderRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("进货单不存在"));
         

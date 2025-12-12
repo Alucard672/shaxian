@@ -7,8 +7,8 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 
 @Repository
-public interface InventoryCheckItemRepository extends JpaRepository<InventoryCheckItem, String> {
-    List<InventoryCheckItem> findByOrderId(String orderId);
-    void deleteByOrderId(String orderId);
+public interface InventoryCheckItemRepository extends JpaRepository<InventoryCheckItem, Long> {
+    List<InventoryCheckItem> findByOrderId(Long orderId);
+    void deleteByOrderId(Long orderId);
 }
 

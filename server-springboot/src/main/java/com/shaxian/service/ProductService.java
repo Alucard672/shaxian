@@ -2,7 +2,6 @@ package com.shaxian.service;
 
 import com.shaxian.entity.Product;
 import com.shaxian.repository.ProductRepository;
-import com.shaxian.util.UuidUtil;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,7 +23,7 @@ public class ProductService {
         return productRepository.findAll();
     }
 
-    public Optional<Product> getProductById(String id) {
+    public Optional<Product> getProductById(Long id) {
         return productRepository.findById(id);
     }
 
@@ -33,12 +32,11 @@ public class ProductService {
         if (productRepository.existsByCode(product.getCode())) {
             throw new IllegalArgumentException("商品编码已存在");
         }
-        product.setId(UuidUtil.generate());
         return productRepository.save(product);
     }
 
     @Transactional
-    public Product updateProduct(String id, Product product) {
+    public Product updateProduct(Long id, Product product) {
         Product existing = productRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("商品不存在"));
         
@@ -54,7 +52,7 @@ public class ProductService {
     }
 
     @Transactional
-    public void deleteProduct(String id) {
+    public void deleteProduct(Long id) {
         if (!productRepository.existsById(id)) {
             throw new IllegalArgumentException("商品不存在");
         }

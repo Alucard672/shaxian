@@ -1,14 +1,16 @@
 package com.shaxian.entity;
 
 import jakarta.persistence.*;
+import lombok.Data;
 import java.time.LocalDateTime;
 
+@Data
 @Entity
 @Table(name = "system_params")
 public class SystemParams {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Integer id;
+    private Long id;
 
     @Column(name = "enable_dyeing_process", nullable = false)
     private Boolean enableDyeingProcess = false;
@@ -21,32 +23,5 @@ public class SystemParams {
     protected void onUpdate() {
         updatedAt = LocalDateTime.now();
     }
-
-    // Getters and Setters
-
-    public Integer getId() {
-        return id;
-    }
-
-    public void setId(Integer id) {
-        this.id = id;
-    }
-
-    public Boolean isEnableDyeingProcess() {
-        return enableDyeingProcess;
-    }
-
-    public void setEnableDyeingProcess(Boolean enableDyeingProcess) {
-        this.enableDyeingProcess = enableDyeingProcess;
-    }
-
-    public LocalDateTime getUpdatedAt() {
-        return updatedAt;
-    }
-
-    public void setUpdatedAt(LocalDateTime updatedAt) {
-        this.updatedAt = updatedAt;
-    }
-
 }
 

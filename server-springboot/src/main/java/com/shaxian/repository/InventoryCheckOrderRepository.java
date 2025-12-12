@@ -9,7 +9,7 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 
 @Repository
-public interface InventoryCheckOrderRepository extends JpaRepository<InventoryCheckOrder, String> {
+public interface InventoryCheckOrderRepository extends JpaRepository<InventoryCheckOrder, Long> {
     @Query("SELECT ico FROM InventoryCheckOrder ico WHERE " +
            "(:status IS NULL OR CAST(ico.status AS string) = :status) AND " +
            "(:warehouse IS NULL OR ico.warehouse = :warehouse) " +

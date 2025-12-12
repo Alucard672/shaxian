@@ -9,11 +9,11 @@ import java.time.LocalDateTime;
 @Data
 public class Color {
     @Id
-    @Column(length = 50)
-    private String id;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
-    @Column(name = "product_id", nullable = false, length = 50)
-    private String productId;
+    @Column(name = "product_id", nullable = false)
+    private Long productId;
 
     @Column(nullable = false, length = 50)
     private String code;
@@ -57,19 +57,19 @@ public class Color {
     }
 
     // 手动添加getter/setter方法以确保编译通过
-    public String getId() {
+    public Long getId() {
         return id;
     }
 
-    public void setId(String id) {
+    public void setId(Long id) {
         this.id = id;
     }
 
-    public String getProductId() {
+    public Long getProductId() {
         return productId;
     }
 
-    public void setProductId(String productId) {
+    public void setProductId(Long productId) {
         this.productId = productId;
     }
 
