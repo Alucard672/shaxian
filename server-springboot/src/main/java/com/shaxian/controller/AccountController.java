@@ -3,7 +3,6 @@ package com.shaxian.controller;
 import com.shaxian.entity.*;
 import com.shaxian.repository.*;
 import com.shaxian.util.UuidUtil;
-import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.transaction.annotation.Transactional;
@@ -16,12 +15,23 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/accounts")
-@RequiredArgsConstructor
 public class AccountController {
     private final AccountReceivableRepository accountReceivableRepository;
     private final AccountPayableRepository accountPayableRepository;
     private final ReceiptRecordRepository receiptRecordRepository;
     private final PaymentRecordRepository paymentRecordRepository;
+
+    public AccountController(
+            AccountReceivableRepository accountReceivableRepository,
+            AccountPayableRepository accountPayableRepository,
+            ReceiptRecordRepository receiptRecordRepository,
+            PaymentRecordRepository paymentRecordRepository) {
+        this.accountReceivableRepository = accountReceivableRepository;
+        this.accountPayableRepository = accountPayableRepository;
+        this.receiptRecordRepository = receiptRecordRepository;
+        this.paymentRecordRepository = paymentRecordRepository;
+    }
+
 
     // ========== 应收账款 ==========
     @GetMapping("/receivables")

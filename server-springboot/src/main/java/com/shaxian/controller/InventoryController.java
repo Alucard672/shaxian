@@ -4,7 +4,6 @@ import com.shaxian.entity.*;
 import com.shaxian.repository.*;
 import com.shaxian.util.OrderNumberGenerator;
 import com.shaxian.util.UuidUtil;
-import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,13 +17,25 @@ import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/inventory")
-@RequiredArgsConstructor
 public class InventoryController {
     private final AdjustmentOrderRepository adjustmentOrderRepository;
     private final AdjustmentOrderItemRepository adjustmentOrderItemRepository;
     private final InventoryCheckOrderRepository inventoryCheckOrderRepository;
     private final InventoryCheckItemRepository inventoryCheckItemRepository;
     private final BatchRepository batchRepository;
+
+    public InventoryController(
+            AdjustmentOrderRepository adjustmentOrderRepository,
+            AdjustmentOrderItemRepository adjustmentOrderItemRepository,
+            InventoryCheckOrderRepository inventoryCheckOrderRepository,
+            InventoryCheckItemRepository inventoryCheckItemRepository,
+            BatchRepository batchRepository) {
+        this.adjustmentOrderRepository = adjustmentOrderRepository;
+        this.adjustmentOrderItemRepository = adjustmentOrderItemRepository;
+        this.inventoryCheckOrderRepository = inventoryCheckOrderRepository;
+        this.inventoryCheckItemRepository = inventoryCheckItemRepository;
+        this.batchRepository = batchRepository;
+    }
 
     // ========== 库存调整单 ==========
     @GetMapping("/adjustments")
@@ -58,45 +69,56 @@ public class InventoryController {
             }
             order.setAdjustmentDate(LocalDate.parse((String) request.get("adjustmentDate")));
             order.setOperator((String) request.get("operator"));
-            if (request.containsKey("remark")) order.setRemark((String) request.get("remark"));
+            if (request.containsKey("remark"))
+                order.setRemark((String) request.get("remark"));
             if (request.containsKey("status")) {
                 order.setStatus(AdjustmentOrder.OrderStatus.valueOf((String) request.get("status")));
             }
-            
+
             @SuppressWarnings("unchecked")
             List<Map<String, Object>> itemsData = (List<Map<String, Object>>) request.get("items");
             BigDecimal totalQuantity = itemsData.stream()
                     .map(item -> new BigDecimal(item.get("quantity").toString()).abs())
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
             order.setTotalQuantity(totalQuantity);
-            
+
             AdjustmentOrder saved = adjustmentOrderRepository.save(order);
-            
+
             List<AdjustmentOrderItem> items = itemsData.stream().map(itemData -> {
                 AdjustmentOrderItem item = new AdjustmentOrderItem();
                 item.setId(UuidUtil.generate());
                 item.setOrderId(saved.getId());
-                if (itemData.containsKey("batchId")) item.setBatchId((String) itemData.get("batchId"));
-                if (itemData.containsKey("batchCode")) item.setBatchCode((String) itemData.get("batchCode"));
-                if (itemData.containsKey("productId")) item.setProductId((String) itemData.get("productId"));
-                if (itemData.containsKey("productName")) item.setProductName((String) itemData.get("productName"));
-                if (itemData.containsKey("colorId")) item.setColorId((String) itemData.get("colorId"));
-                if (itemData.containsKey("colorName")) item.setColorName((String) itemData.get("colorName"));
-                if (itemData.containsKey("colorCode")) item.setColorCode((String) itemData.get("colorCode"));
-                if (itemData.containsKey("quantity")) item.setQuantity(new BigDecimal(itemData.get("quantity").toString()));
-                if (itemData.containsKey("unit")) item.setUnit((String) itemData.get("unit"));
-                if (itemData.containsKey("remark")) item.setRemark((String) itemData.get("remark"));
+                if (itemData.containsKey("batchId"))
+                    item.setBatchId((String) itemData.get("batchId"));
+                if (itemData.containsKey("batchCode"))
+                    item.setBatchCode((String) itemData.get("batchCode"));
+                if (itemData.containsKey("productId"))
+                    item.setProductId((String) itemData.get("productId"));
+                if (itemData.containsKey("productName"))
+                    item.setProductName((String) itemData.get("productName"));
+                if (itemData.containsKey("colorId"))
+                    item.setColorId((String) itemData.get("colorId"));
+                if (itemData.containsKey("colorName"))
+                    item.setColorName((String) itemData.get("colorName"));
+                if (itemData.containsKey("colorCode"))
+                    item.setColorCode((String) itemData.get("colorCode"));
+                if (itemData.containsKey("quantity"))
+                    item.setQuantity(new BigDecimal(itemData.get("quantity").toString()));
+                if (itemData.containsKey("unit"))
+                    item.setUnit((String) itemData.get("unit"));
+                if (itemData.containsKey("remark"))
+                    item.setRemark((String) itemData.get("remark"));
                 return item;
             }).toList();
-            
+
             adjustmentOrderItemRepository.saveAll(items);
-            
+
             if (order.getStatus() == AdjustmentOrder.OrderStatus.已完成) {
                 for (AdjustmentOrderItem item : items) {
                     batchRepository.increaseStock(item.getBatchId(), item.getQuantity());
                 }
             }
-            
+
             saved.setItems(items);
             return ResponseEntity.status(HttpStatus.CREATED).body(saved);
         } catch (Exception e) {
@@ -110,61 +132,72 @@ public class InventoryController {
         try {
             AdjustmentOrder order = adjustmentOrderRepository.findById(id)
                     .orElseThrow(() -> new IllegalArgumentException("库存调整单不存在"));
-            
+
             AdjustmentOrder.OrderStatus oldStatus = order.getStatus();
-            
+
             if (request.containsKey("type")) {
                 order.setType(AdjustmentOrder.AdjustmentType.valueOf((String) request.get("type")));
             }
             if (request.containsKey("adjustmentDate")) {
                 order.setAdjustmentDate(LocalDate.parse((String) request.get("adjustmentDate")));
             }
-            if (request.containsKey("remark")) order.setRemark((String) request.get("remark"));
+            if (request.containsKey("remark"))
+                order.setRemark((String) request.get("remark"));
             if (request.containsKey("status")) {
                 order.setStatus(AdjustmentOrder.OrderStatus.valueOf((String) request.get("status")));
             }
-            
+
             @SuppressWarnings("unchecked")
             List<Map<String, Object>> itemsData = (List<Map<String, Object>>) request.get("items");
             BigDecimal totalQuantity = itemsData.stream()
                     .map(item -> new BigDecimal(item.get("quantity").toString()).abs())
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
             order.setTotalQuantity(totalQuantity);
-            
+
             if (oldStatus == AdjustmentOrder.OrderStatus.已完成 && order.getStatus() == AdjustmentOrder.OrderStatus.草稿) {
                 List<AdjustmentOrderItem> oldItems = adjustmentOrderItemRepository.findByOrderId(id);
                 for (AdjustmentOrderItem item : oldItems) {
                     batchRepository.decreaseStock(item.getBatchId(), item.getQuantity());
                 }
             }
-            
+
             adjustmentOrderItemRepository.deleteByOrderId(id);
-            
+
             List<AdjustmentOrderItem> items = itemsData.stream().map(itemData -> {
                 AdjustmentOrderItem item = new AdjustmentOrderItem();
                 item.setId(UuidUtil.generate());
                 item.setOrderId(id);
-                if (itemData.containsKey("batchId")) item.setBatchId((String) itemData.get("batchId"));
-                if (itemData.containsKey("batchCode")) item.setBatchCode((String) itemData.get("batchCode"));
-                if (itemData.containsKey("productId")) item.setProductId((String) itemData.get("productId"));
-                if (itemData.containsKey("productName")) item.setProductName((String) itemData.get("productName"));
-                if (itemData.containsKey("colorId")) item.setColorId((String) itemData.get("colorId"));
-                if (itemData.containsKey("colorName")) item.setColorName((String) itemData.get("colorName"));
-                if (itemData.containsKey("colorCode")) item.setColorCode((String) itemData.get("colorCode"));
-                if (itemData.containsKey("quantity")) item.setQuantity(new BigDecimal(itemData.get("quantity").toString()));
-                if (itemData.containsKey("unit")) item.setUnit((String) itemData.get("unit"));
-                if (itemData.containsKey("remark")) item.setRemark((String) itemData.get("remark"));
+                if (itemData.containsKey("batchId"))
+                    item.setBatchId((String) itemData.get("batchId"));
+                if (itemData.containsKey("batchCode"))
+                    item.setBatchCode((String) itemData.get("batchCode"));
+                if (itemData.containsKey("productId"))
+                    item.setProductId((String) itemData.get("productId"));
+                if (itemData.containsKey("productName"))
+                    item.setProductName((String) itemData.get("productName"));
+                if (itemData.containsKey("colorId"))
+                    item.setColorId((String) itemData.get("colorId"));
+                if (itemData.containsKey("colorName"))
+                    item.setColorName((String) itemData.get("colorName"));
+                if (itemData.containsKey("colorCode"))
+                    item.setColorCode((String) itemData.get("colorCode"));
+                if (itemData.containsKey("quantity"))
+                    item.setQuantity(new BigDecimal(itemData.get("quantity").toString()));
+                if (itemData.containsKey("unit"))
+                    item.setUnit((String) itemData.get("unit"));
+                if (itemData.containsKey("remark"))
+                    item.setRemark((String) itemData.get("remark"));
                 return item;
             }).toList();
-            
+
             adjustmentOrderItemRepository.saveAll(items);
-            
+
             if (order.getStatus() == AdjustmentOrder.OrderStatus.已完成) {
                 for (AdjustmentOrderItem item : items) {
                     batchRepository.increaseStock(item.getBatchId(), item.getQuantity());
                 }
             }
-            
+
             AdjustmentOrder saved = adjustmentOrderRepository.save(order);
             saved.setItems(items);
             return ResponseEntity.ok(saved);
@@ -204,18 +237,19 @@ public class InventoryController {
             order.setWarehouse((String) request.get("warehouse"));
             order.setPlanDate(LocalDate.parse((String) request.get("planDate")));
             order.setOperator((String) request.get("operator"));
-            if (request.containsKey("remark")) order.setRemark((String) request.get("remark"));
+            if (request.containsKey("remark"))
+                order.setRemark((String) request.get("remark"));
             if (request.containsKey("status")) {
                 order.setStatus(InventoryCheckOrder.OrderStatus.valueOf((String) request.get("status")));
             }
-            
+
             @SuppressWarnings("unchecked")
             List<Map<String, Object>> itemsData = (List<Map<String, Object>>) request.get("items");
             int progressTotal = itemsData.size();
             int progressCompleted = (int) itemsData.stream()
                     .filter(item -> item.containsKey("actualQuantity") && item.get("actualQuantity") != null)
                     .count();
-            
+
             BigDecimal surplus = BigDecimal.ZERO;
             BigDecimal deficit = BigDecimal.ZERO;
             for (Map<String, Object> itemData : itemsData) {
@@ -230,38 +264,48 @@ public class InventoryController {
                     }
                 }
             }
-            
+
             order.setProgressTotal(progressTotal);
             order.setProgressCompleted(progressCompleted);
             order.setSurplus(surplus);
             order.setDeficit(deficit);
-            
+
             InventoryCheckOrder saved = inventoryCheckOrderRepository.save(order);
-            
+
             List<InventoryCheckItem> items = itemsData.stream().map(itemData -> {
                 InventoryCheckItem item = new InventoryCheckItem();
                 item.setId(UuidUtil.generate());
                 item.setOrderId(saved.getId());
-                if (itemData.containsKey("batchId")) item.setBatchId((String) itemData.get("batchId"));
-                if (itemData.containsKey("batchCode")) item.setBatchCode((String) itemData.get("batchCode"));
-                if (itemData.containsKey("productId")) item.setProductId((String) itemData.get("productId"));
-                if (itemData.containsKey("productName")) item.setProductName((String) itemData.get("productName"));
-                if (itemData.containsKey("colorId")) item.setColorId((String) itemData.get("colorId"));
-                if (itemData.containsKey("colorName")) item.setColorName((String) itemData.get("colorName"));
-                if (itemData.containsKey("colorCode")) item.setColorCode((String) itemData.get("colorCode"));
-                if (itemData.containsKey("systemQuantity")) item.setSystemQuantity(new BigDecimal(itemData.get("systemQuantity").toString()));
+                if (itemData.containsKey("batchId"))
+                    item.setBatchId((String) itemData.get("batchId"));
+                if (itemData.containsKey("batchCode"))
+                    item.setBatchCode((String) itemData.get("batchCode"));
+                if (itemData.containsKey("productId"))
+                    item.setProductId((String) itemData.get("productId"));
+                if (itemData.containsKey("productName"))
+                    item.setProductName((String) itemData.get("productName"));
+                if (itemData.containsKey("colorId"))
+                    item.setColorId((String) itemData.get("colorId"));
+                if (itemData.containsKey("colorName"))
+                    item.setColorName((String) itemData.get("colorName"));
+                if (itemData.containsKey("colorCode"))
+                    item.setColorCode((String) itemData.get("colorCode"));
+                if (itemData.containsKey("systemQuantity"))
+                    item.setSystemQuantity(new BigDecimal(itemData.get("systemQuantity").toString()));
                 if (itemData.containsKey("actualQuantity") && itemData.get("actualQuantity") != null) {
                     item.setActualQuantity(new BigDecimal(itemData.get("actualQuantity").toString()));
                     item.setDifference(item.getActualQuantity().subtract(item.getSystemQuantity()));
                 }
-                if (itemData.containsKey("unit")) item.setUnit((String) itemData.get("unit"));
-                if (itemData.containsKey("remark")) item.setRemark((String) itemData.get("remark"));
+                if (itemData.containsKey("unit"))
+                    item.setUnit((String) itemData.get("unit"));
+                if (itemData.containsKey("remark"))
+                    item.setRemark((String) itemData.get("remark"));
                 return item;
             }).toList();
-            
+
             inventoryCheckItemRepository.saveAll(items);
             saved.setItems(items);
-            
+
             return ResponseEntity.status(HttpStatus.CREATED).body(saved);
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
@@ -274,22 +318,26 @@ public class InventoryController {
         try {
             InventoryCheckOrder order = inventoryCheckOrderRepository.findById(id)
                     .orElseThrow(() -> new IllegalArgumentException("盘点单不存在"));
-            
-            if (request.containsKey("name")) order.setName((String) request.get("name"));
-            if (request.containsKey("warehouse")) order.setWarehouse((String) request.get("warehouse"));
-            if (request.containsKey("planDate")) order.setPlanDate(LocalDate.parse((String) request.get("planDate")));
-            if (request.containsKey("remark")) order.setRemark((String) request.get("remark"));
+
+            if (request.containsKey("name"))
+                order.setName((String) request.get("name"));
+            if (request.containsKey("warehouse"))
+                order.setWarehouse((String) request.get("warehouse"));
+            if (request.containsKey("planDate"))
+                order.setPlanDate(LocalDate.parse((String) request.get("planDate")));
+            if (request.containsKey("remark"))
+                order.setRemark((String) request.get("remark"));
             if (request.containsKey("status")) {
                 order.setStatus(InventoryCheckOrder.OrderStatus.valueOf((String) request.get("status")));
             }
-            
+
             @SuppressWarnings("unchecked")
             List<Map<String, Object>> itemsData = (List<Map<String, Object>>) request.get("items");
             int progressTotal = itemsData.size();
             int progressCompleted = (int) itemsData.stream()
                     .filter(item -> item.containsKey("actualQuantity") && item.get("actualQuantity") != null)
                     .count();
-            
+
             BigDecimal surplus = BigDecimal.ZERO;
             BigDecimal deficit = BigDecimal.ZERO;
             for (Map<String, Object> itemData : itemsData) {
@@ -304,39 +352,49 @@ public class InventoryController {
                     }
                 }
             }
-            
+
             order.setProgressTotal(progressTotal);
             order.setProgressCompleted(progressCompleted);
             order.setSurplus(surplus);
             order.setDeficit(deficit);
-            
+
             inventoryCheckItemRepository.deleteByOrderId(id);
-            
+
             List<InventoryCheckItem> items = itemsData.stream().map(itemData -> {
                 InventoryCheckItem item = new InventoryCheckItem();
                 item.setId(UuidUtil.generate());
                 item.setOrderId(id);
-                if (itemData.containsKey("batchId")) item.setBatchId((String) itemData.get("batchId"));
-                if (itemData.containsKey("batchCode")) item.setBatchCode((String) itemData.get("batchCode"));
-                if (itemData.containsKey("productId")) item.setProductId((String) itemData.get("productId"));
-                if (itemData.containsKey("productName")) item.setProductName((String) itemData.get("productName"));
-                if (itemData.containsKey("colorId")) item.setColorId((String) itemData.get("colorId"));
-                if (itemData.containsKey("colorName")) item.setColorName((String) itemData.get("colorName"));
-                if (itemData.containsKey("colorCode")) item.setColorCode((String) itemData.get("colorCode"));
-                if (itemData.containsKey("systemQuantity")) item.setSystemQuantity(new BigDecimal(itemData.get("systemQuantity").toString()));
+                if (itemData.containsKey("batchId"))
+                    item.setBatchId((String) itemData.get("batchId"));
+                if (itemData.containsKey("batchCode"))
+                    item.setBatchCode((String) itemData.get("batchCode"));
+                if (itemData.containsKey("productId"))
+                    item.setProductId((String) itemData.get("productId"));
+                if (itemData.containsKey("productName"))
+                    item.setProductName((String) itemData.get("productName"));
+                if (itemData.containsKey("colorId"))
+                    item.setColorId((String) itemData.get("colorId"));
+                if (itemData.containsKey("colorName"))
+                    item.setColorName((String) itemData.get("colorName"));
+                if (itemData.containsKey("colorCode"))
+                    item.setColorCode((String) itemData.get("colorCode"));
+                if (itemData.containsKey("systemQuantity"))
+                    item.setSystemQuantity(new BigDecimal(itemData.get("systemQuantity").toString()));
                 if (itemData.containsKey("actualQuantity") && itemData.get("actualQuantity") != null) {
                     item.setActualQuantity(new BigDecimal(itemData.get("actualQuantity").toString()));
                     item.setDifference(item.getActualQuantity().subtract(item.getSystemQuantity()));
                 }
-                if (itemData.containsKey("unit")) item.setUnit((String) itemData.get("unit"));
-                if (itemData.containsKey("remark")) item.setRemark((String) itemData.get("remark"));
+                if (itemData.containsKey("unit"))
+                    item.setUnit((String) itemData.get("unit"));
+                if (itemData.containsKey("remark"))
+                    item.setRemark((String) itemData.get("remark"));
                 return item;
             }).toList();
-            
+
             inventoryCheckItemRepository.saveAll(items);
             InventoryCheckOrder saved = inventoryCheckOrderRepository.save(order);
             saved.setItems(items);
-            
+
             return ResponseEntity.ok(saved);
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
@@ -352,4 +410,3 @@ public class InventoryController {
         return ResponseEntity.noContent().build();
     }
 }
-

@@ -1,455 +1,275 @@
-import { useState, useMemo } from 'react'
+import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { templateApi } from '@/api/client'
 import { usePrintStore } from '@/store/printStore'
-import { useSalesStore } from '@/store/salesStore'
-import { usePurchaseStore } from '@/store/purchaseStore'
-import { PrintRecord, PrintDocumentType } from '@/types/print'
-import Card from '../../components/ui/Card'
-import Button from '../../components/ui/Button'
-import Table from '../../components/ui/Table'
-import Badge from '../../components/ui/Badge'
-import Pagination from '../../components/ui/Pagination'
-import Tabs from '../../components/ui/Tabs'
-import TemplateManagement from '../../components/template/TemplateManagement'
-import {
-  Printer,
-  Clock,
-  FileText,
-  Filter,
-  Calendar,
-  Settings,
-  CheckSquare,
-  History,
-} from 'lucide-react'
-import { format } from 'date-fns'
+import Button from '@/components/ui/Button'
+import Table from '@/components/ui/Table'
+import { Printer, Plus, Edit, Trash2, FileText, Settings } from 'lucide-react'
+
+interface PrintTemplate {
+  id: string
+  name: string
+  type?: string
+  documentType?: string
+  description?: string
+  isDefault?: boolean
+  usageCount?: number
+  createdAt: string
+  updatedAt: string
+}
 
 function PrintManagement() {
-  const { getPrintRecords, getPrintRecordsByType, printDocument, getTodayPrintCount, getPendingPrintCount } = usePrintStore()
-  const { orders: salesOrders } = useSalesStore()
-  const { orders: purchaseOrders } = usePurchaseStore()
+  const navigate = useNavigate()
+  const { getPrintRecords, getPrintRecordsByType, getTodayPrintCount } = usePrintStore()
+  const [templates, setTemplates] = useState<PrintTemplate[]>([])
+  const [loading, setLoading] = useState(false)
+  const [selectedTab, setSelectedTab] = useState<'templates' | 'records' | 'settings'>('templates')
 
-  const [searchKeyword, setSearchKeyword] = useState('')
-  const [tabType, setTabType] = useState<'全部' | '销售单' | '进货单' | '待打印'>('全部')
-  const [currentPage, setCurrentPage] = useState(1)
-  const [showTemplateManagement, setShowTemplateManagement] = useState(false)
-  const pageSize = 10
+  useEffect(() => {
+    loadTemplates()
+  }, [])
 
-  // 统计数据
-  const stats = useMemo(() => {
-    const todayPrintCount = getTodayPrintCount()
-    const pendingPrintCount = getPendingPrintCount()
-    const salesCount = salesOrders.length
-    const purchaseCount = purchaseOrders.length
-
-    return {
-      todayPrintCount,
-      pendingPrintCount,
-      salesCount,
-      purchaseCount,
-    }
-  }, [salesOrders, purchaseOrders])
-
-  // 获取打印记录
-  const allPrintRecords = useMemo(() => {
-    return getPrintRecords()
-  }, [salesOrders, purchaseOrders])
-
-  // 筛选记录
-  const filteredRecords = useMemo(() => {
-    let result: PrintRecord[] = []
-
-    if (tabType === '待打印') {
-      result = allPrintRecords.filter((r) => r.status === '待打印')
-    } else if (tabType === '全部') {
-      result = allPrintRecords
-    } else {
-      result = getPrintRecordsByType(tabType as PrintDocumentType)
-    }
-
-    // 关键词搜索
-    if (searchKeyword) {
-      const keyword = searchKeyword.toLowerCase()
-      result = result.filter(
-        (r) =>
-          r.documentNumber.toLowerCase().includes(keyword)
-      )
-    }
-
-    return result.sort(
-      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    )
-  }, [allPrintRecords, tabType, searchKeyword])
-
-  // 分页数据
-  const paginatedRecords = useMemo(() => {
-    const start = (currentPage - 1) * pageSize
-    const end = start + pageSize
-    return filteredRecords.slice(start, end)
-  }, [filteredRecords, currentPage])
-
-  // 处理打印
-  const handlePrint = (record: PrintRecord) => {
-    // 更新打印记录
-    printDocument(record.documentType, record.documentId, record.documentNumber)
-    
-    // 根据单据类型获取订单并打印
-    if (record.documentType === '销售单') {
-      const order = salesOrders.find((o) => o.id === record.documentId)
-      if (order) {
-        import('@/utils/printDocument').then(({ printOrder }) => {
-          printOrder('销售单', order)
-        })
-      }
-    } else if (record.documentType === '进货单') {
-      const order = purchaseOrders.find((o) => o.id === record.documentId)
-      if (order) {
-        import('@/utils/printDocument').then(({ printOrder }) => {
-          printOrder('进货单', order)
-        })
-      }
+  const loadTemplates = async () => {
+    setLoading(true)
+    try {
+      const data = await templateApi.getAll()
+      setTemplates(data)
+    } catch (error: any) {
+      console.error('Failed to load templates:', error)
+      alert('加载模板失败：' + (error.message || '未知错误'))
+    } finally {
+      setLoading(false)
     }
   }
 
-  // 统计卡片 - 变化指标基于实际数据，数据为空时不显示变化
-  const statCards = [
-    {
-      label: '今日打印',
-      value: stats.todayPrintCount,
-      change: null, // 暂时不显示变化，等有历史数据后再计算
-      icon: Printer,
-      iconColor: 'text-primary-500',
-      bgColor: 'bg-primary-50',
-    },
-    {
-      label: '待打印',
-      value: stats.pendingPrintCount,
-      change: null,
-      icon: Clock,
-      iconColor: 'text-warning-500',
-      bgColor: 'bg-warning-50',
-    },
-    {
-      label: '销售单',
-      value: stats.salesCount,
-      change: null,
-      icon: FileText,
-      iconColor: 'text-success-500',
-      bgColor: 'bg-success-50',
-    },
-    {
-      label: '进货单',
-      value: stats.purchaseCount,
-      change: null,
-      icon: FileText,
-      iconColor: 'text-purple-500',
-      bgColor: 'bg-purple-50',
-    },
-  ]
+  const handleDeleteTemplate = async (id: string) => {
+    if (!confirm('确定要删除这个模板吗？')) {
+      return
+    }
 
-  // 快捷操作卡片
-  const quickActionCards = [
-    {
-      label: '批量打印',
-      icon: Printer,
-      onClick: () => {
-        // TODO: 批量打印功能
-        console.log('批量打印')
-      },
-    },
-    {
-      label: '打印设置',
-      icon: Settings,
-      onClick: () => {
-        // TODO: 打印设置
-        console.log('打印设置')
-      },
-    },
-    {
-      label: '模板管理',
-      icon: FileText,
-      onClick: () => {
-        setShowTemplateManagement(true)
-      },
-    },
-    {
-      label: '打印历史',
-      icon: History,
-      onClick: () => {
-        // TODO: 打印历史
-        console.log('打印历史')
-      },
-    },
-  ]
-
-  // 标签页
-  const tabs = [
-    { key: '全部', label: '全部' },
-    { key: '销售单', label: '销售单' },
-    { key: '进货单', label: '进货单' },
-    { key: '待打印', label: '待打印' },
-  ]
-
-  // 获取单据详细信息
-  const getDocumentInfo = (record: PrintRecord) => {
-    if (record.documentType === '销售单') {
-      const order = salesOrders.find((o) => o.id === record.documentId)
-      return {
-        counterparty: order?.customerName || '',
-        date: order?.salesDate || '',
-        itemCount: order?.items.length || 0,
-        amount: order?.totalAmount || 0,
-      }
-    } else {
-      const order = purchaseOrders.find((o) => o.id === record.documentId)
-      return {
-        counterparty: order?.supplierName || '',
-        date: order?.purchaseDate || '',
-        itemCount: order?.items.length || 0,
-        amount: order?.totalAmount || 0,
-      }
+    try {
+      await templateApi.delete(id)
+      await loadTemplates()
+      alert('模板已删除')
+    } catch (error: any) {
+      alert('删除失败：' + (error.message || '未知错误'))
     }
   }
 
-  // 表格列定义
-  const recordColumns = [
+  const handleCreateTemplate = () => {
+    navigate('/print/template/new')
+  }
+
+  const handleEditTemplate = (id: string) => {
+    navigate(`/print/template/${id}`)
+  }
+
+  const printRecords = getPrintRecords()
+  const todayPrintCount = getTodayPrintCount()
+
+  const templateColumns = [
     {
-      key: 'documentType',
-      title: '单据类型',
-      render: (_: any, record: PrintRecord) => (
+      key: 'name',
+      title: '模板名称',
+      render: (_: any, record: PrintTemplate) => (
         <div className="flex items-center gap-2">
-          <FileText className={`w-4 h-4 ${
-            record.documentType === '销售单' ? 'text-success-500' : 'text-primary-500'
-          }`} />
-          <span>{record.documentType}</span>
+          <FileText className="w-4 h-4 text-blue-600" />
+          <span className="text-sm font-medium text-gray-900">{record.name}</span>
+          {record.isDefault && (
+            <span className="text-xs px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full">
+              默认
+            </span>
+          )}
         </div>
       ),
     },
     {
-      key: 'documentNumber',
-      title: '单据号',
-      render: (_: any, record: PrintRecord) => (
-        <span className="font-medium">{record.documentNumber}</span>
+      key: 'documentType',
+      title: '单据类型',
+      render: (_: any, record: PrintTemplate) => (
+        <span className="text-sm text-gray-600">{record.documentType || '-'}</span>
       ),
     },
     {
-      key: 'counterparty',
-      title: '往来单位',
-      render: (_: any, record: PrintRecord) => {
-        const info = getDocumentInfo(record)
-        return <span>{info.counterparty}</span>
-      },
-    },
-    {
-      key: 'date',
-      title: '单据日期',
-      render: (_: any, record: PrintRecord) => {
-        const info = getDocumentInfo(record)
-        return <span>{info.date}</span>
-      },
-    },
-    {
-      key: 'itemCount',
-      title: '商品数量',
-      render: (_: any, record: PrintRecord) => {
-        const info = getDocumentInfo(record)
-        return <span>{info.itemCount}项</span>
-      },
-    },
-    {
-      key: 'amount',
-      title: '金额',
-      render: (_: any, record: PrintRecord) => {
-        const info = getDocumentInfo(record)
-        return <span className="font-medium">¥{info.amount.toLocaleString()}</span>
-      },
-    },
-    {
-      key: 'printCount',
-      title: '打印次数',
-      render: (_: any, record: PrintRecord) => (
-        <span>{record.printCount}次</span>
-      ),
-    },
-    {
-      key: 'lastPrintTime',
-      title: '最后打印时间',
-      render: (_: any, record: PrintRecord) => (
-        <span className="text-sm text-gray-600">
-          {record.lastPrintTime
-            ? format(new Date(record.lastPrintTime), 'yyyy-MM-dd HH:mm')
-            : '未打印'}
-        </span>
-      ),
-    },
-    {
-      key: 'status',
-      title: '状态',
-      render: (_: any, record: PrintRecord) => (
-        <Badge variant={record.status === '已打印' ? 'success' : 'warning'}>
-          {record.status}
-        </Badge>
+      key: 'usageCount',
+      title: '使用次数',
+      render: (_: any, record: PrintTemplate) => (
+        <span className="text-sm text-gray-600">{record.usageCount || 0}</span>
       ),
     },
     {
       key: 'actions',
       title: '操作',
-      render: (_: any, record: PrintRecord) => (
+      render: (_: any, record: PrintTemplate) => (
         <div className="flex items-center gap-2">
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => {
-              // TODO: 查看详情
-              console.log('查看', record.documentId)
-            }}
-            title="查看"
+            onClick={() => handleEditTemplate(record.id)}
+            className="p-1.5 hover:bg-gray-100 rounded-xl"
           >
-            <FileText className="w-4 h-4" />
+            <Edit className="w-4 h-4 text-gray-600" />
           </Button>
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => handlePrint(record)}
-            className="text-primary-600 hover:text-primary-700"
+            onClick={() => handleDeleteTemplate(record.id)}
+            className="p-1.5 hover:bg-gray-100 rounded-xl"
           >
-            <Printer className="w-4 h-4 mr-1" />
-            打印
+            <Trash2 className="w-4 h-4 text-red-600" />
           </Button>
         </div>
       ),
     },
   ]
 
+  const recordColumns = [
+    {
+      key: 'documentType',
+      title: '单据类型',
+      render: (_: any, record: any) => (
+        <span className="text-sm font-medium text-gray-900">{record.documentType}</span>
+      ),
+    },
+    {
+      key: 'documentNumber',
+      title: '单据编号',
+      render: (_: any, record: any) => (
+        <span className="text-sm text-gray-600">{record.documentNumber}</span>
+      ),
+    },
+    {
+      key: 'printCount',
+      title: '打印次数',
+      render: (_: any, record: any) => (
+        <span className="text-sm text-gray-600">{record.printCount || 1}</span>
+      ),
+    },
+    {
+      key: 'lastPrintTime',
+      title: '最后打印时间',
+      render: (_: any, record: any) => (
+        <span className="text-sm text-gray-600">
+          {record.lastPrintTime
+            ? new Date(record.lastPrintTime).toLocaleString('zh-CN')
+            : '-'}
+        </span>
+      ),
+    },
+  ]
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-8">
       {/* 页面标题 */}
-      <div>
-        <h1 className="text-2xl font-semibold text-gray-900 mb-2">打印管理</h1>
-        <p className="text-gray-600">
-          打印业务单据,支持自定义模板和批量打印
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold text-gray-900">打印管理</h1>
+          <p className="text-sm text-gray-600 mt-1">管理打印模板和查看打印记录</p>
+        </div>
+        {selectedTab === 'templates' && (
+          <Button
+            onClick={handleCreateTemplate}
+            className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            新建模板
+          </Button>
+        )}
       </div>
 
-      {/* 统计卡片 */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {statCards.map((card, index) => {
-          const Icon = card.icon
-          return (
-            <Card key={index} className="p-4">
-              <div className="flex items-center justify-between mb-2">
-                <div className={`w-9 h-9 ${card.bgColor} rounded-lg flex items-center justify-center`}>
-                  <Icon className={`w-4 h-4 ${card.iconColor}`} />
-                </div>
-                {card.change && (
-                  <div className="text-xs text-success-500 font-medium">
-                    {card.change}
-                  </div>
-                )}
-              </div>
-              <div className="text-xs text-gray-600 mb-1">{card.label}</div>
-              <div className="text-lg font-semibold text-gray-900">{card.value}</div>
-            </Card>
-          )
-        })}
+      {/* 标签页 */}
+      <div className="border-b border-gray-200">
+        <div className="flex gap-4">
+          <button
+            onClick={() => setSelectedTab('templates')}
+            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+              selectedTab === 'templates'
+                ? 'border-blue-600 text-blue-600'
+                : 'border-transparent text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            <FileText className="w-4 h-4 inline mr-2" />
+            模板管理
+          </button>
+          <button
+            onClick={() => setSelectedTab('records')}
+            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+              selectedTab === 'records'
+                ? 'border-blue-600 text-blue-600'
+                : 'border-transparent text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            <Printer className="w-4 h-4 inline mr-2" />
+            打印记录
+            {todayPrintCount > 0 && (
+              <span className="ml-2 px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xs">
+                {todayPrintCount}
+              </span>
+            )}
+          </button>
+          <button
+            onClick={() => setSelectedTab('settings')}
+            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+              selectedTab === 'settings'
+                ? 'border-blue-600 text-blue-600'
+                : 'border-transparent text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            <Settings className="w-4 h-4 inline mr-2" />
+            打印设置
+          </button>
+        </div>
       </div>
 
-      {/* 快捷操作 */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {quickActionCards.map((action, index) => {
-          const Icon = action.icon
-          return (
-            <div
-              key={index}
-              className="bg-white border border-gray-200 rounded-lg shadow-sm p-6 cursor-pointer hover:shadow-md transition-shadow"
-              onClick={action.onClick}
-            >
-              <div className="flex flex-col items-center gap-3">
-                <div className="w-12 h-12 bg-gray-50 rounded-lg flex items-center justify-center">
-                  <Icon className="w-6 h-6 text-gray-600" />
-                </div>
-                <span className="text-sm font-medium text-gray-700">{action.label}</span>
-              </div>
+      {/* 模板管理 */}
+      {selectedTab === 'templates' && (
+        <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+          {loading ? (
+            <div className="p-8 text-center text-gray-500">加载中...</div>
+          ) : templates.length === 0 ? (
+            <div className="p-8 text-center text-gray-500">
+              <FileText className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+              <p>暂无模板，点击"新建模板"创建第一个模板</p>
             </div>
-          )
-        })}
-      </div>
+          ) : (
+            <Table columns={templateColumns} data={templates} rowKey={(record) => record.id} />
+          )}
+        </div>
+      )}
 
-      {/* 搜索和筛选栏 */}
-      <Card>
-        <div className="space-y-4">
-          {/* 搜索和筛选 */}
-          <div className="flex items-center gap-4">
-            <div className="relative flex-1 max-w-md">
-              <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <input
-                type="text"
-                placeholder="选择日期范围"
-                value={searchKeyword}
-                onChange={(e) => {
-                  setSearchKeyword(e.target.value)
-                  setCurrentPage(1)
-                }}
-                className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-              />
+      {/* 打印记录 */}
+      {selectedTab === 'records' && (
+        <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+          {printRecords.length === 0 ? (
+            <div className="p-8 text-center text-gray-500">
+              <Printer className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+              <p>暂无打印记录</p>
             </div>
-            <Button variant="outline">
-              <Filter className="w-4 h-4 mr-2" />
-              筛选
-            </Button>
-          </div>
+          ) : (
+            <Table columns={recordColumns} data={printRecords} rowKey={(record, index) => index.toString()} />
+          )}
+        </div>
+      )}
 
-          {/* 标签页和操作按钮 */}
-          <div className="flex items-center justify-between">
-            <Tabs
-              items={tabs}
-              activeKey={tabType}
-              onChange={(key) => {
-                setTabType(key as typeof tabType)
-                setCurrentPage(1)
-              }}
-            />
-            <div className="flex items-center gap-3">
-              <Button variant="outline">
-                <CheckSquare className="w-4 h-4 mr-2" />
-                批量选择
-              </Button>
-              <Button>
-                <Printer className="w-4 h-4 mr-2" />
-                批量打印
-              </Button>
+      {/* 打印设置 */}
+      {selectedTab === 'settings' && (
+        <div className="bg-white rounded-2xl p-6 border border-gray-200">
+          <div className="space-y-4">
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">默认打印机</h3>
+              <p className="text-sm text-gray-600 mb-4">使用系统默认打印机</p>
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">打印预览</h3>
+              <p className="text-sm text-gray-600 mb-4">打印前显示预览</p>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" className="sr-only peer" defaultChecked />
+                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600" />
+              </label>
             </div>
           </div>
         </div>
-      </Card>
-
-      {/* 打印记录表格 */}
-      <Card>
-        {paginatedRecords.length === 0 ? (
-          <p className="text-gray-500 text-center py-8">
-            {searchKeyword || tabType !== '全部'
-              ? '未找到匹配的打印记录'
-              : '暂无打印记录'}
-          </p>
-        ) : (
-          <>
-            <Table columns={recordColumns} data={paginatedRecords} />
-            <div className="mt-4">
-              <Pagination
-                current={currentPage}
-                total={filteredRecords.length}
-                pageSize={pageSize}
-                onChange={setCurrentPage}
-                totalText={`共${filteredRecords.length}条记录`}
-              />
-            </div>
-          </>
-        )}
-      </Card>
-
-      {/* 模板管理模态窗口 */}
-      <TemplateManagement
-        isOpen={showTemplateManagement}
-        onClose={() => setShowTemplateManagement(false)}
-      />
+      )}
     </div>
   )
 }

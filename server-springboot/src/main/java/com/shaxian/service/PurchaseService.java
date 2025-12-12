@@ -6,7 +6,6 @@ import com.shaxian.repository.PurchaseOrderRepository;
 import com.shaxian.repository.PurchaseOrderItemRepository;
 import com.shaxian.util.OrderNumberGenerator;
 import com.shaxian.util.UuidUtil;
-import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -16,10 +15,17 @@ import java.util.List;
 import java.util.Optional;
 
 @Service
-@RequiredArgsConstructor
 public class PurchaseService {
     private final PurchaseOrderRepository purchaseOrderRepository;
     private final PurchaseOrderItemRepository purchaseOrderItemRepository;
+
+    public PurchaseService(
+            PurchaseOrderRepository purchaseOrderRepository,
+            PurchaseOrderItemRepository purchaseOrderItemRepository) {
+        this.purchaseOrderRepository = purchaseOrderRepository;
+        this.purchaseOrderItemRepository = purchaseOrderItemRepository;
+    }
+
 
     public List<PurchaseOrder> getAllPurchases(String status, String supplierId, LocalDate startDate, LocalDate endDate) {
         return purchaseOrderRepository.findByFilters(status, supplierId, startDate, endDate);

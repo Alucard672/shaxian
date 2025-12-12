@@ -17,48 +17,48 @@ export interface PrintData {
  */
 export function generatePrintContent(data: PrintData): string {
   const { template, order, documentType, customer, supplier } = data
-  
+
   // 单位转换：英寸转毫米（用于CSS）
   const unit = template.pageSettings.unit || 'mm'
   const convertToMm = (value: number) => {
     return unit === 'inch' ? value * 25.4 : value
   }
-  
+
   const widthMm = convertToMm(template.pageSettings.width)
   const heightMm = convertToMm(template.pageSettings.height)
   const marginTopMm = convertToMm(template.pageSettings.marginTop)
   const marginRightMm = convertToMm(template.pageSettings.marginRight)
   const marginBottomMm = convertToMm(template.pageSettings.marginBottom)
   const marginLeftMm = convertToMm(template.pageSettings.marginLeft)
-  
+
   // 计算页面尺寸（像素）
   const mmToPx = (mm: number) => mm * 3.779527559
   const pageWidth = mmToPx(widthMm)
   const pageHeight = mmToPx(heightMm)
-  
+
   // 客户/供应商信息
-  const customerName = documentType === '销售单' 
-    ? (order as SalesOrder).customerName 
+  const customerName = documentType === '销售单'
+    ? (order as SalesOrder).customerName
     : (order as PurchaseOrder).supplierName
-  
-  const contactPerson = documentType === '销售单' 
+
+  const contactPerson = documentType === '销售单'
     ? customer?.contactPerson || ''
     : supplier?.contactPerson || ''
-  
+
   const contactPhone = documentType === '销售单'
     ? customer?.phone || ''
     : supplier?.phone || ''
-  
+
   const deliveryAddress = documentType === '销售单'
     ? customer?.address || ''
     : supplier?.address || ''
-  
+
   const documentDate = documentType === '销售单'
     ? (order as SalesOrder).salesDate
     : (order as PurchaseOrder).purchaseDate
-  
+
   const items = order.items
-  
+
   // 生成HTML内容
   let html = `
     <!DOCTYPE html>
@@ -190,123 +190,145 @@ export function generatePrintContent(data: PrintData): string {
     <body>
       <div class="print-container">
   `
-  
+
   // 标题
   if (template.titleSettings.enabled && template.titleSettings.text) {
     html += `<div class="title">${template.titleSettings.text}</div>`
   }
-  
+
   // 基础信息
   html += '<div class="info-row">'
   html += '<div class="info-left">'
-  
+
   if (template.basicInfoFields.customerName) {
     html += `<div class="info-item"><strong>${documentType === '销售单' ? '客户' : '供应商'}：</strong>${customerName}</div>`
   }
-  
+
   if (template.basicInfoFields.contactPerson && contactPerson) {
     html += `<div class="info-item"><strong>联系人：</strong>${contactPerson}</div>`
   }
-  
+
   if (template.basicInfoFields.contactPhone && contactPhone) {
     html += `<div class="info-item"><strong>电话：</strong>${contactPhone}</div>`
   }
-  
+
   if (template.basicInfoFields.deliveryAddress && deliveryAddress) {
     html += `<div class="info-item"><strong>地址：</strong>${deliveryAddress}</div>`
   }
-  
+
   html += '</div>'
   html += '<div class="info-right">'
-  
+
   if (template.basicInfoFields.documentDate) {
     html += `<div class="info-item"><strong>单据日期：</strong>${documentDate}</div>`
   }
-  
+
   if (template.basicInfoFields.printDate) {
     html += `<div class="info-item"><strong>打印：</strong>${format(new Date(), 'yyyy/MM/dd')}</div>`
   }
-  
+
   if (template.basicInfoFields.documentNumber) {
     html += `<div class="info-item"><strong>NO：</strong>${order.orderNumber}</div>`
   }
-  
+
   html += '</div>'
   html += '</div>'
-  
+
   // 商品表格
   if (template.productFields.showTable) {
     const textAlign = template.productFields.textAlign || 'left'
-    
+
     html += '<table>'
     html += '<thead><tr>'
     html += '<th style="text-align: left;">序号</th>'
-    
-    if (template.productFields.productName) {
-      html += `<th style="text-align: ${textAlign};">商品名称</th>`
+
+    const order = template.productFields.order || [
+      'productCode',
+      'productName',
+      'specification',
+      'colorName',
+      'colorCode',
+      'quantity',
+      'unit',
+      'unitPrice',
+      'amount',
+      'batchCode',
+      'remark'
+    ]
+
+    const labelMap: Record<string, string> = {
+      productCode: '编号',
+      productName: '商品名称',
+      specification: '规格',
+      colorName: '颜色',
+      colorCode: '色号',
+      quantity: '数量',
+      unit: '单位',
+      unitPrice: '单价',
+      amount: '金额',
+      batchCode: '批号',
+      remark: '备注'
     }
-    if (template.productFields.colorCode) {
-      html += `<th style="text-align: ${textAlign};">色号</th>`
+
+    const alignMap: Record<string, string> = {
+      quantity: 'center',
+      unit: 'center',
+      unitPrice: 'right',
+      amount: 'right'
     }
-    if (template.productFields.quantity) {
-      html += `<th style="text-align: ${textAlign};">数量</th>`
-    }
-    if (template.productFields.unitPrice) {
-      html += '<th style="text-align: right;">单价</th>'
-    }
-    if (template.productFields.amount) {
-      html += '<th style="text-align: right;">金额</th>'
-    }
-    if (template.productFields.batchCode) {
-      html += `<th style="text-align: ${textAlign};">批号</th>`
-    }
-    if (template.productFields.remark) {
-      html += `<th style="text-align: ${textAlign};">备注</th>`
-    }
-    
+
+    order.forEach((key) => {
+      if (template.productFields[key as keyof typeof template.productFields]) {
+        // Use configured textAlign for text fields, fixed alignment for numbers
+        const align = alignMap[key] || textAlign
+        html += `<th style="text-align: ${align};">${labelMap[key]}</th>`
+      }
+    })
+
     html += '</tr></thead>'
     html += '<tbody>'
-    
+
     items.forEach((item, index) => {
       html += '<tr>'
       html += `<td style="text-align: left;">${index + 1}</td>`
-      
-      if (template.productFields.productName) {
-        html += `<td style="text-align: ${textAlign};">${item.productName}</td>`
-      }
-      if (template.productFields.colorCode) {
-        html += `<td style="text-align: ${textAlign};">${item.colorCode}</td>`
-      }
-      if (template.productFields.quantity) {
-        html += `<td style="text-align: ${textAlign};">${item.quantity}</td>`
-      }
-      if (template.productFields.unitPrice) {
-        html += `<td style="text-align: right;">¥${item.price.toFixed(2)}</td>`
-      }
-      if (template.productFields.amount) {
-        html += `<td style="text-align: right;">¥${item.amount.toFixed(2)}</td>`
-      }
-      if (template.productFields.batchCode) {
-        html += `<td style="text-align: ${textAlign};">${item.batchCode || ''}</td>`
-      }
-      if (template.productFields.remark) {
-        html += `<td style="text-align: ${textAlign};">${item.remark || ''}</td>`
-      }
-      
+
+      order.forEach((key) => {
+        if (template.productFields[key as keyof typeof template.productFields]) {
+          const align = alignMap[key] || textAlign
+          let content = ''
+
+          switch (key) {
+            case 'productCode': content = (item as any).productCode || ''; break;
+            case 'productName': content = item.productName; break;
+            case 'specification': content = (item as any).specification || ''; break;
+            case 'colorName': content = (item as any).colorName || ''; break;
+            case 'colorCode': content = (item as any).colorCode || ''; break;
+            case 'quantity': content = item.quantity.toString(); break;
+            case 'unit': content = (item as any).unit || ''; break;
+            case 'unitPrice': content = `¥${item.price.toFixed(2)}`; break;
+            case 'amount': content = `¥${item.amount.toFixed(2)}`; break;
+            case 'batchCode': content = (item as any).batchCode || ''; break;
+            case 'remark': content = item.remark || ''; break;
+          }
+
+          html += `<td style="text-align: ${align};">${content}</td>`
+        }
+      })
+
       html += '</tr>'
     })
-    
+
     html += '</tbody>'
     html += '</table>'
   }
-  
+
   // 汇总信息
   html += '<div class="summary">'
-  
+
   if (template.summaryFields.totalAmount) {
     html += `<div style="font-size: 14px; font-weight: bold; margin-bottom: 2px;">合计：¥${order.totalAmount.toFixed(2)}</div>`
   }
-  
+
   if (template.summaryFields.paymentInfo) {
     if (documentType === '销售单') {
       const salesOrder = order as SalesOrder
@@ -324,30 +346,30 @@ export function generatePrintContent(data: PrintData): string {
       `
     }
   }
-  
+
   html += '</div>'
-  
+
   // 签名区域
   html += '<div class="signature-row">'
-  
+
   if (template.summaryFields.creator) {
     html += `<div><strong>制单：</strong>${order.operator}</div>`
   }
-  
+
   if (template.summaryFields.handler) {
     html += `<div><strong>经手：</strong>${order.operator}</div>`
   }
-  
+
   if (template.summaryFields.customerSign) {
     html += '<div><strong>客户签收：</strong><div style="margin-top: 12px; border-bottom: 1px solid #000;"></div></div>'
   }
-  
+
   html += '</div>'
-  
+
   // 门店信息和二维码（底部，同一行）
   if (template.otherElements.companyInfo || template.otherElements.qrcode) {
     html += '<div class="footer-section">'
-    
+
     // 门店信息（左侧）
     if (template.otherElements.companyInfo) {
       html += `
@@ -359,7 +381,7 @@ export function generatePrintContent(data: PrintData): string {
         </div>
       `
     }
-    
+
     // 二维码（右侧）
     if (template.otherElements.qrcode) {
       const qrcodeCount = template.otherElements.qrcodeCount || 1
@@ -375,21 +397,21 @@ export function generatePrintContent(data: PrintData): string {
       }
       html += '</div>'
     }
-    
+
     html += '</div>'
   }
-  
+
   // 页码
   if (template.otherElements.pageNumber) {
     html += '<div style="text-align: center; font-size: 10px; color: #666; margin-top: 8px;">第 1 页</div>'
   }
-  
+
   html += `
       </div>
     </body>
     </html>
   `
-  
+
   return html
 }
 
@@ -402,10 +424,10 @@ export function openPrintDialog(htmlContent: string) {
     alert('无法打开打印窗口，请检查浏览器弹窗设置')
     return
   }
-  
+
   printWindow.document.write(htmlContent)
   printWindow.document.close()
-  
+
   // 等待内容加载完成后打印
   setTimeout(() => {
     printWindow.focus()

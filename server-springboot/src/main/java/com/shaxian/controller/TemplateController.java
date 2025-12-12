@@ -5,7 +5,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.shaxian.entity.PrintTemplate;
 import com.shaxian.repository.PrintTemplateRepository;
 import com.shaxian.util.UuidUtil;
-import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -16,10 +15,17 @@ import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/templates")
-@RequiredArgsConstructor
 public class TemplateController {
     private final PrintTemplateRepository printTemplateRepository;
     private final ObjectMapper objectMapper;
+
+    public TemplateController(
+            PrintTemplateRepository printTemplateRepository,
+            ObjectMapper objectMapper) {
+        this.printTemplateRepository = printTemplateRepository;
+        this.objectMapper = objectMapper;
+    }
+
 
     @GetMapping
     public ResponseEntity<List<PrintTemplate>> getAllTemplates(@RequestParam(required = false) String documentType) {

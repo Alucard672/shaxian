@@ -3,7 +3,6 @@ package com.shaxian.service;
 import com.shaxian.entity.Product;
 import com.shaxian.repository.ProductRepository;
 import com.shaxian.util.UuidUtil;
-import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -12,9 +11,14 @@ import java.util.List;
 import java.util.Optional;
 
 @Service
-@RequiredArgsConstructor
 public class ProductService {
     private final ProductRepository productRepository;
+
+    public ProductService(
+            ProductRepository productRepository) {
+        this.productRepository = productRepository;
+    }
+
 
     public List<Product> getAllProducts() {
         return productRepository.findAll();

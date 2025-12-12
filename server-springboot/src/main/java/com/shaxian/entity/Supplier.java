@@ -1,12 +1,10 @@
 package com.shaxian.entity;
 
 import jakarta.persistence.*;
-import lombok.Data;
 import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "suppliers")
-@Data
 public class Supplier {
     @Id
     @Column(length = 50)
@@ -70,5 +68,104 @@ public class Supplier {
     public enum SupplierStatus {
         合作中, 已停用
     }
+
+    // Getters and Setters
+
+    public String getId() {
+        return id;
+    }
+
+    public void setId(String id) {
+        this.id = id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public String getCode() {
+        return code;
+    }
+
+    public void setCode(String code) {
+        this.code = code;
+    }
+
+    public String getContactPerson() {
+        return contactPerson;
+    }
+
+    public void setContactPerson(String contactPerson) {
+        this.contactPerson = contactPerson;
+    }
+
+    public String getPhone() {
+        return phone;
+    }
+
+    public void setPhone(String phone) {
+        this.phone = phone;
+    }
+
+    public String getAddress() {
+        return address;
+    }
+
+    public void setAddress(String address) {
+        this.address = address;
+    }
+
+    public SupplierType getType() {
+        return type;
+    }
+
+    public void setType(SupplierType type) {
+        this.type = type;
+    }
+
+    public SettlementCycle getSettlementCycle() {
+        return settlementCycle;
+    }
+
+    public void setSettlementCycle(SettlementCycle settlementCycle) {
+        this.settlementCycle = settlementCycle;
+    }
+
+    public SupplierStatus getStatus() {
+        return status;
+    }
+
+    public void setStatus(SupplierStatus status) {
+        this.status = status;
+    }
+
+    public String getRemark() {
+        return remark;
+    }
+
+    public void setRemark(String remark) {
+        this.remark = remark;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
+    }
+
+    public LocalDateTime getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public void setUpdatedAt(LocalDateTime updatedAt) {
+        this.updatedAt = updatedAt;
+    }
+
 }
 

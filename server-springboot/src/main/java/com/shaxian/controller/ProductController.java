@@ -17,11 +17,16 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/products")
-@RequiredArgsConstructor
 public class ProductController {
     private final ProductService productService;
     private final ColorRepository colorRepository;
     private final BatchRepository batchRepository;
+
+    public ProductController(ProductService productService, ColorRepository colorRepository, BatchRepository batchRepository) {
+        this.productService = productService;
+        this.colorRepository = colorRepository;
+        this.batchRepository = batchRepository;
+    }
 
     @GetMapping
     public ResponseEntity<List<Product>> getAllProducts() {
@@ -68,20 +73,14 @@ public class ProductController {
     // ========== 色号管理 ==========
     @GetMapping("/{id}/colors")
     public ResponseEntity<List<Color>> getColors(@PathVariable String id) {
-        List<Color> colors = colorRepository.findByProductIdOrderByCode(id);
-        // 确保返回的对象不包含懒加载的 product
-        colors.forEach(color -> color.setProduct(null));
-        return ResponseEntity.ok(colors);
+        return ResponseEntity.ok(colorRepository.findByProductIdOrderByCode(id));
     }
 
     @PostMapping("/{id}/colors")
     public ResponseEntity<Color> createColor(@PathVariable String id, @RequestBody Color color) {
         color.setId(UuidUtil.generate());
         color.setProductId(id);
-        Color saved = colorRepository.save(color);
-        // 确保返回的对象不包含懒加载的 product
-        saved.setProduct(null);
-        return ResponseEntity.status(HttpStatus.CREATED).body(saved);
+        return ResponseEntity.status(HttpStatus.CREATED).body(colorRepository.save(color));
     }
 
     @PutMapping("/colors/{id}")
@@ -93,10 +92,7 @@ public class ProductController {
         color.setId(id);
         color.setProductId(existing.getProductId());
         color.setCreatedAt(existing.getCreatedAt());
-        Color saved = colorRepository.save(color);
-        // 确保返回的对象不包含懒加载的 product
-        saved.setProduct(null);
-        return ResponseEntity.ok(saved);
+        return ResponseEntity.ok(colorRepository.save(color));
     }
 
     @DeleteMapping("/colors/{id}")
@@ -111,10 +107,7 @@ public class ProductController {
     // ========== 缸号管理 ==========
     @GetMapping("/colors/{colorId}/batches")
     public ResponseEntity<List<Batch>> getBatches(@PathVariable String colorId) {
-        List<Batch> batches = batchRepository.findByColorIdOrderByCode(colorId);
-        // 确保返回的对象不包含懒加载的 color
-        batches.forEach(batch -> batch.setColor(null));
-        return ResponseEntity.ok(batches);
+        return ResponseEntity.ok(batchRepository.findByColorIdOrderByCode(colorId));
     }
 
     @PostMapping("/colors/{colorId}/batches")
@@ -124,10 +117,7 @@ public class ProductController {
         if (batch.getStockQuantity() == null) {
             batch.setStockQuantity(batch.getInitialQuantity() != null ? batch.getInitialQuantity() : java.math.BigDecimal.ZERO);
         }
-        Batch saved = batchRepository.save(batch);
-        // 确保返回的对象不包含懒加载的 color
-        saved.setColor(null);
-        return ResponseEntity.status(HttpStatus.CREATED).body(saved);
+        return ResponseEntity.status(HttpStatus.CREATED).body(batchRepository.save(batch));
     }
 
     @PutMapping("/batches/{id}")
@@ -139,10 +129,7 @@ public class ProductController {
         batch.setId(id);
         batch.setColorId(existing.getColorId());
         batch.setCreatedAt(existing.getCreatedAt());
-        Batch saved = batchRepository.save(batch);
-        // 确保返回的对象不包含懒加载的 color
-        saved.setColor(null);
-        return ResponseEntity.ok(saved);
+        return ResponseEntity.ok(batchRepository.save(batch));
     }
 
     @DeleteMapping("/batches/{id}")

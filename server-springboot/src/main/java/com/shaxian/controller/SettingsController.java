@@ -5,7 +5,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.shaxian.entity.*;
 import com.shaxian.repository.*;
 import com.shaxian.util.UuidUtil;
-import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -17,7 +16,6 @@ import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/settings")
-@RequiredArgsConstructor
 public class SettingsController {
     private final StoreInfoRepository storeInfoRepository;
     private final EmployeeRepository employeeRepository;
@@ -26,6 +24,24 @@ public class SettingsController {
     private final InventoryAlertSettingsRepository inventoryAlertSettingsRepository;
     private final SystemParamsRepository systemParamsRepository;
     private final ObjectMapper objectMapper;
+
+    public SettingsController(
+            StoreInfoRepository storeInfoRepository,
+            EmployeeRepository employeeRepository,
+            RoleRepository roleRepository,
+            CustomQueryRepository customQueryRepository,
+            InventoryAlertSettingsRepository inventoryAlertSettingsRepository,
+            SystemParamsRepository systemParamsRepository,
+            ObjectMapper objectMapper) {
+        this.storeInfoRepository = storeInfoRepository;
+        this.employeeRepository = employeeRepository;
+        this.roleRepository = roleRepository;
+        this.customQueryRepository = customQueryRepository;
+        this.inventoryAlertSettingsRepository = inventoryAlertSettingsRepository;
+        this.systemParamsRepository = systemParamsRepository;
+        this.objectMapper = objectMapper;
+    }
+
 
     // ========== 门店信息 ==========
     @GetMapping("/store")

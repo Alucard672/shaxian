@@ -7,7 +7,6 @@ import com.shaxian.repository.DyeingOrderItemRepository;
 import com.shaxian.repository.DyeingOrderRepository;
 import com.shaxian.util.OrderNumberGenerator;
 import com.shaxian.util.UuidUtil;
-import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -20,11 +19,20 @@ import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/dyeing")
-@RequiredArgsConstructor
 public class DyeingController {
     private final DyeingOrderRepository dyeingOrderRepository;
     private final DyeingOrderItemRepository dyeingOrderItemRepository;
     private final ObjectMapper objectMapper;
+
+    public DyeingController(
+            DyeingOrderRepository dyeingOrderRepository,
+            DyeingOrderItemRepository dyeingOrderItemRepository,
+            ObjectMapper objectMapper) {
+        this.dyeingOrderRepository = dyeingOrderRepository;
+        this.dyeingOrderItemRepository = dyeingOrderItemRepository;
+        this.objectMapper = objectMapper;
+    }
+
 
     @GetMapping
     public ResponseEntity<List<DyeingOrder>> getAllDyeingOrders(

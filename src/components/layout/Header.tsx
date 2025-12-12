@@ -1,83 +1,124 @@
-import { User, LogOut, Search, FileText, Bell } from 'lucide-react'
-import { Link } from 'react-router-dom'
-import { format } from 'date-fns'
+import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { LogOut, User, Building2, Menu } from 'lucide-react'
+import { authApi } from '@/api/client'
+
+interface UserInfo {
+  id: string
+  name: string
+  phone?: string
+  email?: string
+  role?: string
+  position?: string
+}
 
 function Header() {
-  const today = format(new Date(), 'yyyy年MM月dd日 EEEE')
+  const navigate = useNavigate()
+  const [user, setUser] = useState<UserInfo | null>(null)
+  const [showUserMenu, setShowUserMenu] = useState(false)
+  const [currentTenant, setCurrentTenant] = useState<string>('')
+
+  useEffect(() => {
+    // 从localStorage加载用户信息
+    const userStr = localStorage.getItem('user')
+    if (userStr) {
+      try {
+        const userData = JSON.parse(userStr)
+        setUser(userData)
+      } catch (e) {
+        console.error('Failed to parse user data:', e)
+      }
+    }
+
+    // 加载当前租户信息
+    const tenantId = localStorage.getItem('currentTenantId')
+    if (tenantId) {
+      setCurrentTenant(tenantId)
+    }
+  }, [])
+
+  const handleLogout = async () => {
+    try {
+      await authApi.logout()
+    } catch (error) {
+      console.error('Logout error:', error)
+    } finally {
+      localStorage.clear()
+      sessionStorage.clear()
+      navigate('/login')
+    }
+  }
 
   return (
-    <header className="bg-white border-b border-gray-200 h-16 flex items-center justify-between px-6 sticky top-0 z-50">
-      <div className="flex items-center gap-4 flex-1">
-        {/* Logo */}
-        <Link to="/" className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-primary-500 rounded-full flex items-center justify-center">
-            <span className="text-white text-xs font-bold">纱</span>
-          </div>
-          <span className="text-lg font-semibold text-gray-900">纱线进销存系统</span>
-        </Link>
-
-        {/* 搜索框 */}
-        <div className="flex-1 max-w-md ml-8">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <input
-              type="text"
-              placeholder="搜索商品、订单..."
-              className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-            />
-          </div>
+    <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6 shadow-sm">
+      {/* 左侧：Logo和标题 */}
+      <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2">
+          <Building2 className="w-6 h-6 text-blue-600" />
+          <h1 className="text-xl font-semibold text-gray-900">沙县ERP系统</h1>
         </div>
       </div>
 
+      {/* 右侧：用户信息和操作 */}
       <div className="flex items-center gap-4">
-        {/* 设计文档 */}
-        <Link
-          to="#"
-          className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors"
-          title="设计文档"
-        >
-          <FileText className="w-5 h-5" />
-        </Link>
-
-        {/* 通知 */}
-        <button
-          className="relative text-gray-600 hover:text-gray-900 transition-colors"
-          title="通知"
-        >
-          <Bell className="w-5 h-5" />
-          <span className="absolute -top-1 -right-1 w-2 h-2 bg-danger-500 rounded-full"></span>
-        </button>
-
-        {/* 用户信息 */}
-        <div className="flex items-center gap-3 pl-4 border-l border-gray-200">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center">
-              <User className="w-4 h-4 text-gray-600" />
-            </div>
-            <div className="text-right">
-              <div className="text-sm font-medium text-gray-900">管理员</div>
-              <div className="text-xs text-gray-500">admin@example.com</div>
-            </div>
+        {/* 租户信息 */}
+        {currentTenant && (
+          <div className="flex items-center gap-2 text-sm text-gray-600">
+            <Building2 className="w-4 h-4" />
+            <span>租户: {currentTenant}</span>
           </div>
-          <button
-            onClick={() => {
-              // 清空所有本地存储
-              localStorage.clear()
-              sessionStorage.clear()
-              // 跳转到登录页
-              window.location.href = '/shaxian/login'
-            }}
-            className="flex items-center gap-2 px-3 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
-            title="退出登录"
-          >
-            <LogOut className="w-4 h-4" />
-            <span className="text-sm">退出</span>
-          </button>
-        </div>
+        )}
 
-        {/* 日期 */}
-        <div className="text-sm text-gray-600 hidden lg:block">
-          {today}
+        {/* 用户菜单 */}
+        <div className="relative">
+          <button
+            onClick={() => setShowUserMenu(!showUserMenu)}
+            className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors"
+          >
+            <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white text-sm font-medium">
+              {user?.name?.[0] || 'U'}
+            </div>
+            <div className="text-left hidden md:block">
+              <div className="text-sm font-medium text-gray-900">{user?.name || '用户'}</div>
+              {user?.position && (
+                <div className="text-xs text-gray-500">{user.position}</div>
+              )}
+            </div>
+            <User className="w-4 h-4 text-gray-500" />
+          </button>
+
+          {/* 下拉菜单 */}
+          {showUserMenu && (
+            <>
+              <div
+                className="fixed inset-0 z-10"
+                onClick={() => setShowUserMenu(false)}
+              />
+              <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-20">
+                {user && (
+                  <div className="px-4 py-2 border-b border-gray-200">
+                    <div className="text-sm font-medium text-gray-900">{user.name}</div>
+                    {user.phone && (
+                      <div className="text-xs text-gray-500">{user.phone}</div>
+                    )}
+                    {user.role && (
+                      <div className="text-xs text-gray-500">角色: {user.role}</div>
+                    )}
+                  </div>
+                )}
+                <button
+                  onClick={() => {
+                    setShowUserMenu(false)
+                    handleLogout()
+                  }}
+                  className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                >
+                  <LogOut className="w-4 h-4" />
+                  退出登录
+                </button>
+              </div>
+            </>
+          )}
         </div>
       </div>
     </header>
@@ -85,5 +126,3 @@ function Header() {
 }
 
 export default Header
-
-

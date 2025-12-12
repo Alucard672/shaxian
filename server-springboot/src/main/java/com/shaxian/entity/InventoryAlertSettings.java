@@ -1,13 +1,11 @@
 package com.shaxian.entity;
 
 import jakarta.persistence.*;
-import lombok.Data;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "inventory_alert_settings")
-@Data
 public class InventoryAlertSettings {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -30,5 +28,48 @@ public class InventoryAlertSettings {
     protected void onUpdate() {
         updatedAt = LocalDateTime.now();
     }
+
+    // Getters and Setters
+
+    public Integer getId() {
+        return id;
+    }
+
+    public void setId(Integer id) {
+        this.id = id;
+    }
+
+    public Boolean isEnabled() {
+        return enabled;
+    }
+
+    public void setEnabled(Boolean enabled) {
+        this.enabled = enabled;
+    }
+
+    public BigDecimal getThreshold() {
+        return threshold;
+    }
+
+    public void setThreshold(BigDecimal threshold) {
+        this.threshold = threshold;
+    }
+
+    public Boolean isAutoAlert() {
+        return autoAlert;
+    }
+
+    public void setAutoAlert(Boolean autoAlert) {
+        this.autoAlert = autoAlert;
+    }
+
+    public LocalDateTime getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public void setUpdatedAt(LocalDateTime updatedAt) {
+        this.updatedAt = updatedAt;
+    }
+
 }
 

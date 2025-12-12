@@ -10,12 +10,15 @@ export interface SalesOrderItem {
   colorId: string
   colorName: string
   colorCode: string
-  batchId: string // 缸号ID（从现有库存选择）
-  batchCode: string // 缸号编码
+  batchId: string
+  batchCode: string
   quantity: number
   unit: string
   price: number // 单价
   amount: number // 小计 = quantity * price
+  // 双单位相关字段
+  pieceCount?: number // 件数
+  unitWeight?: number // 单件重量
   remark?: string // 备注
 }
 
@@ -26,11 +29,14 @@ export interface SalesOrder {
   customerId: string
   customerName: string
   salesDate: string // 销售日期
-  expectedDate?: string // 预计发货日期
+  deliveryDate?: string // 交货日期
+  deliveryAddress?: string // 交货地址
+  contactPerson?: string // 联系人
+  contactPhone?: string // 联系电话
   items: SalesOrderItem[]
   totalAmount: number // 总金额
-  receivedAmount: number // 已收金额
-  unpaidAmount: number // 欠款金额 = totalAmount - receivedAmount
+  paidAmount: number // 已收金额
+  unpaidAmount: number // 欠款金额 = totalAmount - paidAmount
   status: SalesOrderStatus
   operator: string // 经办人
   remark?: string // 备注
@@ -43,12 +49,11 @@ export interface SalesOrderFormData {
   customerId: string
   customerName: string
   salesDate: string
-  expectedDate?: string
+  deliveryDate?: string
+  deliveryAddress?: string
+  contactPerson?: string
+  contactPhone?: string
   items: Omit<SalesOrderItem, 'id' | 'amount'>[]
-  receivedAmount: number
+  paidAmount: number
   remark?: string
 }
-
-
-
-

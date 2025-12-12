@@ -56,3 +56,15 @@ INSERT INTO roles (id, name, description, permissions, created_at, updated_at) V
     CURRENT_TIMESTAMP
 );
 
+-- 默认管理员员工（如果不存在）
+INSERT IGNORE INTO employees (id, name, phone, role, password, status, created_at, updated_at) VALUES (
+    'emp-admin-001',
+    '系统管理员',
+    '13800138000',
+    'role-boss',
+    '123456',
+    'active',
+    CURRENT_TIMESTAMP,
+    CURRENT_TIMESTAMP
+);
+

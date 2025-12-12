@@ -1,227 +1,533 @@
-// API 客户端 - 封装所有 HTTP 请求
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api';
+// API基础配置
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api'
 
-/**
- * 发送 API 请求
- */
+// 通用请求函数
 async function apiRequest(endpoint, options = {}) {
-  const url = `${API_BASE_URL}${endpoint}`;
-  
+  const url = `${API_BASE_URL}${endpoint}`
+  const defaultOptions = {
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  }
+
+  // 添加租户ID到请求头
+  const tenantId = localStorage.getItem('currentTenantId')
+  if (tenantId) {
+    defaultOptions.headers['X-Tenant-Id'] = tenantId
+  }
+
+  const config = {
+    ...defaultOptions,
+    ...options,
+    headers: {
+      ...defaultOptions.headers,
+      ...options.headers,
+    },
+  }
+
   try {
-    const response = await fetch(url, {
-      ...options,
-      headers: {
-        'Content-Type': 'application/json',
-        ...options.headers,
-      },
-    });
-
+    const response = await fetch(url, config)
+    
     if (!response.ok) {
-      const error = await response.json().catch(() => ({ error: 'Request failed' }));
-      throw new Error(error.error || `HTTP ${response.status}: ${response.statusText}`);
+      const errorData = await response.json().catch(() => ({ message: '请求失败' }))
+      throw new Error(errorData.message || `HTTP error! status: ${response.status}`)
     }
 
-    // 204 No Content 没有响应体
-    if (response.status === 204) {
-      return null;
-    }
-
-    return await response.json();
+    return await response.json()
   } catch (error) {
-    // 如果是连接错误，提供更友好的错误信息
-    if (error.message.includes('Failed to fetch') || error.message.includes('ERR_CONNECTION_REFUSED')) {
-      console.warn('后端服务器未运行，请启动后端服务:', error);
-      throw new Error('无法连接到后端服务器。请确保后端服务已启动（运行 npm run dev 在 server 目录下）');
+    if (error.message.includes('Failed to fetch')) {
+      throw new Error('无法连接到后端服务器。请确保后端服务已启动（运行 mvn spring-boot:run 在 server-springboot 目录下）')
     }
-    console.error('API Request Error:', error);
-    throw error;
+    throw error
   }
 }
 
-/**
- * API 客户端方法
- */
-export const api = {
-  get: (endpoint, params = {}) => {
-    const queryString = new URLSearchParams(params).toString();
-    const url = queryString ? `${endpoint}?${queryString}` : endpoint;
-    return apiRequest(url, { method: 'GET' });
+// 认证API
+export const authApi = {
+  login: async (data) => {
+    return apiRequest('/auth/login', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
   },
+  logout: async () => {
+    return apiRequest('/auth/logout', {
+      method: 'POST',
+    })
+  },
+}
 
+// 系统设置API
+export const settingsApi = {
+  // 门店信息
+  getStoreInfo: async () => {
+    return apiRequest('/settings/store')
+  },
+  updateStoreInfo: async (data) => {
+    return apiRequest('/settings/store', {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    })
+  },
+  
+  // 员工管理
+  getAllEmployees: async () => {
+    return apiRequest('/settings/employees')
+  },
+  getEmployee: async (id) => {
+    return apiRequest(`/settings/employees/${id}`)
+  },
+  createEmployee: async (data) => {
+    return apiRequest('/settings/employees', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+  },
+  updateEmployee: async (id, data) => {
+    return apiRequest(`/settings/employees/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    })
+  },
+  deleteEmployee: async (id) => {
+    return apiRequest(`/settings/employees/${id}`, {
+      method: 'DELETE',
+    })
+  },
+  
+  // 角色管理
+  getAllRoles: async () => {
+    return apiRequest('/settings/roles')
+  },
+  createRole: async (data) => {
+    return apiRequest('/settings/roles', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+  },
+  updateRole: async (id, data) => {
+    return apiRequest(`/settings/roles/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    })
+  },
+  deleteRole: async (id) => {
+    return apiRequest(`/settings/roles/${id}`, {
+      method: 'DELETE',
+    })
+  },
+  
+  // 自定义查询
+  getAllQueries: async (params) => {
+    const queryString = params ? '?' + new URLSearchParams(params).toString() : ''
+    return apiRequest(`/settings/queries${queryString}`)
+  },
+  createQuery: async (data) => {
+    return apiRequest('/settings/queries', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+  },
+  
+  // 库存预警设置
+  getInventoryAlert: async () => {
+    return apiRequest('/settings/inventory-alert')
+  },
+  updateInventoryAlert: async (data) => {
+    return apiRequest('/settings/inventory-alert', {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    })
+  },
+  
+  // 系统参数
+  getParams: async () => {
+    return apiRequest('/settings/params')
+  },
+  updateParams: async (data) => {
+    return apiRequest('/settings/params', {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    })
+  },
+}
+
+// 账款API
+export const accountApi = {
+  // 应收账款
+  getAllReceivables: async (params) => {
+    const queryString = params ? '?' + new URLSearchParams(params).toString() : ''
+    return apiRequest(`/accounts/receivables${queryString}`)
+  },
+  createReceivable: async (data) => {
+    return apiRequest('/accounts/receivables', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+  },
+  getReceipts: async (id) => {
+    return apiRequest(`/accounts/receivables/${id}/receipts`)
+  },
+  createReceipt: async (id, data) => {
+    return apiRequest(`/accounts/receivables/${id}/receipts`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+  },
+  getAllReceipts: async () => {
+    // 注意：后端可能没有单独的获取所有收款记录的接口，这里返回空数组
+    return []
+  },
+  
+  // 应付账款
+  getAllPayables: async (params) => {
+    const queryString = params ? '?' + new URLSearchParams(params).toString() : ''
+    return apiRequest(`/accounts/payables${queryString}`)
+  },
+  createPayable: async (data) => {
+    return apiRequest('/accounts/payables', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+  },
+  getPayments: async (id) => {
+    return apiRequest(`/accounts/payables/${id}/payments`)
+  },
+  createPayment: async (id, data) => {
+    return apiRequest(`/accounts/payables/${id}/payments`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+  },
+  getAllPayments: async () => {
+    // 注意：后端可能没有单独的获取所有付款记录的接口，这里返回空数组
+    return []
+  },
+}
+
+// 往来单位API
+export const contactApi = {
+  // 客户管理
+  getAllCustomers: async () => {
+    return apiRequest('/contacts/customers')
+  },
+  getCustomer: async (id) => {
+    return apiRequest(`/contacts/customers/${id}`)
+  },
+  createCustomer: async (data) => {
+    return apiRequest('/contacts/customers', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+  },
+  updateCustomer: async (id, data) => {
+    return apiRequest(`/contacts/customers/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    })
+  },
+  deleteCustomer: async (id) => {
+    return apiRequest(`/contacts/customers/${id}`, {
+      method: 'DELETE',
+    })
+  },
+  
+  // 供应商管理
+  getAllSuppliers: async () => {
+    return apiRequest('/contacts/suppliers')
+  },
+  getSupplier: async (id) => {
+    return apiRequest(`/contacts/suppliers/${id}`)
+  },
+  createSupplier: async (data) => {
+    return apiRequest('/contacts/suppliers', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+  },
+  updateSupplier: async (id, data) => {
+    return apiRequest(`/contacts/suppliers/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    })
+  },
+  deleteSupplier: async (id) => {
+    return apiRequest(`/contacts/suppliers/${id}`, {
+      method: 'DELETE',
+    })
+  },
+}
+
+// 采购API
+export const purchaseApi = {
+  getAll: async (params) => {
+    const queryString = params ? '?' + new URLSearchParams(params).toString() : ''
+    return apiRequest(`/purchases${queryString}`)
+  },
+  getById: async (id) => {
+    return apiRequest(`/purchases/${id}`)
+  },
+  create: async (data) => {
+    return apiRequest('/purchases', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+  },
+  update: async (id, data) => {
+    return apiRequest(`/purchases/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    })
+  },
+  delete: async (id) => {
+    return apiRequest(`/purchases/${id}`, {
+      method: 'DELETE',
+    })
+  },
+}
+
+// 销售API
+export const salesApi = {
+  getAll: async (params) => {
+    const queryString = params ? '?' + new URLSearchParams(params).toString() : ''
+    return apiRequest(`/sales${queryString}`)
+  },
+  getById: async (id) => {
+    return apiRequest(`/sales/${id}`)
+  },
+  create: async (data) => {
+    return apiRequest('/sales', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+  },
+  update: async (id, data) => {
+    return apiRequest(`/sales/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    })
+  },
+  delete: async (id) => {
+    return apiRequest(`/sales/${id}`, {
+      method: 'DELETE',
+    })
+  },
+  checkStock: async (batchId, quantity) => {
+    return apiRequest(`/sales/check-stock`, {
+      method: 'POST',
+      body: JSON.stringify({ batchId, quantity }),
+    })
+  },
+}
+
+// 染色加工API
+export const dyeingApi = {
+  getAll: async (params) => {
+    const queryString = params ? '?' + new URLSearchParams(params).toString() : ''
+    return apiRequest(`/dyeing${queryString}`)
+  },
+  getById: async (id) => {
+    return apiRequest(`/dyeing/${id}`)
+  },
+  create: async (data) => {
+    return apiRequest('/dyeing', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+  },
+  update: async (id, data) => {
+    return apiRequest(`/dyeing/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    })
+  },
+  delete: async (id) => {
+    return apiRequest(`/dyeing/${id}`, {
+      method: 'DELETE',
+    })
+  },
+}
+
+// 库存API
+export const inventoryApi = {
+  // 库存调整单
+  getAllAdjustments: async (params) => {
+    const queryString = params ? '?' + new URLSearchParams(params).toString() : ''
+    return apiRequest(`/inventory/adjustments${queryString}`)
+  },
+  getAdjustment: async (id) => {
+    return apiRequest(`/inventory/adjustments/${id}`)
+  },
+  createAdjustment: async (data) => {
+    return apiRequest('/inventory/adjustments', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+  },
+  updateAdjustment: async (id, data) => {
+    return apiRequest(`/inventory/adjustments/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    })
+  },
+  deleteAdjustment: async (id) => {
+    return apiRequest(`/inventory/adjustments/${id}`, {
+      method: 'DELETE',
+    })
+  },
+  
+  // 库存盘点单
+  getAllChecks: async (params) => {
+    const queryString = params ? '?' + new URLSearchParams(params).toString() : ''
+    return apiRequest(`/inventory/checks${queryString}`)
+  },
+  getCheck: async (id) => {
+    return apiRequest(`/inventory/checks/${id}`)
+  },
+  createCheck: async (data) => {
+    return apiRequest('/inventory/checks', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+  },
+  updateCheck: async (id, data) => {
+    return apiRequest(`/inventory/checks/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    })
+  },
+  deleteCheck: async (id) => {
+    return apiRequest(`/inventory/checks/${id}`, {
+      method: 'DELETE',
+    })
+  },
+}
+
+// 商品API
+export const productApi = {
+  getAll: async () => {
+    return apiRequest('/products')
+  },
+  getById: async (id) => {
+    return apiRequest(`/products/${id}`)
+  },
+  create: async (data) => {
+    return apiRequest('/products', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+  },
+  update: async (id, data) => {
+    return apiRequest(`/products/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    })
+  },
+  delete: async (id) => {
+    return apiRequest(`/products/${id}`, {
+      method: 'DELETE',
+    })
+  },
+  
+  // 色号管理
+  getColors: async (productId) => {
+    return apiRequest(`/products/${productId}/colors`)
+  },
+  createColor: async (productId, data) => {
+    return apiRequest(`/products/${productId}/colors`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+  },
+  updateColor: async (id, data) => {
+    return apiRequest(`/products/colors/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    })
+  },
+  deleteColor: async (id) => {
+    return apiRequest(`/products/colors/${id}`, {
+      method: 'DELETE',
+    })
+  },
+  
+  // 缸号管理
+  getBatches: async (colorId) => {
+    return apiRequest(`/products/colors/${colorId}/batches`)
+  },
+  createBatch: async (colorId, data) => {
+    return apiRequest(`/products/colors/${colorId}/batches`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+  },
+  updateBatch: async (id, data) => {
+    return apiRequest(`/products/batches/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    })
+  },
+  deleteBatch: async (id) => {
+    return apiRequest(`/products/batches/${id}`, {
+      method: 'DELETE',
+    })
+  },
+}
+
+// 打印模板API
+export const templateApi = {
+  getAll: async (params) => {
+    const queryString = params ? '?' + new URLSearchParams(params).toString() : ''
+    return apiRequest(`/templates${queryString}`)
+  },
+  getById: async (id) => {
+    return apiRequest(`/templates/${id}`)
+  },
+  create: async (data) => {
+    return apiRequest('/templates', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+  },
+  update: async (id, data) => {
+    return apiRequest(`/templates/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    })
+  },
+  delete: async (id) => {
+    return apiRequest(`/templates/${id}`, {
+      method: 'DELETE',
+    })
+  },
+  incrementUsage: async (id) => {
+    return apiRequest(`/templates/${id}/usage`, {
+      method: 'POST',
+    })
+  },
+}
+
+// 导出默认API对象
+export default {
+  get: (endpoint, params) => {
+    const queryString = params ? '?' + new URLSearchParams(params).toString() : ''
+    return apiRequest(endpoint + queryString)
+  },
   post: (endpoint, data) => {
     return apiRequest(endpoint, {
       method: 'POST',
       body: JSON.stringify(data),
-    });
+    })
   },
-
   put: (endpoint, data) => {
     return apiRequest(endpoint, {
       method: 'PUT',
       body: JSON.stringify(data),
-    });
+    })
   },
-
   delete: (endpoint) => {
-    return apiRequest(endpoint, { method: 'DELETE' });
+    return apiRequest(endpoint, {
+      method: 'DELETE',
+    })
   },
-};
-
-/**
- * 商品 API
- */
-export const productApi = {
-  getAll: () => api.get('/products'),
-  getById: (id) => api.get(`/products/${id}`),
-  create: (data) => api.post('/products', data),
-  update: (id, data) => api.put(`/products/${id}`, data),
-  delete: (id) => api.delete(`/products/${id}`),
-  getColors: (productId) => api.get(`/products/${productId}/colors`),
-  createColor: (productId, data) => api.post(`/products/${productId}/colors`, data),
-  updateColor: (id, data) => api.put(`/products/colors/${id}`, data),
-  deleteColor: (id) => api.delete(`/products/colors/${id}`),
-  getBatches: (colorId) => api.get(`/products/colors/${colorId}/batches`),
-  createBatch: (colorId, data) => api.post(`/products/colors/${colorId}/batches`, data),
-  updateBatch: (id, data) => api.put(`/products/batches/${id}`, data),
-  deleteBatch: (id) => api.delete(`/products/batches/${id}`),
-};
-
-/**
- * 往来单位 API
- */
-export const contactApi = {
-  // 客户
-  getAllCustomers: () => api.get('/contacts/customers'),
-  getCustomer: (id) => api.get(`/contacts/customers/${id}`),
-  createCustomer: (data) => api.post('/contacts/customers', data),
-  updateCustomer: (id, data) => api.put(`/contacts/customers/${id}`, data),
-  deleteCustomer: (id) => api.delete(`/contacts/customers/${id}`),
-  
-  // 供应商
-  getAllSuppliers: () => api.get('/contacts/suppliers'),
-  getSupplier: (id) => api.get(`/contacts/suppliers/${id}`),
-  createSupplier: (data) => api.post('/contacts/suppliers', data),
-  updateSupplier: (id, data) => api.put(`/contacts/suppliers/${id}`, data),
-  deleteSupplier: (id) => api.delete(`/contacts/suppliers/${id}`),
-};
-
-/**
- * 进货单 API
- */
-export const purchaseApi = {
-  getAll: (params) => api.get('/purchases', params),
-  getById: (id) => api.get(`/purchases/${id}`),
-  create: (data) => api.post('/purchases', data),
-  update: (id, data) => api.put(`/purchases/${id}`, data),
-  delete: (id) => api.delete(`/purchases/${id}`),
-};
-
-/**
- * 销售单 API
- */
-export const salesApi = {
-  getAll: (params) => api.get('/sales', params),
-  getById: (id) => api.get(`/sales/${id}`),
-  create: (data) => api.post('/sales', data),
-  update: (id, data) => api.put(`/sales/${id}`, data),
-  delete: (id) => api.delete(`/sales/${id}`),
-  checkStock: (batchId, quantity) => api.post('/sales/check-stock', { batchId, quantity }),
-};
-
-/**
- * 染色加工单 API
- */
-export const dyeingApi = {
-  getAll: (params) => api.get('/dyeing', params),
-  getById: (id) => api.get(`/dyeing/${id}`),
-  create: (data) => api.post('/dyeing', data),
-  update: (id, data) => api.put(`/dyeing/${id}`, data),
-  delete: (id) => api.delete(`/dyeing/${id}`),
-};
-
-/**
- * 账款 API
- */
-export const accountApi = {
-  // 应收账款
-  getAllReceivables: (params) => api.get('/accounts/receivables', params),
-  createReceivable: (data) => api.post('/accounts/receivables', data),
-  getReceipts: (id) => api.get(`/accounts/receivables/${id}/receipts`),
-  getAllReceipts: (params) => api.get('/accounts/receipts', params),
-  createReceipt: (id, data) => api.post(`/accounts/receivables/${id}/receipts`, data),
-  
-  // 应付账款
-  getAllPayables: (params) => api.get('/accounts/payables', params),
-  createPayable: (data) => api.post('/accounts/payables', data),
-  getPayments: (id) => api.get(`/accounts/payables/${id}/payments`),
-  getAllPayments: (params) => api.get('/accounts/payments', params),
-  createPayment: (id, data) => api.post(`/accounts/payables/${id}/payments`, data),
-};
-
-/**
- * 库存 API
- */
-export const inventoryApi = {
-  // 库存调整单
-  getAllAdjustments: (params) => api.get('/inventory/adjustments', params),
-  getAdjustment: (id) => api.get(`/inventory/adjustments/${id}`),
-  createAdjustment: (data) => api.post('/inventory/adjustments', data),
-  updateAdjustment: (id, data) => api.put(`/inventory/adjustments/${id}`, data),
-  deleteAdjustment: (id) => api.delete(`/inventory/adjustments/${id}`),
-  
-  // 盘点单
-  getAllChecks: (params) => api.get('/inventory/checks', params),
-  getCheck: (id) => api.get(`/inventory/checks/${id}`),
-  createCheck: (data) => api.post('/inventory/checks', data),
-  updateCheck: (id, data) => api.put(`/inventory/checks/${id}`, data),
-  deleteCheck: (id) => api.delete(`/inventory/checks/${id}`),
-};
-
-/**
- * 系统设置 API
- */
-export const settingsApi = {
-  // 门店信息
-  getStoreInfo: () => api.get('/settings/store'),
-  updateStoreInfo: (data) => api.put('/settings/store', data),
-  
-  // 员工
-  getAllEmployees: () => api.get('/settings/employees'),
-  getEmployee: (id) => api.get(`/settings/employees/${id}`),
-  createEmployee: (data) => api.post('/settings/employees', data),
-  updateEmployee: (id, data) => api.put(`/settings/employees/${id}`, data),
-  deleteEmployee: (id) => api.delete(`/settings/employees/${id}`),
-  
-  // 角色
-  getAllRoles: () => api.get('/settings/roles'),
-  createRole: (data) => api.post('/settings/roles', data),
-  updateRole: (id, data) => api.put(`/settings/roles/${id}`, data),
-  deleteRole: (id) => api.delete(`/settings/roles/${id}`),
-  
-  // 自定义查询
-  getAllQueries: (params) => api.get('/settings/queries', params),
-  createQuery: (data) => api.post('/settings/queries', data),
-  
-  // 库存预警设置
-  getInventoryAlert: () => api.get('/settings/inventory-alert'),
-  updateInventoryAlert: (data) => api.put('/settings/inventory-alert', data),
-  
-  // 系统参数
-  getParams: () => api.get('/settings/params'),
-  updateParams: (data) => api.put('/settings/params', data),
-};
-
-/**
- * 打印模板 API
- */
-export const templateApi = {
-  getAll: (params) => api.get('/templates', params),
-  getById: (id) => api.get(`/templates/${id}`),
-  create: (data) => api.post('/templates', data),
-  update: (id, data) => api.put(`/templates/${id}`, data),
-  delete: (id) => api.delete(`/templates/${id}`),
-  incrementUsage: (id) => api.post(`/templates/${id}/usage`),
-};
-
-export default api;
-
+}

@@ -5,7 +5,6 @@ import com.shaxian.entity.Supplier;
 import com.shaxian.repository.CustomerRepository;
 import com.shaxian.repository.SupplierRepository;
 import com.shaxian.util.UuidUtil;
-import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -15,10 +14,17 @@ import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/contacts")
-@RequiredArgsConstructor
 public class ContactController {
     private final CustomerRepository customerRepository;
     private final SupplierRepository supplierRepository;
+
+    public ContactController(
+            CustomerRepository customerRepository,
+            SupplierRepository supplierRepository) {
+        this.customerRepository = customerRepository;
+        this.supplierRepository = supplierRepository;
+    }
+
 
     // ========== 客户管理 ==========
     @GetMapping("/customers")

@@ -5,7 +5,6 @@ import com.shaxian.entity.SalesOrder;
 import com.shaxian.entity.SalesOrderItem;
 import com.shaxian.repository.BatchRepository;
 import com.shaxian.service.SalesService;
-import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -18,10 +17,17 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/sales")
-@RequiredArgsConstructor
 public class SalesController {
     private final SalesService salesService;
     private final BatchRepository batchRepository;
+
+    public SalesController(
+            SalesService salesService,
+            BatchRepository batchRepository) {
+        this.salesService = salesService;
+        this.batchRepository = batchRepository;
+    }
+
 
     @GetMapping
     public ResponseEntity<List<SalesOrder>> getAllSales(

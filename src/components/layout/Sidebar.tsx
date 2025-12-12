@@ -1,145 +1,204 @@
-import { NavLink, useNavigate } from 'react-router-dom'
-import { useMemo } from 'react'
-import { useTabStore, getRouteTitle } from '@/store/tabStore'
-import { useSettingsStore } from '@/store/settingsStore'
+import { useState } from 'react'
+import { useNavigate, useLocation } from 'react-router-dom'
 import {
   LayoutDashboard,
   Package,
+  Users,
   ShoppingCart,
   DollarSign,
   Palette,
+  Warehouse,
+  Receipt,
   BarChart3,
-  CreditCard,
-  Users,
   Printer,
-  FileText,
   Settings,
+  Building2,
   ChevronRight,
 } from 'lucide-react'
 import { cn } from '@/utils/cn'
 
-// 基础菜单项（不包含条件显示的菜单）
-const baseMenuItems = [
-  { path: '/', label: '工作台', icon: LayoutDashboard },
-  { path: '/product', label: '商品管理', icon: Package },
-  { path: '/purchase', label: '进货管理', icon: ShoppingCart },
-  { path: '/sales', label: '销售管理', icon: DollarSign },
-  { path: '/inventory', label: '库存管理', icon: BarChart3 },
-  { path: '/print', label: '打印管理', icon: Printer },
-  { path: '/account/receivable', label: '账款管理', icon: CreditCard },
-  { path: '/customer', label: '往来单位', icon: Users },
-  { path: '/report', label: '统计报表', icon: FileText },
-]
-
-// 条件菜单项
-const conditionalMenuItems = [
-  { path: '/dyeing', label: '染色加工', icon: Palette },
-]
-
-const settingsItem = {
-  path: '/settings',
-  label: '系统设置',
-  icon: Settings,
+interface MenuItem {
+  id: string
+  label: string
+  icon: React.ComponentType<{ className?: string }>
+  path: string
+  children?: MenuItem[]
 }
 
-function Sidebar() {
-  const SettingsIcon = settingsItem.icon
-  const navigate = useNavigate()
-  const { addTab, setActiveTab } = useTabStore()
-  const { systemParams } = useSettingsStore()
-  
-  // 根据系统参数动态生成菜单项
-  const menuItems = useMemo(() => {
-    const items = [...baseMenuItems]
-    // 如果染色加工流程启用，添加染色加工菜单
-    if (systemParams.enableDyeingProcess) {
-      // 在库存管理之后插入染色加工菜单
-      const inventoryIndex = items.findIndex(item => item.path === '/inventory')
-      items.splice(inventoryIndex + 1, 0, ...conditionalMenuItems)
-    }
-    return items
-  }, [systemParams.enableDyeingProcess])
+const menuItems: MenuItem[] = [
+  {
+    id: 'dashboard',
+    label: '工作台',
+    icon: LayoutDashboard,
+    path: '/',
+  },
+  {
+    id: 'products',
+    label: '商品管理',
+    icon: Package,
+    path: '/products',
+  },
+  {
+    id: 'contacts',
+    label: '往来单位',
+    icon: Users,
+    path: '/contacts',
+    children: [
+      { id: 'contacts-all', label: '全部', icon: Users, path: '/contacts' },
+      { id: 'customer', label: '客户管理', icon: Users, path: '/customer' },
+      { id: 'supplier', label: '供应商管理', icon: Users, path: '/supplier' },
+    ],
+  },
+  {
+    id: 'purchase',
+    label: '进货管理',
+    icon: ShoppingCart,
+    path: '/purchase',
+  },
+  {
+    id: 'sales',
+    label: '销售管理',
+    icon: DollarSign,
+    path: '/sales',
+  },
+  {
+    id: 'dyeing',
+    label: '染色加工',
+    icon: Palette,
+    path: '/dyeing',
+  },
+  {
+    id: 'inventory',
+    label: '库存管理',
+    icon: Warehouse,
+    path: '/inventory',
+  },
+  {
+    id: 'account',
+    label: '账款管理',
+    icon: Receipt,
+    path: '/account',
+  },
+  {
+    id: 'report',
+    label: '统计报表',
+    icon: BarChart3,
+    path: '/report',
+  },
+  {
+    id: 'print',
+    label: '打印管理',
+    icon: Printer,
+    path: '/print',
+  },
+  {
+    id: 'settings',
+    label: '系统设置',
+    icon: Settings,
+    path: '/settings',
+  },
+  {
+    id: 'tenant',
+    label: '租户管理',
+    icon: Building2,
+    path: '/tenant',
+  },
+]
 
-  // 处理菜单项点击
-  const handleMenuClick = (path: string, e?: React.MouseEvent) => {
-    if (e) {
-      e.preventDefault()
-    }
-    const title = getRouteTitle(path)
-    addTab({
-      key: path,
-      path,
-      title,
-      closable: path !== '/',
+function Sidebar() {
+  const navigate = useNavigate()
+  const location = useLocation()
+  const [expandedMenus, setExpandedMenus] = useState<Set<string>>(new Set())
+
+  const isActive = (path: string) => {
+    const currentPath = location.pathname.replace(/^\/shaxian/, '') || '/'
+    return currentPath === path || currentPath.startsWith(path + '/')
+  }
+
+  const toggleMenu = (menuId: string) => {
+    setExpandedMenus((prev) => {
+      const newSet = new Set(prev)
+      if (newSet.has(menuId)) {
+        newSet.delete(menuId)
+      } else {
+        newSet.add(menuId)
+      }
+      return newSet
     })
-    setActiveTab(path)
-    navigate(path)
+  }
+
+  const handleMenuClick = (item: MenuItem) => {
+    if (item.children && item.children.length > 0) {
+      toggleMenu(item.id)
+    } else {
+      navigate(item.path)
+    }
   }
 
   return (
-    <aside className="w-48 bg-white/80 border-r border-gray-200/60 h-full flex flex-col">
-      {/* 主要导航区域 */}
-      <nav className="px-2 pt-2 flex-1">
-        <ul className="space-y-0.5">
+    <aside className="w-64 bg-white border-r border-gray-200 flex flex-col">
+      <nav className="flex-1 overflow-y-auto py-4">
+        <div className="px-3 space-y-1">
           {menuItems.map((item) => {
             const Icon = item.icon
+            const hasChildren = item.children && item.children.length > 0
+            const isExpanded = expandedMenus.has(item.id)
+            const active = isActive(item.path)
+
             return (
-              <li key={item.path}>
-                <NavLink
-                  to={item.path}
-                  onClick={(e) => handleMenuClick(item.path, e)}
-                  className={({ isActive }) =>
-                    cn(
-                      'flex items-center justify-between px-2 h-9 rounded-lg text-sm font-medium transition-all duration-200 group',
-                      isActive
-                        ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-[0px_2px_4px_-2px_rgba(59,130,246,0.25),0px_4px_6px_-1px_rgba(59,130,246,0.25)]'
-                        : 'text-gray-700 hover:bg-gray-50'
-                    )
-                  }
-                >
-                  {({ isActive }) => (
-                    <>
-                      <div className="flex items-center gap-2">
-                        <Icon className={cn(
-                          'w-4 h-4 flex-shrink-0',
-                          'transition-colors'
-                        )} />
-                        <span className="leading-[1.4]">{item.label}</span>
-                      </div>
-                      <ChevronRight className={cn(
-                        'w-3 h-3 flex-shrink-0 transition-opacity',
-                        isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
-                      )} />
-                    </>
+              <div key={item.id}>
+                <button
+                  onClick={() => handleMenuClick(item)}
+                  className={cn(
+                    'w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
+                    active
+                      ? 'bg-blue-50 text-blue-600'
+                      : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
                   )}
-                </NavLink>
-              </li>
+                >
+                  <Icon className="w-5 h-5 flex-shrink-0" />
+                  <span className="flex-1 text-left">{item.label}</span>
+                  {hasChildren && (
+                    <ChevronRight
+                      className={cn(
+                        'w-4 h-4 transition-transform',
+                        isExpanded && 'rotate-90'
+                      )}
+                    />
+                  )}
+                </button>
+
+                {/* 子菜单 */}
+                {hasChildren && isExpanded && (
+                  <div className="ml-8 mt-1 space-y-1">
+                    {item.children!.map((child) => {
+                      const ChildIcon = child.icon
+                      const childActive = isActive(child.path)
+                      return (
+                        <button
+                          key={child.id}
+                          onClick={() => navigate(child.path)}
+                          className={cn(
+                            'w-full flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm transition-colors',
+                            childActive
+                              ? 'bg-blue-50 text-blue-600'
+                              : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                          )}
+                        >
+                          <ChildIcon className="w-4 h-4" />
+                          <span>{child.label}</span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
             )
           })}
-        </ul>
+        </div>
       </nav>
-
-      {/* 系统设置区域 - 底部带分隔线 */}
-      <div className="pt-2 px-2 pb-2 border-t border-gray-200">
-        <NavLink
-          to={settingsItem.path}
-          onClick={(e) => handleMenuClick(settingsItem.path, e)}
-          className={({ isActive }) =>
-            cn(
-              'flex items-center gap-2 px-2 h-9 rounded-lg text-sm font-medium transition-all duration-200',
-              isActive
-                ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-[0px_2px_4px_-2px_rgba(59,130,246,0.25),0px_4px_6px_-1px_rgba(59,130,246,0.25)]'
-                : 'text-gray-700 hover:bg-gray-50'
-            )
-          }
-        >
-          <SettingsIcon className="w-4 h-4 flex-shrink-0" />
-          <span className="leading-[1.4]">{settingsItem.label}</span>
-        </NavLink>
-      </div>
     </aside>
   )
 }
 
 export default Sidebar
-

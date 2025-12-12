@@ -1,7 +1,6 @@
 package com.shaxian.entity;
 
 import jakarta.persistence.*;
-import lombok.Data;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -9,7 +8,6 @@ import java.util.List;
 
 @Entity
 @Table(name = "adjustment_orders")
-@Data
 public class AdjustmentOrder {
     @Id
     @Column(length = 50)
@@ -47,11 +45,6 @@ public class AdjustmentOrder {
     @OneToMany(mappedBy = "orderId", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<AdjustmentOrderItem> items;
 
-    // 手动添加 setItems 方法以确保编译通过
-    public void setItems(List<AdjustmentOrderItem> items) {
-        this.items = items;
-    }
-
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();
@@ -70,5 +63,95 @@ public class AdjustmentOrder {
     public enum OrderStatus {
         草稿, 已完成
     }
-}
 
+    // Getters and Setters
+
+    public String getId() {
+        return id;
+    }
+
+    public void setId(String id) {
+        this.id = id;
+    }
+
+    public String getOrderNumber() {
+        return orderNumber;
+    }
+
+    public void setOrderNumber(String orderNumber) {
+        this.orderNumber = orderNumber;
+    }
+
+    public AdjustmentType getType() {
+        return type;
+    }
+
+    public void setType(AdjustmentType type) {
+        this.type = type;
+    }
+
+    public LocalDate getAdjustmentDate() {
+        return adjustmentDate;
+    }
+
+    public void setAdjustmentDate(LocalDate adjustmentDate) {
+        this.adjustmentDate = adjustmentDate;
+    }
+
+    public BigDecimal getTotalQuantity() {
+        return totalQuantity;
+    }
+
+    public void setTotalQuantity(BigDecimal totalQuantity) {
+        this.totalQuantity = totalQuantity;
+    }
+
+    public OrderStatus getStatus() {
+        return status;
+    }
+
+    public void setStatus(OrderStatus status) {
+        this.status = status;
+    }
+
+    public String getOperator() {
+        return operator;
+    }
+
+    public void setOperator(String operator) {
+        this.operator = operator;
+    }
+
+    public String getRemark() {
+        return remark;
+    }
+
+    public void setRemark(String remark) {
+        this.remark = remark;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
+    }
+
+    public LocalDateTime getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public void setUpdatedAt(LocalDateTime updatedAt) {
+        this.updatedAt = updatedAt;
+    }
+
+    public List<AdjustmentOrderItem> getItems() {
+        return items;
+    }
+
+    public void setItems(List<AdjustmentOrderItem> items) {
+        this.items = items;
+    }
+
+}

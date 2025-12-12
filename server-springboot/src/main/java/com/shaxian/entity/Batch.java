@@ -1,7 +1,5 @@
 package com.shaxian.entity;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.Data;
 import java.math.BigDecimal;
@@ -11,7 +9,6 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "batches")
 @Data
-@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class Batch {
     @Id
     @Column(length = 50)
@@ -55,7 +52,6 @@ public class Batch {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "color_id", insertable = false, updatable = false)
-    @JsonIgnore
     private Color color;
 
     @PrePersist
@@ -70,6 +66,47 @@ public class Batch {
     @PreUpdate
     protected void onUpdate() {
         updatedAt = LocalDateTime.now();
+    }
+
+    // 手动添加getter/setter方法以确保编译通过
+    public String getId() {
+        return id;
+    }
+
+    public void setId(String id) {
+        this.id = id;
+    }
+
+    public String getColorId() {
+        return colorId;
+    }
+
+    public void setColorId(String colorId) {
+        this.colorId = colorId;
+    }
+
+    public BigDecimal getStockQuantity() {
+        return stockQuantity;
+    }
+
+    public void setStockQuantity(BigDecimal stockQuantity) {
+        this.stockQuantity = stockQuantity;
+    }
+
+    public BigDecimal getInitialQuantity() {
+        return initialQuantity;
+    }
+
+    public void setInitialQuantity(BigDecimal initialQuantity) {
+        this.initialQuantity = initialQuantity;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
     }
 }
 

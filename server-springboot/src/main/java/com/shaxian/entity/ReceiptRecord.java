@@ -1,14 +1,12 @@
 package com.shaxian.entity;
 
 import jakarta.persistence.*;
-import lombok.Data;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "receipt_records")
-@Data
 public class ReceiptRecord {
     @Id
     @Column(length = 50)
@@ -44,5 +42,72 @@ public class ReceiptRecord {
     public enum PaymentMethod {
         现金, 转账, 支票, 其他
     }
+
+    // Getters and Setters
+
+    public String getId() {
+        return id;
+    }
+
+    public void setId(String id) {
+        this.id = id;
+    }
+
+    public String getAccountReceivableId() {
+        return accountReceivableId;
+    }
+
+    public void setAccountReceivableId(String accountReceivableId) {
+        this.accountReceivableId = accountReceivableId;
+    }
+
+    public BigDecimal getAmount() {
+        return amount;
+    }
+
+    public void setAmount(BigDecimal amount) {
+        this.amount = amount;
+    }
+
+    public PaymentMethod getPaymentMethod() {
+        return paymentMethod;
+    }
+
+    public void setPaymentMethod(PaymentMethod paymentMethod) {
+        this.paymentMethod = paymentMethod;
+    }
+
+    public LocalDate getReceiptDate() {
+        return receiptDate;
+    }
+
+    public void setReceiptDate(LocalDate receiptDate) {
+        this.receiptDate = receiptDate;
+    }
+
+    public String getOperator() {
+        return operator;
+    }
+
+    public void setOperator(String operator) {
+        this.operator = operator;
+    }
+
+    public String getRemark() {
+        return remark;
+    }
+
+    public void setRemark(String remark) {
+        this.remark = remark;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
+    }
+
 }
 

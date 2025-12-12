@@ -3,7 +3,6 @@ package com.shaxian.controller;
 import com.shaxian.entity.PurchaseOrder;
 import com.shaxian.entity.PurchaseOrderItem;
 import com.shaxian.service.PurchaseService;
-import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -15,9 +14,14 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/purchases")
-@RequiredArgsConstructor
 public class PurchaseController {
     private final PurchaseService purchaseService;
+
+    public PurchaseController(
+            PurchaseService purchaseService) {
+        this.purchaseService = purchaseService;
+    }
+
 
     @GetMapping
     public ResponseEntity<List<PurchaseOrder>> getAllPurchases(

@@ -503,3 +503,6 @@ INSERT INTO inventory_alert_settings (enabled, auto_alert) VALUES (FALSE, FALSE)
 INSERT INTO system_params (enable_dyeing_process) VALUES (FALSE);
 
 
+
+
+

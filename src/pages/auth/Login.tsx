@@ -1,136 +1,123 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { User, Lock, LogIn } from 'lucide-react'
+import { LogIn, Eye, EyeOff } from 'lucide-react'
 import Button from '@/components/ui/Button'
 
 function Login() {
   const navigate = useNavigate()
-  const [username, setUsername] = useState('')
+  const [phone, setPhone] = useState('')
   const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
+  const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
-    if (!username.trim() || !password.trim()) {
-      alert('请输入用户名和密码')
+    setError('')
+
+    if (!phone || !password) {
+      setError('请输入手机号和密码')
       return
     }
 
     setLoading(true)
     try {
-      // 简单的登录逻辑（实际项目中应该调用后端API）
-      // 这里为了演示，直接允许登录
+      const { authApi } = await import('@/api/client')
+      const data = await authApi.login({ phone, password })
+
+      if (!data.success) {
+        setError(data.message || '登录失败')
+        return
+      }
+
+      // 保存用户信息到localStorage
+      localStorage.setItem('user', JSON.stringify(data.user))
       localStorage.setItem('isAuthenticated', 'true')
-      localStorage.setItem('username', username)
-      
-      // 延迟一下，模拟API调用
-      await new Promise(resolve => setTimeout(resolve, 500))
-      
-      navigate('/')
-    } catch (error) {
-      console.error('登录失败:', error)
-      alert('登录失败，请重试')
+
+      // 登录成功，跳转到租户选择页面
+      navigate('/tenant/select')
+    } catch (error: any) {
+      setError(error.message || '登录失败，请检查网络连接')
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    <div 
-      className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden"
-      style={{
-        backgroundImage: 'url(https://images.unsplash.com/photo-1618354691373-d851c5c3a990?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80)',
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-        backgroundRepeat: 'no-repeat',
-      }}
-    >
-      {/* 深色遮罩层，确保文字可读性 */}
-      <div 
-        className="absolute inset-0 bg-black/40"
-      />
-
-      {/* 渐变遮罩，增强视觉效果 */}
-      <div 
-        className="absolute inset-0"
-        style={{
-          background: 'linear-gradient(135deg, rgba(0, 0, 0, 0.5) 0%, rgba(0, 0, 0, 0.3) 50%, rgba(0, 0, 0, 0.5) 100%)',
-        }}
-      />
-
-      <div className="w-full max-w-md relative z-10">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 px-4">
+      <div className="w-full max-w-md">
         {/* Logo和标题 */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-white/90 backdrop-blur-sm rounded-xl mb-4 shadow-xl border border-white/20">
-            <span className="text-blue-600 text-2xl font-bold">纱</span>
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-600 rounded-2xl mb-4 shadow-lg">
+            <LogIn className="w-8 h-8 text-white" />
           </div>
-          <h1 className="text-3xl font-bold text-white mb-2 drop-shadow-lg">纱线进销存系统</h1>
-          <p className="text-white/90 text-sm drop-shadow-md">请输入您的账号信息登录</p>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">沙县ERP系统</h1>
+          <p className="text-gray-600">请输入您的账号信息登录</p>
         </div>
 
         {/* 登录表单 */}
-        <div className="bg-white/95 backdrop-blur-md rounded-xl shadow-2xl border border-white/20 p-8">
-          <form onSubmit={handleLogin} className="space-y-6">
-            {/* 用户名 */}
+        <div className="bg-white rounded-2xl shadow-xl p-8">
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {error && (
+              <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg text-sm">
+                {error}
+              </div>
+            )}
+
+            {/* 手机号输入 */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                用户名
+                手机号
               </label>
-              <div className="relative">
-                <User className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-                <input
-                  type="text"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  placeholder="请输入用户名"
-                  className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
-                  autoComplete="username"
-                />
-              </div>
+              <input
+                type="tel"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                placeholder="请输入手机号"
+                disabled={loading}
+              />
             </div>
 
-            {/* 密码 */}
+            {/* 密码输入 */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 密码
               </label>
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
                 <input
-                  type="password"
+                  type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="请输入密码"
-                  className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
-                  autoComplete="current-password"
+                  className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="请输入密码（默认：123456）"
+                  disabled={loading}
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                >
+                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                </button>
               </div>
+              <p className="mt-1 text-xs text-gray-500">默认密码：123456</p>
             </div>
 
             {/* 登录按钮 */}
             <Button
               type="submit"
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3"
               disabled={loading}
-              className="w-full h-12 text-base font-medium bg-blue-600 hover:bg-blue-700 text-white shadow-md hover:shadow-lg transition-all"
             >
-              {loading ? (
-                '登录中...'
-              ) : (
-                <>
-                  <LogIn className="w-5 h-5 mr-2" />
-                  登录
-                </>
-              )}
+              {loading ? '登录中...' : '登录'}
             </Button>
           </form>
+        </div>
 
-          {/* 提示信息 */}
-          <div className="mt-6 text-center">
-            <p className="text-xs text-gray-500">
-              提示：当前为演示版本，任意用户名和密码均可登录
-            </p>
-          </div>
+        {/* 底部提示 */}
+        <div className="mt-6 text-center text-sm text-gray-600">
+          <p>首次登录请使用默认密码：123456</p>
         </div>
       </div>
     </div>
@@ -138,4 +125,5 @@ function Login() {
 }
 
 export default Login
+
 

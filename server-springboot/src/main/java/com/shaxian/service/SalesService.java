@@ -8,7 +8,6 @@ import com.shaxian.repository.SalesOrderRepository;
 import com.shaxian.repository.SalesOrderItemRepository;
 import com.shaxian.util.OrderNumberGenerator;
 import com.shaxian.util.UuidUtil;
-import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,11 +17,20 @@ import java.util.List;
 import java.util.Optional;
 
 @Service
-@RequiredArgsConstructor
 public class SalesService {
     private final SalesOrderRepository salesOrderRepository;
     private final SalesOrderItemRepository salesOrderItemRepository;
     private final BatchRepository batchRepository;
+
+    public SalesService(
+            SalesOrderRepository salesOrderRepository,
+            SalesOrderItemRepository salesOrderItemRepository,
+            BatchRepository batchRepository) {
+        this.salesOrderRepository = salesOrderRepository;
+        this.salesOrderItemRepository = salesOrderItemRepository;
+        this.batchRepository = batchRepository;
+    }
+
 
     public List<SalesOrder> getAllSales(String status, String customerId, LocalDate startDate, LocalDate endDate) {
         return salesOrderRepository.findByFilters(status, customerId, startDate, endDate);

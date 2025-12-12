@@ -29,7 +29,7 @@ spring:
     date-format: yyyy-MM-dd HH:mm:ss
 
 server:
-  port: 3000
+  port: 8080
   servlet:
     context-path: /
 

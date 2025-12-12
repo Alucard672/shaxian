@@ -1,7 +1,5 @@
 package com.shaxian.entity;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.Data;
 import java.time.LocalDateTime;
@@ -9,7 +7,6 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "colors")
 @Data
-@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class Color {
     @Id
     @Column(length = 50)
@@ -42,7 +39,6 @@ public class Color {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "product_id", insertable = false, updatable = false)
-    @JsonIgnore
     private Product product;
 
     @PrePersist
@@ -58,6 +54,31 @@ public class Color {
 
     public enum ColorStatus {
         在售, 停售
+    }
+
+    // 手动添加getter/setter方法以确保编译通过
+    public String getId() {
+        return id;
+    }
+
+    public void setId(String id) {
+        this.id = id;
+    }
+
+    public String getProductId() {
+        return productId;
+    }
+
+    public void setProductId(String productId) {
+        this.productId = productId;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
     }
 }
 
