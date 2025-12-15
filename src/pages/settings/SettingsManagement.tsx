@@ -10,6 +10,7 @@ import {
   Info,
   BookOpen,
   Trash2,
+  Printer,
 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 
@@ -104,6 +105,18 @@ function SettingsManagement() {
       ],
     },
     {
+      id: 'print',
+      title: '打印管理',
+      description: '管理打印模板和打印设置',
+      icon: Printer,
+      iconBg: 'bg-gradient-to-br from-purple-100 to-purple-200',
+      iconColor: '#9333EA',
+      features: [
+        '• 打印模板管理',
+        '• 打印设置配置',
+      ],
+    },
+    {
       id: 'clear-data',
       title: '清空数据',
       description: '清空系统中的测试数据，用于重新开始测试',
@@ -150,6 +163,8 @@ function SettingsManagement() {
                   navigate('/settings/custom-query')
                 } else if (card.id === 'inventory-alert') {
                   navigate('/settings/inventory-alert')
+                } else if (card.id === 'print') {
+                  navigate('/settings/print')
                 } else if (card.id === 'clear-data') {
                   navigate('/settings/clear-data')
                 }

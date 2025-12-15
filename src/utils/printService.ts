@@ -70,15 +70,26 @@ export function generatePrintContent(data: PrintData): string {
         @media print {
           @page {
             size: ${widthMm}mm ${heightMm}mm;
-            margin: ${marginTopMm}mm ${marginRightMm}mm ${marginBottomMm}mm ${marginLeftMm}mm;
+            margin: 0;
+          }
+          * {
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
           }
           body {
             margin: 0;
             padding: 0;
+            width: ${widthMm}mm;
+            height: ${heightMm}mm;
           }
           .print-container {
+            width: ${widthMm}mm;
+            min-height: ${heightMm}mm;
+            padding: ${marginTopMm}mm ${marginRightMm}mm ${marginBottomMm}mm ${marginLeftMm}mm;
+            box-sizing: border-box;
             page-break-inside: avoid;
             page-break-after: avoid;
+            margin: 0;
           }
         }
         body {
@@ -133,6 +144,10 @@ export function generatePrintContent(data: PrintData): string {
         table th {
           background-color: #f5f5f5;
           font-weight: bold;
+          text-align: center !important;
+        }
+        table th:first-child {
+          text-align: left !important;
         }
         table td {
           text-align: ${template.productFields.textAlign || 'left'};
@@ -242,46 +257,71 @@ export function generatePrintContent(data: PrintData): string {
     html += '<thead><tr>'
     html += '<th style="text-align: left;">序号</th>'
 
-    const order = template.productFields.order || [
-      'productCode',
-      'productName',
-      'specification',
-      'colorName',
-      'colorCode',
-      'quantity',
-      'unit',
-      'unitPrice',
-      'amount',
-      'batchCode',
-      'remark'
-    ]
-
+    // 字段标签映射
     const labelMap: Record<string, string> = {
-      productCode: '编号',
       productName: '商品名称',
-      specification: '规格',
-      colorName: '颜色',
-      colorCode: '色号',
+      productCode: '商品编码',
+      colorName: '颜色名称',
+      colorCode: '颜色代码',
+      batchCode: '批次号/缸号',
       quantity: '数量',
       unit: '单位',
-      unitPrice: '单价',
+      price: '单价',
       amount: '金额',
-      batchCode: '批号',
-      remark: '备注'
+      pieceCount: '件数',
+      unitWeight: '单件重量',
+      productionDate: '生产日期',
+      stockLocation: '库存位置',
+      remark: '备注',
     }
 
+    // 字段对齐方式（表头和数据行都使用）
     const alignMap: Record<string, string> = {
       quantity: 'center',
       unit: 'center',
-      unitPrice: 'right',
-      amount: 'right'
+      price: 'right',
+      amount: 'right',
+      pieceCount: 'center',
+      unitWeight: 'right',
+    }
+    
+    // 表头对齐方式（默认居中，但某些字段需要特殊对齐）
+    const headerAlignMap: Record<string, string> = {
+      quantity: 'center',
+      unit: 'center',
+      price: 'right',
+      amount: 'right',
+      pieceCount: 'center',
+      unitWeight: 'right',
     }
 
-    order.forEach((key) => {
-      if (template.productFields[key as keyof typeof template.productFields]) {
-        // Use configured textAlign for text fields, fixed alignment for numbers
-        const align = alignMap[key] || textAlign
-        html += `<th style="text-align: ${align};">${labelMap[key]}</th>`
+    // 根据配置的字段动态生成表头（按固定顺序）
+    const fieldOrder = [
+      'productCode',
+      'productName',
+      'colorName',
+      'colorCode',
+      'batchCode',
+      'quantity',
+      'unit',
+      'price',
+      'amount',
+      'pieceCount',
+      'unitWeight',
+      'productionDate',
+      'stockLocation',
+      'remark',
+    ]
+
+    fieldOrder.forEach((key) => {
+      // 检查字段是否启用（排除 showTable 和 textAlign）
+      const fieldEnabled = key !== 'showTable' && key !== 'textAlign' && 
+        template.productFields[key as keyof typeof template.productFields] === true
+      
+      if (fieldEnabled) {
+        // 表头对齐：优先使用 headerAlignMap，否则使用 alignMap，最后默认居中
+        const headerAlign = headerAlignMap[key] || alignMap[key] || 'center'
+        html += `<th style="text-align: ${headerAlign} !important;">${labelMap[key] || key}</th>`
       }
     })
 
@@ -292,23 +332,60 @@ export function generatePrintContent(data: PrintData): string {
       html += '<tr>'
       html += `<td style="text-align: left;">${index + 1}</td>`
 
-      order.forEach((key) => {
-        if (template.productFields[key as keyof typeof template.productFields]) {
+      fieldOrder.forEach((key) => {
+        // 检查字段是否启用（排除 showTable 和 textAlign）
+        const fieldEnabled = key !== 'showTable' && key !== 'textAlign' && 
+          template.productFields[key as keyof typeof template.productFields] === true
+        
+        if (fieldEnabled) {
           const align = alignMap[key] || textAlign
           let content = ''
 
           switch (key) {
-            case 'productCode': content = (item as any).productCode || ''; break;
-            case 'productName': content = item.productName; break;
-            case 'specification': content = (item as any).specification || ''; break;
-            case 'colorName': content = (item as any).colorName || ''; break;
-            case 'colorCode': content = (item as any).colorCode || ''; break;
-            case 'quantity': content = item.quantity.toString(); break;
-            case 'unit': content = (item as any).unit || ''; break;
-            case 'unitPrice': content = `¥${item.price.toFixed(2)}`; break;
-            case 'amount': content = `¥${item.amount.toFixed(2)}`; break;
-            case 'batchCode': content = (item as any).batchCode || ''; break;
-            case 'remark': content = item.remark || ''; break;
+            case 'productCode': 
+              content = (item as any).productCode || (item as any).productId || ''; 
+              break;
+            case 'productName': 
+              content = item.productName || ''; 
+              break;
+            case 'colorName': 
+              content = (item as any).colorName || ''; 
+              break;
+            case 'colorCode': 
+              content = (item as any).colorCode || ''; 
+              break;
+            case 'batchCode': 
+              content = (item as any).batchCode || ''; 
+              break;
+            case 'quantity': 
+              content = (item.quantity ?? 0).toString(); 
+              break;
+            case 'unit': 
+              content = (item as any).unit || ''; 
+              break;
+            case 'price': 
+              content = `¥${((item as any).price ?? (item as any).unitPrice ?? 0).toFixed(2)}`; 
+              break;
+            case 'amount': 
+              content = `¥${(item.amount ?? 0).toFixed(2)}`; 
+              break;
+            case 'pieceCount': 
+              content = ((item as any).pieceCount ?? '').toString(); 
+              break;
+            case 'unitWeight': 
+              content = ((item as any).unitWeight ?? '').toString(); 
+              break;
+            case 'productionDate': 
+              content = (item as any).productionDate || ''; 
+              break;
+            case 'stockLocation': 
+              content = (item as any).stockLocation || ''; 
+              break;
+            case 'remark': 
+              content = (item as any).remark || ''; 
+              break;
+            default:
+              content = (item as any)[key] || '';
           }
 
           html += `<td style="text-align: ${align};">${content}</td>`
@@ -332,18 +409,10 @@ export function generatePrintContent(data: PrintData): string {
   if (template.summaryFields.paymentInfo) {
     if (documentType === '销售单') {
       const salesOrder = order as SalesOrder
-      html += `
-        <div style="margin-bottom: 2px;">已付：¥${(salesOrder.receivedAmount || 0).toFixed(2)}</div>
-        <div style="margin-bottom: 2px;">欠款：¥${(salesOrder.unpaidAmount || 0).toFixed(2)}</div>
-        <div style="margin-bottom: 2px;">付款方式：现金支付</div>
-      `
+      html += `<div style="margin-bottom: 2px;">已付：¥${(salesOrder.receivedAmount || 0).toFixed(2)} | 欠款：¥${(salesOrder.unpaidAmount || 0).toFixed(2)} | 付款方式：现金支付</div>`
     } else {
       const purchaseOrder = order as PurchaseOrder
-      html += `
-        <div style="margin-bottom: 2px;">已付：¥${(purchaseOrder.paidAmount || 0).toFixed(2)}</div>
-        <div style="margin-bottom: 2px;">欠款：¥${(purchaseOrder.unpaidAmount || 0).toFixed(2)}</div>
-        <div style="margin-bottom: 2px;">付款方式：现金支付</div>
-      `
+      html += `<div style="margin-bottom: 2px;">已付：¥${(purchaseOrder.paidAmount || 0).toFixed(2)} | 欠款：¥${(purchaseOrder.unpaidAmount || 0).toFixed(2)} | 付款方式：现金支付</div>`
     }
   }
 

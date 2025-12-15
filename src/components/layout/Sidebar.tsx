@@ -86,22 +86,16 @@ const menuItems: MenuItem[] = [
     path: '/report',
   },
   {
-    id: 'print',
-    label: '打印管理',
-    icon: Printer,
-    path: '/print',
+    id: 'tenant',
+    label: '租户管理',
+    icon: Building2,
+    path: '/tenant',
   },
   {
     id: 'settings',
     label: '系统设置',
     icon: Settings,
     path: '/settings',
-  },
-  {
-    id: 'tenant',
-    label: '租户管理',
-    icon: Building2,
-    path: '/tenant',
   },
 ]
 
@@ -135,11 +129,15 @@ function Sidebar() {
     }
   }
 
+  // 分离设置菜单和其他菜单
+  const regularMenus = menuItems.filter((item) => item.id !== 'settings')
+  const settingsMenu = menuItems.find((item) => item.id === 'settings')
+
   return (
     <aside className="w-64 bg-white border-r border-gray-200 flex flex-col">
       <nav className="flex-1 overflow-y-auto py-4">
         <div className="px-3 space-y-1">
-          {menuItems.map((item) => {
+          {regularMenus.map((item) => {
             const Icon = item.icon
             const hasChildren = item.children && item.children.length > 0
             const isExpanded = expandedMenus.has(item.id)
@@ -197,6 +195,31 @@ function Sidebar() {
           })}
         </div>
       </nav>
+      
+      {/* 设置菜单固定在底部 */}
+      {settingsMenu && (
+        <div className="border-t border-gray-200 pt-2 pb-4 px-3">
+          {(() => {
+            const item = settingsMenu
+            const Icon = item.icon
+            const active = isActive(item.path)
+            return (
+              <button
+                onClick={() => handleMenuClick(item)}
+                className={cn(
+                  'w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
+                  active
+                    ? 'bg-blue-50 text-blue-600'
+                    : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
+                )}
+              >
+                <Icon className="w-5 h-5 flex-shrink-0" />
+                <span className="flex-1 text-left">{item.label}</span>
+              </button>
+            )
+          })()}
+        </div>
+      )}
     </aside>
   )
 }

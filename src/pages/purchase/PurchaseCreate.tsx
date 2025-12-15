@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import { usePurchaseStore } from '@/store/purchaseStore'
 import { useProductStore } from '@/store/productStore'
 import { useContactStore } from '@/store/contactStore'
@@ -10,7 +10,9 @@ import { Plus, Trash2, Save, ArrowLeft, Package } from 'lucide-react'
 
 function PurchaseCreate() {
   const navigate = useNavigate()
-  const { addOrder } = usePurchaseStore()
+  const { id } = useParams<{ id?: string }>()
+  const isEdit = id !== undefined
+  const { orders, addOrder, loadOrders } = usePurchaseStore()
   const { products, colors, batches, loadAll, getColorsByProduct } = useProductStore()
   const { suppliers, loadSuppliers } = useContactStore()
 
@@ -44,17 +46,69 @@ function PurchaseCreate() {
   useEffect(() => {
     loadAll()
     loadSuppliers()
-  }, [loadAll, loadSuppliers])
+    if (isEdit) {
+      loadOrders()
+    }
+  }, [loadAll, loadSuppliers, isEdit, loadOrders])
+
+  // 如果是编辑模式，加载订单数据
+  useEffect(() => {
+    if (isEdit && id && orders.length > 0) {
+      const order = orders.find((o) => o.id === id)
+      if (order) {
+        setFormData({
+          supplierId: order.supplierId || '',
+          supplierName: order.supplierName,
+          purchaseDate: order.purchaseDate,
+          expectedDate: order.expectedDate || '',
+          paidAmount: order.paidAmount || 0,
+          remark: order.remark || '',
+        })
+        setItems(order.items.map((item) => ({
+          productId: item.productId,
+          productName: item.productName,
+          productCode: item.productCode || '',
+          colorId: item.colorId || '',
+          colorName: item.colorName || '',
+          colorCode: item.colorCode || '',
+          batchCode: item.batchCode || '',
+          quantity: item.quantity,
+          pieceCount: item.pieceCount || 0,
+          unitWeight: item.unitWeight || 0,
+          unit: item.unit || 'kg',
+          price: item.price || item.unitPrice || 0,
+          productionDate: item.productionDate || new Date().toISOString().split('T')[0],
+          stockLocation: item.stockLocation || '',
+          remark: item.remark || '',
+        })))
+      }
+    }
+  }, [isEdit, id, orders])
 
   // 获取当前选中商品的色号
   const colorOptions = useMemo(() => {
     if (!itemForm.productId) return []
-    return getColorsByProduct(itemForm.productId).map((c) => ({
-      value: c.id,
-      label: `${c.code} - ${c.name}`,
-      color: c,
-    }))
-  }, [itemForm.productId, getColorsByProduct])
+    const colors = getColorsByProduct(itemForm.productId)
+    
+    // 如果编辑模式下已选择了色号，但该色号不在当前商品的色号列表中，也要包含它
+    const allColors = [...colors]
+    if (itemForm.colorId && !colors.find((c) => c.id === itemForm.colorId)) {
+      // 从所有色号中查找已选择的色号
+      const selectedColor = colors.find((c) => c.id === itemForm.colorId) || 
+                           useProductStore.getState().colors.find((c) => c.id === itemForm.colorId)
+      if (selectedColor) {
+        allColors.push(selectedColor)
+      }
+    }
+    
+    return allColors
+      .filter((c) => c && c.id) // 过滤掉无效的颜色
+      .map((c) => ({
+        value: c.id,
+        label: `${c.code || ''} - ${c.name || ''}`.replace(/^ - | - $|^$/, '') || c.id, // 处理 undefined，如果都为空则显示 ID
+        color: c,
+      }))
+  }, [itemForm.productId, itemForm.colorId, getColorsByProduct])
 
   // 获取当前选中商品信息
   const selectedProduct = useMemo(() => {
@@ -129,7 +183,14 @@ function PurchaseCreate() {
   }
 
   const handleColorChange = (colorId: string) => {
-    const color = colors.find((c) => c.id === colorId)
+    // 先从当前商品的色号中查找，如果找不到则从所有色号中查找
+    const color = getColorsByProduct(itemForm.productId).find((c) => c.id === colorId) ||
+                  colors.find((c) => c.id === colorId) ||
+                  useProductStore.getState().colors.find((c) => c.id === colorId)
+    
+    if (!color && colorId) {
+      console.warn('Color not found:', colorId)
+    }
     setItemForm({
       ...itemForm,
       colorId,
@@ -191,8 +252,8 @@ function PurchaseCreate() {
             <ArrowLeft className="w-5 h-5 text-gray-600" />
           </button>
           <div>
-            <h1 className="text-2xl font-semibold text-gray-900">新建采购单</h1>
-            <p className="text-sm text-gray-600 mt-1">创建新的采购进货单</p>
+            <h1 className="text-2xl font-semibold text-gray-900">{isEdit ? '查看/编辑采购单' : '新建采购单'}</h1>
+            <p className="text-sm text-gray-600 mt-1">{isEdit ? '查看或编辑采购单信息' : '创建新的采购进货单'}</p>
           </div>
         </div>
         <div className="flex gap-2">

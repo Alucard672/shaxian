@@ -1,24 +1,40 @@
 import { useState, useEffect } from 'react'
 import { useProductStore } from '@/store/productStore'
-import { Product } from '@/types/product'
+import { Product, Color } from '@/types/product'
 import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
 import Table from '@/components/ui/Table'
-import { Plus, Edit, Trash2, Save, Package, Search } from 'lucide-react'
+import { Plus, Edit, Trash2, Save, Package, Search, Palette } from 'lucide-react'
 
 function ProductManagement() {
   const {
     products,
+    colors,
     loading,
     loadProducts,
+    loadColors,
     addProduct,
     updateProduct,
     deleteProduct,
+    addColor,
+    updateColor,
+    deleteColor,
+    getColorsByProduct,
   } = useProductStore()
 
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingProduct, setEditingProduct] = useState<Product | null>(null)
   const [searchKeyword, setSearchKeyword] = useState('')
+  const [isColorModalOpen, setIsColorModalOpen] = useState(false)
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
+  const [editingColor, setEditingColor] = useState<Color | null>(null)
+  const [colorFormData, setColorFormData] = useState({
+    code: '',
+    name: '',
+    colorValue: '',
+    description: '',
+    status: '在售' as '在售' | '停售',
+  })
   const [formData, setFormData] = useState({
     name: '',
     code: '',
@@ -36,7 +52,8 @@ function ProductManagement() {
 
   useEffect(() => {
     loadProducts()
-  }, [loadProducts])
+    loadColors()
+  }, [loadProducts, loadColors])
 
   const handleOpenModal = (product?: Product) => {
     if (product) {
@@ -127,6 +144,85 @@ function ProductManagement() {
     }
   }
 
+  const handleManageColors = (product: Product) => {
+    setSelectedProduct(product)
+    setIsColorModalOpen(true)
+  }
+
+  const handleCloseColorModal = () => {
+    setIsColorModalOpen(false)
+    setSelectedProduct(null)
+    setEditingColor(null)
+    setColorFormData({
+      code: '',
+      name: '',
+      colorValue: '',
+      description: '',
+      status: '在售',
+    })
+  }
+
+  const handleOpenColorModal = (color?: Color) => {
+    if (color) {
+      setEditingColor(color)
+      setColorFormData({
+        code: color.code,
+        name: color.name,
+        colorValue: color.colorValue || '',
+        description: color.description || '',
+        status: color.status,
+      })
+    } else {
+      setEditingColor(null)
+      setColorFormData({
+        code: '',
+        name: '',
+        colorValue: '',
+        description: '',
+        status: '在售',
+      })
+    }
+  }
+
+  const handleSaveColor = async () => {
+    if (!selectedProduct) return
+
+    if (!colorFormData.code.trim() || !colorFormData.name.trim()) {
+      alert('请填写色号编码和名称')
+      return
+    }
+
+    try {
+      if (editingColor) {
+        await updateColor(editingColor.id, colorFormData)
+        alert('色号更新成功')
+      } else {
+        await addColor(selectedProduct.id, colorFormData)
+        alert('色号创建成功')
+      }
+      await loadColors(selectedProduct.id)
+      handleOpenColorModal()
+    } catch (error: any) {
+      alert('保存失败：' + (error.message || '未知错误'))
+    }
+  }
+
+  const handleDeleteColor = async (colorId: string) => {
+    if (!confirm('确定要删除这个色号吗？删除后无法恢复。')) {
+      return
+    }
+
+    try {
+      await deleteColor(colorId)
+      if (selectedProduct) {
+        await loadColors(selectedProduct.id)
+      }
+      alert('色号已删除')
+    } catch (error: any) {
+      alert('删除失败：' + (error.message || '未知错误'))
+    }
+  }
+
   const filteredProducts = products.filter((product) => {
     const keyword = searchKeyword.toLowerCase()
     return (
@@ -183,10 +279,32 @@ function ProductManagement() {
       ),
     },
     {
+      key: 'colorCount',
+      title: '色号数量',
+      render: (_: any, record: Product) => {
+        const colorCount = getColorsByProduct(record.id).length
+        return (
+          <div className="flex items-center gap-2">
+            <Palette className="w-4 h-4 text-purple-600" />
+            <span className="text-sm text-gray-600">{colorCount} 个</span>
+          </div>
+        )
+      },
+    },
+    {
       key: 'actions',
       title: '操作',
       render: (_: any, record: Product) => (
         <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => handleManageColors(record)}
+            className="p-1.5 hover:bg-purple-50 rounded-xl"
+            title="管理色号"
+          >
+            <Palette className="w-4 h-4 text-purple-600" />
+          </Button>
           <Button
             variant="ghost"
             size="sm"
@@ -409,6 +527,166 @@ function ProductManagement() {
                   保存
                 </Button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 色号管理弹窗 */}
+      {isColorModalOpen && selectedProduct && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h2 className="text-xl font-semibold text-gray-900">管理色号</h2>
+                <p className="text-sm text-gray-600 mt-1">商品：{selectedProduct.name} ({selectedProduct.code})</p>
+              </div>
+              <button
+                onClick={handleCloseColorModal}
+                className="p-2 hover:bg-gray-100 rounded-xl transition-colors"
+              >
+                <Trash2 className="w-5 h-5 text-gray-400" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              {/* 色号列表 */}
+              <div className="bg-gray-50 rounded-xl p-4">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-medium text-gray-900">色号列表</h3>
+                  <Button
+                    onClick={() => handleOpenColorModal()}
+                    className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg"
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    添加色号
+                  </Button>
+                </div>
+                {getColorsByProduct(selectedProduct.id).length === 0 ? (
+                  <div className="text-center py-8 text-gray-500">
+                    <Palette className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+                    <p>暂无色号，点击"添加色号"创建第一个色号</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {getColorsByProduct(selectedProduct.id).map((color) => (
+                      <div
+                        key={color.id}
+                        className="bg-white rounded-lg p-4 border border-gray-200 flex items-center justify-between"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center">
+                            <Palette className="w-5 h-5 text-purple-600" />
+                          </div>
+                          <div>
+                            <div className="text-sm font-medium text-gray-900">
+                              {color.code} - {color.name}
+                            </div>
+                            {color.colorValue && (
+                              <div className="text-xs text-gray-500 mt-1">
+                                色值：{color.colorValue}
+                              </div>
+                            )}
+                            <div className="text-xs text-gray-500 mt-1">
+                              状态：<span className={color.status === '在售' ? 'text-green-600' : 'text-gray-600'}>{color.status}</span>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleOpenColorModal(color)}
+                            className="p-1.5 hover:bg-gray-100 rounded-xl"
+                          >
+                            <Edit className="w-4 h-4 text-gray-600" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDeleteColor(color.id)}
+                            className="p-1.5 hover:bg-red-50 rounded-xl"
+                          >
+                            <Trash2 className="w-4 h-4 text-red-600" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* 添加/编辑色号表单 */}
+              {editingColor !== null && (
+                <div className="bg-white rounded-xl p-4 border border-gray-200">
+                  <h3 className="text-lg font-medium text-gray-900 mb-4">
+                    {editingColor ? '编辑色号' : '添加色号'}
+                  </h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        色号编码 <span className="text-red-500">*</span>
+                      </label>
+                      <Input
+                        value={colorFormData.code}
+                        onChange={(e) => setColorFormData({ ...colorFormData, code: e.target.value })}
+                        placeholder="请输入色号编码"
+                        className="w-full"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        色号名称 <span className="text-red-500">*</span>
+                      </label>
+                      <Input
+                        value={colorFormData.name}
+                        onChange={(e) => setColorFormData({ ...colorFormData, name: e.target.value })}
+                        placeholder="请输入色号名称"
+                        className="w-full"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">色值</label>
+                      <Input
+                        value={colorFormData.colorValue}
+                        onChange={(e) => setColorFormData({ ...colorFormData, colorValue: e.target.value })}
+                        placeholder="请输入色值（如：#FF0000）"
+                        className="w-full"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">状态</label>
+                      <select
+                        value={colorFormData.status}
+                        onChange={(e) => setColorFormData({ ...colorFormData, status: e.target.value as '在售' | '停售' })}
+                        className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value="在售">在售</option>
+                        <option value="停售">停售</option>
+                      </select>
+                    </div>
+                    <div className="col-span-2">
+                      <label className="block text-sm font-medium text-gray-700 mb-2">描述</label>
+                      <textarea
+                        value={colorFormData.description}
+                        onChange={(e) => setColorFormData({ ...colorFormData, description: e.target.value })}
+                        placeholder="请输入色号描述"
+                        rows={2}
+                        className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-200 mt-4">
+                    <Button variant="outline" onClick={() => handleOpenColorModal()}>
+                      取消
+                    </Button>
+                    <Button onClick={handleSaveColor} className="bg-purple-600 hover:bg-purple-700 text-white">
+                      <Save className="w-4 h-4 mr-2" />
+                      保存
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>

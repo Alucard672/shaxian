@@ -1,15 +1,21 @@
 import { useState, useMemo, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { usePurchaseStore } from '@/store/purchaseStore'
+import { useContactStore } from '@/store/contactStore'
+import { usePrintStore } from '@/store/printStore'
 import { PurchaseOrder, PurchaseOrderStatus } from '@/types/purchase'
 import Button from '@/components/ui/Button'
 import Table from '@/components/ui/Table'
-import { Plus, Edit, Trash2, Eye, Search, FileText } from 'lucide-react'
+import { templateApi } from '@/api/client'
+import { generatePrintContent, openPrintDialog } from '@/utils/printService'
+import { Plus, Edit, Trash2, Eye, Search, FileText, Printer } from 'lucide-react'
 import { parseISO, startOfDay, endOfDay } from 'date-fns'
 
 function PurchaseList() {
   const navigate = useNavigate()
   const { orders, loading, loadOrders, deleteOrder } = usePurchaseStore()
+  const { suppliers } = useContactStore()
+  const { addPrintRecord } = usePrintStore()
 
   const [searchKeyword, setSearchKeyword] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('全部状态')
@@ -20,6 +26,7 @@ function PurchaseList() {
 
   useEffect(() => {
     loadOrders()
+    useContactStore.getState().loadAll()
   }, [loadOrders])
 
   // 统计数据
@@ -121,6 +128,70 @@ function PurchaseList() {
     }
   }
 
+  const handlePrint = async (order: PurchaseOrder) => {
+    try {
+      // 获取所有进货单模板
+      const templates = await templateApi.getAll()
+      const purchaseTemplates = templates.filter((t: any) => t.documentType === '进货单')
+
+      if (purchaseTemplates.length === 0) {
+        alert('未找到进货单打印模板，请先创建模板')
+        return
+      }
+
+      let selectedTemplate: any
+
+      // 如果只有一个模板，直接使用
+      if (purchaseTemplates.length === 1) {
+        selectedTemplate = purchaseTemplates[0]
+      } else {
+        // 如果有多个模板，弹出选择框
+        const templateNames = purchaseTemplates.map((t: any) => t.name)
+        const defaultIndex = purchaseTemplates.findIndex((t: any) => t.isDefault || false)
+        const selectedIndex = defaultIndex >= 0 ? defaultIndex : 0
+        
+        const selectedName = prompt(
+          `请选择打印模板：\n${templateNames.map((name: string, index: number) => `${index + 1}. ${name}`).join('\n')}\n\n请输入模板序号（1-${templateNames.length}）：`,
+          String(selectedIndex + 1)
+        )
+
+        if (!selectedName) {
+          return // 用户取消
+        }
+
+        const index = parseInt(selectedName) - 1
+        if (isNaN(index) || index < 0 || index >= purchaseTemplates.length) {
+          alert('无效的模板序号')
+          return
+        }
+
+        selectedTemplate = purchaseTemplates[index]
+      }
+
+      // 获取供应商信息
+      const supplier = suppliers.find((s) => s.name === order.supplierName)
+
+      // 生成打印内容
+      const printData = {
+        template: selectedTemplate,
+        order: order,
+        documentType: '进货单',
+        supplier: supplier,
+      }
+
+      const htmlContent = generatePrintContent(printData as any)
+      
+      // 记录打印
+      addPrintRecord('进货单', order.id, order.orderNumber)
+      
+      // 打开打印对话框
+      openPrintDialog(htmlContent)
+    } catch (error: any) {
+      console.error('打印失败:', error)
+      alert('打印失败：' + (error.message || '未知错误'))
+    }
+  }
+
   const columns = [
     {
       key: 'orderNumber',
@@ -197,6 +268,15 @@ function PurchaseList() {
             className="p-1.5 hover:bg-gray-100 rounded-xl"
           >
             <Eye className="w-4 h-4 text-gray-600" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => handlePrint(record)}
+            className="p-1.5 hover:bg-blue-50 rounded-xl"
+            title="打印"
+          >
+            <Printer className="w-4 h-4 text-blue-600" />
           </Button>
           <Button
             variant="ghost"

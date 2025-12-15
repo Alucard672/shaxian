@@ -1,15 +1,21 @@
 import { useState, useMemo, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useSalesStore } from '@/store/salesStore'
+import { useContactStore } from '@/store/contactStore'
+import { usePrintStore } from '@/store/printStore'
 import { SalesOrder, SalesOrderStatus } from '@/types/sales'
 import Button from '@/components/ui/Button'
 import Table from '@/components/ui/Table'
-import { Plus, Edit, Trash2, Eye, Search, ShoppingCart } from 'lucide-react'
+import { templateApi } from '@/api/client'
+import { generatePrintContent, openPrintDialog } from '@/utils/printService'
+import { Plus, Edit, Trash2, Eye, Search, ShoppingCart, Printer } from 'lucide-react'
 import { parseISO, startOfDay, endOfDay } from 'date-fns'
 
 function SalesList() {
   const navigate = useNavigate()
   const { orders, loading, loadOrders, deleteOrder } = useSalesStore()
+  const { customers } = useContactStore()
+  const { addPrintRecord } = usePrintStore()
 
   const [searchKeyword, setSearchKeyword] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('全部状态')
@@ -20,6 +26,7 @@ function SalesList() {
 
   useEffect(() => {
     loadOrders()
+    useContactStore.getState().loadAll()
   }, [loadOrders])
 
   // 统计数据
@@ -121,6 +128,70 @@ function SalesList() {
     }
   }
 
+  const handlePrint = async (order: SalesOrder) => {
+    try {
+      // 获取所有销售单模板
+      const templates = await templateApi.getAll()
+      const salesTemplates = templates.filter((t: any) => t.documentType === '销售单')
+
+      if (salesTemplates.length === 0) {
+        alert('未找到销售单打印模板，请先创建模板')
+        return
+      }
+
+      let selectedTemplate: any
+
+      // 如果只有一个模板，直接使用
+      if (salesTemplates.length === 1) {
+        selectedTemplate = salesTemplates[0]
+      } else {
+        // 如果有多个模板，弹出选择框
+        const templateNames = salesTemplates.map((t: any) => t.name)
+        const defaultIndex = salesTemplates.findIndex((t: any) => t.isDefault || false)
+        const selectedIndex = defaultIndex >= 0 ? defaultIndex : 0
+        
+        const selectedName = prompt(
+          `请选择打印模板：\n${templateNames.map((name: string, index: number) => `${index + 1}. ${name}`).join('\n')}\n\n请输入模板序号（1-${templateNames.length}）：`,
+          String(selectedIndex + 1)
+        )
+
+        if (!selectedName) {
+          return // 用户取消
+        }
+
+        const index = parseInt(selectedName) - 1
+        if (isNaN(index) || index < 0 || index >= salesTemplates.length) {
+          alert('无效的模板序号')
+          return
+        }
+
+        selectedTemplate = salesTemplates[index]
+      }
+
+      // 获取客户信息
+      const customer = customers.find((c) => c.name === order.customerName)
+
+      // 生成打印内容
+      const printData = {
+        template: selectedTemplate,
+        order: order,
+        documentType: '销售单',
+        customer: customer,
+      }
+
+      const htmlContent = generatePrintContent(printData as any)
+      
+      // 记录打印
+      addPrintRecord('销售单', order.id, order.orderNumber)
+      
+      // 打开打印对话框
+      openPrintDialog(htmlContent)
+    } catch (error: any) {
+      console.error('打印失败:', error)
+      alert('打印失败：' + (error.message || '未知错误'))
+    }
+  }
+
   const columns = [
     {
       key: 'orderNumber',
@@ -159,14 +230,14 @@ function SalesList() {
       key: 'paidAmount',
       title: '已收金额',
       render: (_: any, record: SalesOrder) => (
-        <span className="text-sm text-gray-600">¥{record.paidAmount.toFixed(2)}</span>
+        <span className="text-sm text-gray-600">¥{(record.paidAmount ?? 0).toFixed(2)}</span>
       ),
     },
     {
       key: 'unpaidAmount',
       title: '欠款金额',
       render: (_: any, record: SalesOrder) => (
-        <span className="text-sm text-red-600">¥{record.unpaidAmount.toFixed(2)}</span>
+        <span className="text-sm text-red-600">¥{(record.unpaidAmount ?? 0).toFixed(2)}</span>
       ),
     },
     {
@@ -195,6 +266,15 @@ function SalesList() {
             className="p-1.5 hover:bg-gray-100 rounded-xl"
           >
             <Eye className="w-4 h-4 text-gray-600" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => handlePrint(record)}
+            className="p-1.5 hover:bg-blue-50 rounded-xl"
+            title="打印"
+          >
+            <Printer className="w-4 h-4 text-blue-600" />
           </Button>
           <Button
             variant="ghost"

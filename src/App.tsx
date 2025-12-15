@@ -46,7 +46,7 @@ import InventoryReport from './pages/report/InventoryReport'
 import FundReport from './pages/report/FundReport'
 
 // 打印管理
-import PrintManagement from './pages/print/PrintManagement'
+import PrintSettings from './pages/settings/PrintSettings'
 import TemplateEdit from './pages/print/TemplateEdit'
 
 // 系统设置
@@ -155,6 +155,22 @@ function App() {
             </ProtectedRoute>
           }
         />
+        <Route
+          path="/purchase/:id"
+          element={
+            <ProtectedRoute>
+              <PurchaseCreate />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/purchase/edit/:id"
+          element={
+            <ProtectedRoute>
+              <PurchaseCreate />
+            </ProtectedRoute>
+          }
+        />
 
         {/* 销售管理 */}
         <Route
@@ -167,6 +183,22 @@ function App() {
         />
         <Route
           path="/sales/create"
+          element={
+            <ProtectedRoute>
+              <SalesCreate />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/sales/:id"
+          element={
+            <ProtectedRoute>
+              <SalesCreate />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/sales/edit/:id"
           element={
             <ProtectedRoute>
               <SalesCreate />
@@ -318,17 +350,17 @@ function App() {
           }
         />
 
-        {/* 打印管理 */}
+        {/* 打印管理 - 已移至设置页面 */}
         <Route
-          path="/print"
+          path="/settings/print"
           element={
             <ProtectedRoute>
-              <PrintManagement />
+              <PrintSettings />
             </ProtectedRoute>
           }
         />
         <Route
-          path="/print/template/:id"
+          path="/settings/print/template/:id"
           element={
             <ProtectedRoute>
               <TemplateEdit />

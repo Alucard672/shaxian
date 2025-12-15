@@ -45,8 +45,8 @@ const routeTitleMap: Record<string, string> = {
   '/report/customer': '客户报表',
   '/report/inventory': '库存报表',
   '/report/fund': '资金报表',
-  '/print': '打印管理',
-  '/print/template/:id': '模板编辑',
+  '/settings/print': '打印管理',
+  '/settings/print/template/:id': '模板编辑',
   '/settings': '系统设置',
   '/settings/store': '门店信息',
   '/settings/employees': '员工管理',
@@ -64,6 +64,9 @@ const routeTitleMap: Record<string, string> = {
 // 根据路径获取标题
 export function getRouteTitle(path: string): string {
   // 处理动态路由参数
+  if (path.includes('/settings/print/template/')) {
+    return '模板编辑'
+  }
   if (path.includes('/print/template/')) {
     return '模板编辑'
   }
