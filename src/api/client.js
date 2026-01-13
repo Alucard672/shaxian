@@ -1,5 +1,5 @@
 // API基础配置
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api'
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/biz/api'
 
 // 通用请求函数
 async function apiRequest(endpoint, options = {}) {
