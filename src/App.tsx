@@ -91,8 +91,12 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 }
 
 function App() {
+  const basename = import.meta.env.PROD
+    ? import.meta.env.BASE_URL.replace(/\/$/, '')
+    : '/'
+
   return (
-    <BrowserRouter basename={import.meta.env.PROD ? '/shaxian' : '/'}>
+    <BrowserRouter basename={basename}>
       <Routes>
         {/* 登录页面 */}
         <Route path="/login" element={<Login />} />
