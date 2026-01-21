@@ -177,7 +177,7 @@ function AdjustmentCreate() {
   }
 
   // 提交表单
-  const handleSubmit = (status: '草稿' | '已完成' = '草稿') => {
+  const handleSubmit = async (status: '草稿' | '已完成' = '草稿') => {
     if (!adjustmentType) {
       alert('请选择调整类型')
       return
@@ -216,14 +216,14 @@ function AdjustmentCreate() {
     }
 
     if (isEditMode && existingOrder) {
-      updateOrder(existingOrder.id, orderData)
+      await updateOrder(existingOrder.id, orderData)
       if (status === '已完成') {
-        completeOrder(existingOrder.id)
+        await completeOrder(existingOrder.id)
       }
     } else {
-      const newOrder = addOrder(orderData, status)
+      const newOrder = await addOrder(orderData, status)
       if (status === '已完成') {
-        completeOrder(newOrder.id)
+        await completeOrder(newOrder.id)
       }
     }
     navigate('/inventory/adjustment')

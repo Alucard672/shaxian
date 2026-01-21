@@ -15,6 +15,7 @@ interface SalesDetailProps {
 
 function SalesDetail({ order, onEdit, onPrint, onClose }: SalesDetailProps) {
   const { getCustomer } = useContactStore()
+  const receivedAmount = order.receivedAmount ?? order.paidAmount
 
   // 获取客户信息
   const customer = useMemo(() => {
@@ -256,7 +257,7 @@ function SalesDetail({ order, onEdit, onPrint, onClose }: SalesDetailProps) {
               <div className="flex justify-between items-center">
                 <span className="text-base text-gray-600">已收金额：</span>
                 <span className="text-base text-green-600 font-medium">
-                  ¥{order.receivedAmount.toLocaleString()}
+                  ¥{receivedAmount.toLocaleString()}
                 </span>
               </div>
               <div className="flex justify-between items-center border-t border-gray-300 pt-3">

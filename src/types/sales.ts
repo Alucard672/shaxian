@@ -15,6 +15,7 @@ export interface SalesOrderItem {
   quantity: number
   unit: string
   price: number // 单价
+  unitPrice?: number // 兼容旧字段
   amount: number // 小计 = quantity * price
   // 双单位相关字段
   pieceCount?: number // 件数
@@ -30,12 +31,14 @@ export interface SalesOrder {
   customerName: string
   salesDate: string // 销售日期
   deliveryDate?: string // 交货日期
+  expectedDate?: string // 兼容字段（部分页面使用）
   deliveryAddress?: string // 交货地址
   contactPerson?: string // 联系人
   contactPhone?: string // 联系电话
   items: SalesOrderItem[]
   totalAmount: number // 总金额
   paidAmount: number // 已收金额
+  receivedAmount?: number // 兼容字段（= paidAmount）
   unpaidAmount: number // 欠款金额 = totalAmount - paidAmount
   status: SalesOrderStatus
   operator: string // 经办人
@@ -50,10 +53,12 @@ export interface SalesOrderFormData {
   customerName: string
   salesDate: string
   deliveryDate?: string
+  expectedDate?: string
   deliveryAddress?: string
   contactPerson?: string
   contactPhone?: string
   items: Omit<SalesOrderItem, 'id' | 'amount'>[]
   paidAmount: number
+  receivedAmount?: number
   remark?: string
 }

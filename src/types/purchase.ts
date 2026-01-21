@@ -14,6 +14,7 @@ export interface PurchaseOrderItem {
   quantity: number
   unit: string
   price: number // 单价
+  unitPrice?: number // 兼容旧字段
   amount: number // 小计 = quantity * price
   // 双单位相关字段
   pieceCount?: number // 件数

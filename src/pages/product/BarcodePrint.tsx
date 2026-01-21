@@ -63,6 +63,15 @@ function BarcodePrint() {
     }
   }
 
+  const handleSelectTemplateType = (type: 'document' | 'barcode') => {
+    setShowTemplateTypeModal(false)
+    if (type === 'document') {
+      navigate('/settings/print/template/new')
+    } else {
+      navigate('/settings/print/barcode-template/new')
+    }
+  }
+
   // 从URL参数中获取商品ID，如果有则自动添加
   useEffect(() => {
     if (products.length > 0 && selectedItems.length === 0) {

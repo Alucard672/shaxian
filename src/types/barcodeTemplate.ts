@@ -56,6 +56,15 @@ export interface BarcodeElement {
   fillColor?: string     // 填充颜色
   lineAngle?: number     // 线条角度（度，0=水平，90=垂直）
   
+  // 表格元素属性（用于条码标签表格）
+  tableColumns?: string[]
+  tableColumnWidths?: number[]
+  tableRows?: number
+  tableRowHeights?: number[]
+  showHeader?: boolean
+  borderWidth?: number
+  borderColor?: string
+
   // 通用属性
   visible?: boolean       // 是否可见
   zIndex?: number        // 层级

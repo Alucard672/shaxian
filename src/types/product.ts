@@ -67,3 +67,30 @@ export interface Batch {
   createdAt: string
   updatedAt: string
 }
+
+// ===== 表单数据（创建/编辑） =====
+
+export interface ColorFormData {
+  code: string
+  name: string
+  colorValue?: string
+  description?: string
+  status: ColorStatus
+}
+
+export interface BatchFormData {
+  code: string
+  productionDate?: string
+  supplierId?: string
+  supplierName?: string
+  purchasePrice?: number
+  initialQuantity: number
+  // 创建时通常 = initialQuantity（由调用方补齐）
+  stockQuantity?: number
+  stockLocation?: string
+  remark?: string
+  // 双单位相关字段
+  pieceCount?: number
+  looseWeight?: number
+  unitWeight?: number
+}

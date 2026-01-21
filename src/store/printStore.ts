@@ -8,6 +8,7 @@ interface PrintState {
   
   // 打印操作
   printDocument: (documentType: PrintDocumentType, documentId: string, documentNumber: string) => void
+  addPrintRecord: (documentType: PrintDocumentType, documentId: string, documentNumber: string) => void
   getPrintRecords: () => PrintRecord[]
   getPrintRecordsByType: (type: PrintDocumentType | '全部') => PrintRecord[]
   getTodayPrintCount: () => number
@@ -79,6 +80,11 @@ export const usePrintStore = create<PrintState>((set, get) => ({
         return { records }
       })
     }
+  },
+
+  // 兼容旧调用名
+  addPrintRecord: (documentType, documentId, documentNumber) => {
+    get().printDocument(documentType, documentId, documentNumber)
   },
 
   getPrintRecords: () => {

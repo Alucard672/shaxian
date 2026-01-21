@@ -31,9 +31,9 @@ function EmployeeManagement() {
       setEditingEmployee(employee)
       setFormData({
         name: employee.name,
-        phone: employee.phone,
+        phone: employee.phone || '',
         email: employee.email || '',
-        role: employee.role,
+        role: employee.role || '',
         position: employee.position || '',
         status: employee.status,
       })
@@ -96,7 +96,7 @@ function EmployeeManagement() {
     const keyword = searchKeyword.toLowerCase()
     return (
       emp.name.toLowerCase().includes(keyword) ||
-      emp.phone.includes(keyword) ||
+      (emp.phone || '').includes(keyword) ||
       (emp.email && emp.email.toLowerCase().includes(keyword))
     )
   })

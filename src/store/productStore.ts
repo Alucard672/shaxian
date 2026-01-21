@@ -3,6 +3,13 @@ import { persist } from 'zustand/middleware'
 import { Product, Color, Batch } from '@/types/product'
 import { productApi } from '@/api/client'
 
+type BatchCreateData = Omit<
+  Batch,
+  'id' | 'colorId' | 'createdAt' | 'updatedAt' | 'stockQuantity'
+> & {
+  stockQuantity?: number
+}
+
 // 前端特有字段的存储键
 const FRONTEND_FIELDS_KEY = 'product-frontend-fields'
 
@@ -58,7 +65,7 @@ interface ProductState {
   getColorsByProduct: (productId: string) => Color[]
   
   // 缸号操作
-  addBatch: (colorId: string, data: Omit<Batch, 'id' | 'colorId' | 'createdAt' | 'updatedAt'>) => Promise<Batch>
+  addBatch: (colorId: string, data: BatchCreateData) => Promise<Batch>
   updateBatch: (id: string, data: Partial<Batch>) => Promise<void>
   deleteBatch: (id: string) => Promise<void>
   getBatch: (id: string) => Batch | undefined
@@ -373,7 +380,11 @@ export const useProductStore = create<ProductState>((set, get) => ({
   // 缸号操作
   addBatch: async (colorId, data) => {
     try {
-      const newBatch = await productApi.createBatch(colorId, data)
+      const payload = {
+        ...data,
+        stockQuantity: data.stockQuantity ?? data.initialQuantity,
+      }
+      const newBatch = await productApi.createBatch(colorId, payload)
       set((state) => ({
         batches: [...state.batches, newBatch]
       }))

@@ -16,7 +16,7 @@ function RoleManagement() {
   const [formData, setFormData] = useState({
     name: '',
     description: '',
-    permissions: {} as Record<string, any>,
+    permissions: [] as string[],
   })
 
   useEffect(() => {
@@ -29,14 +29,14 @@ function RoleManagement() {
       setFormData({
         name: role.name,
         description: role.description || '',
-        permissions: role.permissions || {},
+        permissions: role.permissions || [],
       })
     } else {
       setEditingRole(null)
       setFormData({
         name: '',
         description: '',
-        permissions: {},
+        permissions: [],
       })
     }
     setIsModalOpen(true)
@@ -48,7 +48,7 @@ function RoleManagement() {
     setFormData({
       name: '',
       description: '',
-      permissions: {},
+      permissions: [],
     })
   }
 
@@ -113,7 +113,7 @@ function RoleManagement() {
       title: '权限',
       render: (_: any, record: Role) => (
         <span className="text-sm text-gray-600">
-          {Object.keys(record.permissions || {}).length} 项权限
+          {(record.permissions || []).length} 项权限
         </span>
       ),
     },

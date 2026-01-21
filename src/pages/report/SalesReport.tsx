@@ -70,7 +70,7 @@ function SalesReport() {
     const totalAmount = filteredOrders.reduce((sum, o) => sum + o.totalAmount, 0)
     const totalOrders = filteredOrders.length
     const avgOrderAmount = totalOrders > 0 ? totalAmount / totalOrders : 0
-    const paidAmount = filteredOrders.reduce((sum, o) => sum + o.receivedAmount, 0)
+    const paidAmount = filteredOrders.reduce((sum, o) => sum + (o.receivedAmount ?? o.paidAmount), 0)
     const unpaidAmount = filteredOrders.reduce((sum, o) => sum + o.unpaidAmount, 0)
 
     return {

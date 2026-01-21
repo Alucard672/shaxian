@@ -470,7 +470,10 @@ export function generatePrintContent(data: PrintData): string {
     // 二维码（右侧）
     if (template.otherElements.qrcode) {
       const qrcodeCount = template.otherElements.qrcodeCount || 1
-      const qrcodeImages = template.qrcodeImages || []
+      const qrcodeImages =
+        (template.otherElements.qrcodeImages as string[] | undefined) ||
+        template.qrcodeImages ||
+        []
       html += '<div class="qrcode-container">'
       for (let i = 0; i < qrcodeCount; i++) {
         const imageUrl = qrcodeImages[i]

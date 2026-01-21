@@ -92,14 +92,15 @@ function SalesCreate() {
   // 获取当前选中商品的色号
   const colorOptions = useMemo(() => {
     if (!itemForm.productId) return []
-    const colors = getColorsByProduct(itemForm.productId)
+    const productColors = getColorsByProduct(itemForm.productId)
     
     // 如果编辑模式下已选择了色号，但该色号不在当前商品的色号列表中，也要包含它
-    const allColors = [...colors]
-    if (itemForm.colorId && !colors.find((c) => c.id === itemForm.colorId)) {
+    const allColors = [...productColors]
+    if (itemForm.colorId && !productColors.find((c) => c.id === itemForm.colorId)) {
       // 从所有色号中查找已选择的色号
-      const selectedColor = colors.find((c) => c.id === itemForm.colorId) || 
-                           productStore.colors.find((c) => c.id === itemForm.colorId)
+      const selectedColor =
+        colors.find((c) => c.id === itemForm.colorId) ||
+        productColors.find((c) => c.id === itemForm.colorId)
       if (selectedColor) {
         allColors.push(selectedColor)
       }
@@ -112,7 +113,7 @@ function SalesCreate() {
         label: `${c.code || ''} - ${c.name || ''}`.replace(/^ - | - $|^$/, '') || c.id, // 处理 undefined，如果都为空则显示 ID
         color: c,
       }))
-  }, [itemForm.productId, itemForm.colorId, getColorsByProduct, productStore.colors])
+  }, [itemForm.productId, itemForm.colorId, getColorsByProduct, colors])
 
   // 获取当前选中色号的缸号
   const batchOptions = useMemo(() => {
@@ -226,8 +227,7 @@ function SalesCreate() {
   const handleColorChange = (colorId: string) => {
     // 先从当前商品的色号中查找，如果找不到则从所有色号中查找
     const color = getColorsByProduct(itemForm.productId).find((c) => c.id === colorId) ||
-                  colors.find((c) => c.id === colorId) ||
-                  productStore.colors.find((c) => c.id === colorId)
+                  colors.find((c) => c.id === colorId)
     
     if (!color && colorId) {
       console.warn('Color not found:', colorId)

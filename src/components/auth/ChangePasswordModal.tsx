@@ -44,6 +44,10 @@ function ChangePasswordModal({ isOpen, onClose }: ChangePasswordModalProps) {
             const username = localStorage.getItem('username') || 'admin'
 
             // 调用后端API修改密码
+            if (!authApi.changePassword) {
+                throw new Error('当前客户端未实现修改密码接口')
+            }
+
             await authApi.changePassword({
                 username,
                 oldPassword,

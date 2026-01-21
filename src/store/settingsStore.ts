@@ -96,6 +96,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   inventoryAlertSettings: defaultInventoryAlertSettings,
   systemParams: defaultSystemParams,
   systemInfo: defaultSystemInfo,
+  units: [],
   loading: false,
   error: null,
 

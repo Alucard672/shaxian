@@ -183,7 +183,7 @@ export const useAccountStore = create<AccountState>((set, get) => ({
             ...r,
             receivedAmount: newReceivedAmount,
             unpaidAmount: newUnpaidAmount,
-            status: newUnpaidAmount <= 0 ? '已结清' : '未结清',
+            status: (newUnpaidAmount <= 0 ? '已结清' : '未结清') as AccountStatus,
             updatedAt: new Date().toISOString(),
           }
         })
@@ -246,7 +246,7 @@ export const useAccountStore = create<AccountState>((set, get) => ({
             ...p,
             paidAmount: newPaidAmount,
             unpaidAmount: newUnpaidAmount,
-            status: newUnpaidAmount <= 0 ? '已结清' : '未结清',
+            status: (newUnpaidAmount <= 0 ? '已结清' : '未结清') as AccountStatus,
             updatedAt: new Date().toISOString(),
           }
         })
