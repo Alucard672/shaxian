@@ -1,5 +1,12 @@
 // API基础配置
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://t.jiyizhiyun.com/api'
+const DEFAULT_API_BASE_URL =
+  typeof window !== 'undefined' &&
+  (window.location.hostname === 'localhost' ||
+    window.location.hostname === '127.0.0.1')
+    ? 'http://localhost:8080/biz/api'
+    : 'http://t.jiyizhiyun.com/api'
+
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || DEFAULT_API_BASE_URL
 
 // 通用请求函数
 async function apiRequest(endpoint, options = {}) {
