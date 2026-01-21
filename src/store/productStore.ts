@@ -1,6 +1,31 @@
 import { create } from 'zustand'
+import { persist } from 'zustand/middleware'
 import { Product, Color, Batch } from '@/types/product'
 import { productApi } from '@/api/client'
+
+// 前端特有字段的存储键
+const FRONTEND_FIELDS_KEY = 'product-frontend-fields'
+
+// 获取前端特有字段的存储
+const getFrontendFields = (): Record<string, any> => {
+  try {
+    const stored = localStorage.getItem(FRONTEND_FIELDS_KEY)
+    return stored ? JSON.parse(stored) : {}
+  } catch {
+    return {}
+  }
+}
+
+// 保存前端特有字段
+const saveFrontendFields = (productId: string, fields: any) => {
+  try {
+    const stored = getFrontendFields()
+    stored[productId] = { ...stored[productId], ...fields }
+    localStorage.setItem(FRONTEND_FIELDS_KEY, JSON.stringify(stored))
+  } catch (error) {
+    console.error('Failed to save frontend fields:', error)
+  }
+}
 
 interface ProductState {
   products: Product[]
@@ -14,6 +39,10 @@ interface ProductState {
   loadColors: (productId?: string) => Promise<void>
   loadBatches: (colorId?: string) => Promise<void>
   loadAll: () => Promise<void>
+  
+  // 商品类型映射
+  mapProductTypeToApi: (type: string) => string
+  mapProductTypeFromApi: (type: string) => string
   
   // 商品操作
   addProduct: (data: Omit<Product, 'id' | 'createdAt' | 'updatedAt'>) => Promise<Product>
@@ -48,7 +77,33 @@ export const useProductStore = create<ProductState>((set, get) => ({
     set({ loading: true, error: null })
     try {
       const products = await productApi.getAll()
-      set({ products, loading: false })
+      const frontendFields = getFrontendFields()
+      
+      // 转换商品类型为前端显示值，并保留前端特有的字段
+      const mappedProducts = products.map((p: any) => {
+        const productId = String(p.id)
+        const savedFields = frontendFields[productId] || {}
+        
+        const mappedProduct = {
+          ...p,
+          id: productId, // 确保 id 是字符串
+          type: get().mapProductTypeFromApi(p.type),
+          // 从 localStorage 恢复前端特有的字段（优先使用保存的字段，然后是后端返回的）
+          manufacturer: savedFields.hasOwnProperty('manufacturer') ? savedFields.manufacturer : (p.manufacturer || undefined),
+          needleType: savedFields.hasOwnProperty('needleType') ? savedFields.needleType : (p.needleType || undefined),
+          colorCode: savedFields.hasOwnProperty('colorCode') ? savedFields.colorCode : (p.colorCode || undefined),
+          width: savedFields.hasOwnProperty('width') ? savedFields.width : (p.width || undefined),
+          weight: savedFields.hasOwnProperty('weight') ? savedFields.weight : (p.weight || undefined),
+          images: savedFields.hasOwnProperty('images') ? savedFields.images : (p.images || undefined),
+          // 确保规格字段也存在（这是后端字段，应该直接使用）
+          specification: p.specification || undefined,
+          composition: p.composition || undefined,
+          count: p.count || undefined,
+        } as Product
+        
+        return mappedProduct
+      })
+      set({ products: mappedProducts, loading: false })
     } catch (error: any) {
       set({ error: error.message || 'Failed to load products', loading: false })
       console.error('Failed to load products:', error)
@@ -130,14 +185,68 @@ export const useProductStore = create<ProductState>((set, get) => ({
     }
   },
 
+  // 商品类型映射：前端中文 -> 后端枚举
+  mapProductTypeToApi: (type: string): string => {
+    const typeMap: Record<string, string> = {
+      '纱线': 'RAW_MATERIAL',
+      '面料': 'SEMI_FINISHED',
+    }
+    return typeMap[type] || type
+  },
+
+  // 商品类型映射：后端枚举 -> 前端中文
+  mapProductTypeFromApi: (type: string): string => {
+    const typeMap: Record<string, string> = {
+      'RAW_MATERIAL': '纱线',
+      'SEMI_FINISHED': '面料',  // 半成品映射为面料
+      'FINISHED': '面料',        // 成品也映射为面料
+    }
+    return typeMap[type] || type
+  },
+
   // 商品操作
   addProduct: async (data) => {
     try {
-      const newProduct = await productApi.create(data)
+      // 转换商品类型为后端枚举值，并只发送API文档中定义的字段
+      const apiData: any = {
+        name: data.name,
+        code: data.code,
+        type: get().mapProductTypeToApi(data.type),
+      }
+      // 可选字段
+      if (data.specification) apiData.specification = data.specification
+      if (data.composition) apiData.composition = data.composition
+      if (data.count) apiData.count = data.count
+      if (data.unit) apiData.unit = data.unit
+      if (data.isWhiteYarn !== undefined) apiData.isWhiteYarn = data.isWhiteYarn
+      if (data.description) apiData.description = data.description
+      
+      const newProduct = await productApi.create(apiData)
+      // 转换返回的商品类型为前端显示值，并保留前端特有的字段
+      const productId = String(newProduct.id)
+      const frontendFields = {
+        manufacturer: data.manufacturer,
+        needleType: data.needleType,
+        width: data.width,
+        weight: data.weight,
+        colorCode: data.colorCode,
+        images: data.images,
+      }
+      
+      // 保存前端特有字段到 localStorage
+      saveFrontendFields(productId, frontendFields)
+      
+      const mappedProduct = {
+        ...newProduct,
+        id: productId,
+        type: get().mapProductTypeFromApi(newProduct.type),
+        // 保留前端特有的字段（不在API文档中）
+        ...frontendFields,
+      }
       set((state) => ({
-        products: [...state.products, newProduct]
+        products: [...state.products, mappedProduct]
       }))
-      return newProduct
+      return mappedProduct
     } catch (error: any) {
       console.error('Failed to add product:', error)
       throw error
@@ -146,9 +255,42 @@ export const useProductStore = create<ProductState>((set, get) => ({
 
   updateProduct: async (id, data) => {
     try {
-      const updated = await productApi.update(id, data)
+      // 转换商品类型为后端枚举值，并只发送API文档中定义的字段
+      const apiData: any = {}
+      if (data.name) apiData.name = data.name
+      if (data.code) apiData.code = data.code
+      if (data.type) apiData.type = get().mapProductTypeToApi(data.type)
+      if (data.specification !== undefined) apiData.specification = data.specification
+      if (data.composition !== undefined) apiData.composition = data.composition
+      if (data.count !== undefined) apiData.count = data.count
+      if (data.unit !== undefined) apiData.unit = data.unit
+      if (data.isWhiteYarn !== undefined) apiData.isWhiteYarn = data.isWhiteYarn
+      if (data.description !== undefined) apiData.description = data.description
+      
+      const updated = await productApi.update(id, apiData)
+      // 转换返回的商品类型为前端显示值，并保留前端特有的字段
+      const currentProduct = get().products.find((p) => p.id === id)
+      const frontendFields = {
+        manufacturer: data.manufacturer !== undefined ? data.manufacturer : currentProduct?.manufacturer,
+        needleType: data.needleType !== undefined ? data.needleType : currentProduct?.needleType,
+        width: data.width !== undefined ? data.width : currentProduct?.width,
+        weight: data.weight !== undefined ? data.weight : currentProduct?.weight,
+        colorCode: data.colorCode !== undefined ? data.colorCode : currentProduct?.colorCode,
+        images: data.images !== undefined ? data.images : currentProduct?.images,
+      }
+      
+      // 保存前端特有字段到 localStorage
+      saveFrontendFields(id, frontendFields)
+      
+      const mappedProduct = {
+        ...updated,
+        id: String(updated.id),
+        type: get().mapProductTypeFromApi(updated.type),
+        // 保留前端特有的字段（不在API文档中）
+        ...frontendFields,
+      }
       set((state) => ({
-        products: state.products.map((p) => p.id === id ? updated : p)
+        products: state.products.map((p) => p.id === id ? mappedProduct : p)
       }))
     } catch (error: any) {
       console.error('Failed to update product:', error)
@@ -159,6 +301,14 @@ export const useProductStore = create<ProductState>((set, get) => ({
   deleteProduct: async (id) => {
     try {
       await productApi.delete(id)
+      // 清理 localStorage 中的前端特有字段
+      try {
+        const stored = getFrontendFields()
+        delete stored[id]
+        localStorage.setItem(FRONTEND_FIELDS_KEY, JSON.stringify(stored))
+      } catch (error) {
+        console.error('Failed to clean frontend fields:', error)
+      }
       set((state) => ({
         products: state.products.filter((p) => p.id !== id),
         colors: state.colors.filter((c) => c.productId !== id),

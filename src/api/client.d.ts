@@ -43,6 +43,26 @@ export interface AuthApi {
         newPassword: string
     }) => Promise<{ message: string }>
     getMe?: (username: string) => Promise<any>
+    register: (data: { phone: string; password: string; tenantCode?: string }) => Promise<any>
+}
+
+export interface Tenant {
+    id: number
+    name: string
+    code: string
+    address: string
+    contactPerson?: string
+    phone?: string
+    status: 'ACTIVE' | 'INACTIVE'
+    expiresAt?: string
+    createdAt?: string
+    updatedAt?: string
+}
+
+export interface TenantApi {
+    createTenant: (data: { name: string; address: string }) => Promise<Tenant>
+    getUserTenants: () => Promise<any[]>
+    switchTenant: (tenantId: number) => Promise<any>
 }
 
 export interface ContactApi {
@@ -149,5 +169,6 @@ export const purchaseApi: PurchaseApi
 export const salesApi: SalesApi
 export const dyeingApi: DyeingApi
 export const inventoryApi: InventoryApi
+export const tenantApi: TenantApi
 
 export default api

@@ -3,9 +3,11 @@ import { useEffect, useState } from 'react'
 import Layout from './components/layout/Layout'
 import Dashboard from './pages/Dashboard'
 import Login from './pages/auth/Login'
+import Register from './pages/auth/Register'
 
 // 商品管理
 import ProductManagement from './pages/product/ProductManagement'
+import BarcodePrint from './pages/product/BarcodePrint'
 
 // 往来单位
 import ContactManagement from './pages/contact/ContactManagement'
@@ -48,6 +50,7 @@ import FundReport from './pages/report/FundReport'
 // 打印管理
 import PrintSettings from './pages/settings/PrintSettings'
 import TemplateEdit from './pages/print/TemplateEdit'
+import BarcodeTemplateEdit from './pages/print/BarcodeTemplateEdit'
 
 // 系统设置
 import SettingsManagement from './pages/settings/SettingsManagement'
@@ -59,11 +62,16 @@ import InventoryAlertSettings from './pages/settings/InventoryAlertSettings'
 import SystemParamsSettings from './pages/settings/SystemParamsSettings'
 import TutorialManagement from './pages/settings/TutorialManagement'
 import ClearData from './pages/settings/ClearData'
+import BasicDataManagement from './pages/settings/BasicDataManagement'
+import UnitManagement from './pages/settings/UnitManagement'
 
 // 租户管理
 import TenantSelect from './pages/tenant/TenantSelect'
-import TenantManagement from './pages/tenant/TenantManagement'
-import TenantUserManagement from './pages/tenant/TenantUserManagement'
+// import TenantManagement from './pages/tenant/TenantManagement'
+// import TenantUserManagement from './pages/tenant/TenantUserManagement'
+
+// 个人中心
+import Profile from './pages/profile/Profile'
 
 // 路由保护组件
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -89,6 +97,9 @@ function App() {
         {/* 登录页面 */}
         <Route path="/login" element={<Login />} />
 
+        {/* 注册页面 */}
+        <Route path="/register" element={<Register />} />
+
         {/* 租户选择页面 */}
         <Route path="/tenant/select" element={<TenantSelect />} />
 
@@ -108,6 +119,14 @@ function App() {
           element={
             <ProtectedRoute>
               <ProductManagement />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/products/barcode-print"
+          element={
+            <ProtectedRoute>
+              <BarcodePrint />
             </ProtectedRoute>
           }
         />
@@ -367,6 +386,14 @@ function App() {
             </ProtectedRoute>
           }
         />
+        <Route
+          path="/settings/print/barcode-template/:id"
+          element={
+            <ProtectedRoute>
+              <BarcodeTemplateEdit />
+            </ProtectedRoute>
+          }
+        />
 
         {/* 系统设置 */}
         <Route
@@ -441,9 +468,25 @@ function App() {
             </ProtectedRoute>
           }
         />
-
-        {/* 租户管理 */}
         <Route
+          path="/settings/basic-data"
+          element={
+            <ProtectedRoute>
+              <BasicDataManagement />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/settings/basic-data/units"
+          element={
+            <ProtectedRoute>
+              <UnitManagement />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* 租户管理 - 已移除 */}
+        {/* <Route
           path="/tenant"
           element={
             <ProtectedRoute>
@@ -456,6 +499,16 @@ function App() {
           element={
             <ProtectedRoute>
               <TenantUserManagement />
+            </ProtectedRoute>
+          }
+        /> */}
+
+        {/* 个人中心 */}
+        <Route
+          path="/profile"
+          element={
+            <ProtectedRoute>
+              <Profile />
             </ProtectedRoute>
           }
         />

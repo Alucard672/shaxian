@@ -1,5 +1,5 @@
 // 商品类型
-export type ProductType = '原料' | '半成品' | '成品'
+export type ProductType = '纱线' | '面料'
 
 // 色号状态
 export type ColorStatus = '在售' | '停售'
@@ -16,10 +16,18 @@ export interface Product {
   type: ProductType
   isWhiteYarn?: boolean
   description?: string
+  manufacturer?: string // 厂家
   // 双单位相关字段
-  auxiliaryUnit?: string // 辅助单位（如：件）
-  unitWeight?: number // 单件重量
   enableDualUnit?: boolean // 是否启用双单位
+  primaryUnit?: string // 一级单位（如：打）
+  secondaryUnit?: string // 子单位（如：支）
+  unitConversion?: number // 换算重量（如：1打 = 12支，则值为12）
+  // 新增字段
+  needleType?: string // 针型（纱线专用）
+  width?: string // 幅宽（面料专用）
+  weight?: string // 克重（面料专用）
+  colorCode?: string // 色号
+  images?: string[] // 图片URL数组，最多9张
   tenantId?: string
   createdAt: string
   updatedAt: string

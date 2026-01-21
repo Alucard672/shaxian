@@ -302,6 +302,10 @@ export function generatePrintContent(data: PrintData): string {
       'colorName',
       'colorCode',
       'batchCode',
+      'needleType',
+      'count',
+      'width',
+      'weight',
       'quantity',
       'unit',
       'price',
@@ -380,6 +384,18 @@ export function generatePrintContent(data: PrintData): string {
               break;
             case 'stockLocation': 
               content = (item as any).stockLocation || ''; 
+              break;
+            case 'needleType': 
+              content = (item as any).needleType || (item as any).product?.needleType || ''; 
+              break;
+            case 'count': 
+              content = (item as any).count || (item as any).product?.count || ''; 
+              break;
+            case 'width': 
+              content = (item as any).width || (item as any).product?.width || ''; 
+              break;
+            case 'weight': 
+              content = (item as any).weight || (item as any).product?.weight || ''; 
               break;
             case 'remark': 
               content = (item as any).remark || ''; 

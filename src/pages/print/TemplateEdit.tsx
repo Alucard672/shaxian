@@ -1,14 +1,15 @@
 import { useState, useEffect } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { templateApi } from '@/api/client'
 import { generatePrintContent } from '@/utils/printService'
 import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
-import { Save, ArrowLeft, FileText, Type, Info, Package, Calculator, QrCode, Eye, Upload, X } from 'lucide-react'
+import { Save, ArrowLeft, FileText, Type, Info, Package, Calculator, QrCode, Eye, Upload, X, Barcode } from 'lucide-react'
 
 function TemplateEdit() {
   const navigate = useNavigate()
   const { id } = useParams<{ id: string }>()
+  const [searchParams] = useSearchParams()
   const isNew = id === 'new'
   const [loading, setLoading] = useState(false)
   const [showPreview, setShowPreview] = useState(false)
@@ -58,6 +59,10 @@ function TemplateEdit() {
       unitWeight: false,
       productionDate: false,
       stockLocation: false,
+      needleType: false,
+      count: false,
+      width: false,
+      weight: false,
       remark: true,
       textAlign: 'left',
     },
@@ -77,13 +82,31 @@ function TemplateEdit() {
       cornerMark: false,
       pageNumber: true,
     },
+    barcodeSettings: {
+      width: 2,
+      height: 60,
+      format: 'CODE128' as 'CODE128' | 'EAN13' | 'EAN8' | 'CODE39',
+      displayValue: true,
+      fontSize: 14,
+      textMargin: 2,
+      margin: 10,
+    },
   })
 
   useEffect(() => {
-    if (!isNew && id) {
+    // 如果是新建模板，检查URL参数中是否有documentType
+    if (isNew) {
+      const documentType = searchParams.get('documentType')
+      if (documentType) {
+        setFormData((prev) => ({
+          ...prev,
+          documentType: documentType as any,
+        }))
+      }
+    } else if (id) {
       loadTemplate(id)
     }
-  }, [id, isNew])
+  }, [id, isNew, searchParams])
 
   // 当模板类型改变时，自动设置页面大小（仅在用户手动切换时，不在加载模板时）
   useEffect(() => {
@@ -202,6 +225,7 @@ function TemplateEdit() {
           ...parseJsonField(data.otherElements, {}),
           qrcodeImages: data.otherElements?.qrcodeImages || formData.otherElements.qrcodeImages || [],
         },
+        barcodeSettings: parseJsonField(data.barcodeSettings, formData.barcodeSettings),
       })
     } catch (error: any) {
       console.error('Failed to load template:', error)
@@ -257,19 +281,21 @@ function TemplateEdit() {
           unitWeight: 12.5,
           productionDate: '2025-01-01',
           stockLocation: 'A区-01',
+          needleType: '18G',
+          count: '32s',
           remark: '测试商品',
         },
         {
           productId: 'P002',
           productCode: 'P002',
-          productName: '40S纯棉纱线',
+          productName: '纯棉面料',
           colorId: 'C002',
           colorName: '蓝色',
           colorCode: 'C002',
           batchId: 'B002',
           batchCode: 'B20250102',
           quantity: 50,
-          unit: 'kg',
+          unit: 'm',
           price: 30.0,
           unitPrice: 30.0,
           amount: 1500,
@@ -277,6 +303,8 @@ function TemplateEdit() {
           unitWeight: 12.5,
           productionDate: '2025-01-02',
           stockLocation: 'A区-02',
+          width: '150cm',
+          weight: '180g/m²',
           remark: '',
         },
       ],
@@ -419,6 +447,10 @@ function TemplateEdit() {
       unitWeight: '单件重量',
       productionDate: '生产日期',
       stockLocation: '库存位置',
+      needleType: '针型',
+      count: '支数',
+      width: '幅宽',
+      weight: '克重',
       remark: '备注',
     },
     summaryFields: {
@@ -513,6 +545,7 @@ function TemplateEdit() {
               >
                 <option value="销售单">销售单</option>
                 <option value="进货单">进货单</option>
+                <option value="条码打印">条码打印</option>
               </select>
             </div>
 
@@ -800,7 +833,8 @@ function TemplateEdit() {
           )}
         </div>
 
-        {/* 基础信息字段 */}
+        {/* 基础信息字段（当单据类型不是条码打印时显示） */}
+        {formData.documentType !== '条码打印' && (
         <div className="space-y-4 pt-6 border-t border-gray-200">
           <div className="flex items-center gap-2">
             <Info className="w-5 h-5 text-blue-600" />
@@ -832,8 +866,120 @@ function TemplateEdit() {
             ))}
           </div>
         </div>
+        )}
 
-        {/* 商品字段 */}
+        {/* 条码设置（当单据类型为条码打印时显示） */}
+        {formData.documentType === '条码打印' && (
+          <div className="space-y-4 pt-6 border-t border-gray-200">
+            <div className="flex items-center gap-2">
+              <Barcode className="w-5 h-5 text-blue-600" />
+              <h2 className="text-lg font-semibold text-gray-900">条码设置</h2>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">条码格式</label>
+                <select
+                  value={formData.barcodeSettings.format}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      barcodeSettings: {
+                        ...formData.barcodeSettings,
+                        format: e.target.value as any,
+                      },
+                    })
+                  }
+                  className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="CODE128">CODE128</option>
+                  <option value="EAN13">EAN13</option>
+                  <option value="EAN8">EAN8</option>
+                  <option value="CODE39">CODE39</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">条码宽度</label>
+                <Input
+                  type="number"
+                  value={formData.barcodeSettings.width}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      barcodeSettings: {
+                        ...formData.barcodeSettings,
+                        width: parseFloat(e.target.value) || 2,
+                      },
+                    })
+                  }
+                  className="w-full"
+                  min={1}
+                  max={5}
+                  step={0.5}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">条码高度</label>
+                <Input
+                  type="number"
+                  value={formData.barcodeSettings.height}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      barcodeSettings: {
+                        ...formData.barcodeSettings,
+                        height: parseInt(e.target.value) || 60,
+                      },
+                    })
+                  }
+                  className="w-full"
+                  min={20}
+                  max={200}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">字体大小</label>
+                <Input
+                  type="number"
+                  value={formData.barcodeSettings.fontSize}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      barcodeSettings: {
+                        ...formData.barcodeSettings,
+                        fontSize: parseInt(e.target.value) || 14,
+                      },
+                    })
+                  }
+                  className="w-full"
+                  min={8}
+                  max={24}
+                />
+              </div>
+              <div className="col-span-2">
+                <label className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={formData.barcodeSettings.displayValue}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        barcodeSettings: {
+                          ...formData.barcodeSettings,
+                          displayValue: e.target.checked,
+                        },
+                      })
+                    }
+                    className="w-4 h-4"
+                  />
+                  <span className="text-sm text-gray-700">显示条码值</span>
+                </label>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 商品字段（当单据类型不是条码打印时显示） */}
+        {formData.documentType !== '条码打印' && (
         <div className="space-y-4 pt-6 border-t border-gray-200">
           <div className="flex items-center gap-2">
             <Package className="w-5 h-5 text-blue-600" />
@@ -886,6 +1032,10 @@ function TemplateEdit() {
                       unitWeight: false,
                       productionDate: false,
                       stockLocation: false,
+                      needleType: false,
+                      count: false,
+                      width: false,
+                      weight: false,
                       remark: true,
                       textAlign: 'left',
                     }
@@ -951,8 +1101,10 @@ function TemplateEdit() {
             </>
           )}
         </div>
+        )}
 
-        {/* 汇总字段 */}
+        {/* 汇总字段（当单据类型不是条码打印时显示） */}
+        {formData.documentType !== '条码打印' && (
         <div className="space-y-4 pt-6 border-t border-gray-200">
           <div className="flex items-center gap-2">
             <Calculator className="w-5 h-5 text-blue-600" />
@@ -984,6 +1136,7 @@ function TemplateEdit() {
             ))}
           </div>
         </div>
+        )}
 
         {/* 其他元素 */}
         <div className="space-y-4 pt-6 border-t border-gray-200">

@@ -1,12 +1,17 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useProductStore } from '@/store/productStore'
+import { useSettingsStore } from '@/store/settingsStore'
 import { Product, Color } from '@/types/product'
 import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
 import Table from '@/components/ui/Table'
-import { Plus, Edit, Trash2, Save, Package, Search, Palette } from 'lucide-react'
+import ManufacturerSelect from '@/components/ui/ManufacturerSelect'
+import { Plus, Edit, Trash2, Save, Package, Search, Palette, Upload, X, Image as ImageIcon, Barcode } from 'lucide-react'
+import ColorPicker from '@/components/ui/ColorPicker'
 
 function ProductManagement() {
+  const navigate = useNavigate()
   const {
     products,
     colors,
@@ -21,6 +26,8 @@ function ProductManagement() {
     deleteColor,
     getColorsByProduct,
   } = useProductStore()
+  
+  const { units, loadUnits } = useSettingsStore()
 
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingProduct, setEditingProduct] = useState<Product | null>(null)
@@ -42,18 +49,29 @@ function ProductManagement() {
     composition: '',
     count: '',
     unit: 'kg',
-    type: '原料' as '原料' | '半成品' | '成品',
+    type: '纱线' as '纱线' | '面料',
     isWhiteYarn: false,
     description: '',
-    auxiliaryUnit: '',
-    unitWeight: 0,
-    enableDualUnit: false,
+    manufacturer: '', // 厂家
+    needleType: '',
+    width: '',
+    weight: '',
+    colorCode: '',
+    images: [] as string[],
   })
 
   useEffect(() => {
     loadProducts()
     loadColors()
-  }, [loadProducts, loadColors])
+    loadUnits()
+  }, [loadProducts, loadColors, loadUnits])
+
+  // 当编辑商品时，加载该商品的色号
+  useEffect(() => {
+    if (editingProduct) {
+      loadColors(editingProduct.id)
+    }
+  }, [editingProduct, loadColors])
 
   const handleOpenModal = (product?: Product) => {
     if (product) {
@@ -68,9 +86,12 @@ function ProductManagement() {
         type: product.type,
         isWhiteYarn: product.isWhiteYarn || false,
         description: product.description || '',
-        auxiliaryUnit: product.auxiliaryUnit || '',
-        unitWeight: product.unitWeight || 0,
-        enableDualUnit: product.enableDualUnit || false,
+        manufacturer: product.manufacturer || '',
+        needleType: product.needleType || '',
+        width: product.width || '',
+        weight: product.weight || '',
+        colorCode: product.colorCode || '',
+        images: product.images || [],
       })
     } else {
       setEditingProduct(null)
@@ -81,12 +102,15 @@ function ProductManagement() {
         composition: '',
         count: '',
         unit: 'kg',
-        type: '原料',
+        type: '纱线',
         isWhiteYarn: false,
         description: '',
-        auxiliaryUnit: '',
-        unitWeight: 0,
-        enableDualUnit: false,
+        manufacturer: '',
+        needleType: '',
+        width: '',
+        weight: '',
+        colorCode: '',
+        images: [],
       })
     }
     setIsModalOpen(true)
@@ -102,12 +126,15 @@ function ProductManagement() {
       composition: '',
       count: '',
       unit: 'kg',
-      type: '原料',
+      type: '纱线',
       isWhiteYarn: false,
       description: '',
-      auxiliaryUnit: '',
-      unitWeight: 0,
-      enableDualUnit: false,
+      manufacturer: '',
+      needleType: '',
+      width: '',
+      weight: '',
+      colorCode: '',
+      images: [],
     })
   }
 
@@ -192,6 +219,11 @@ function ProductManagement() {
       return
     }
 
+    if (!colorFormData.colorValue || !colorFormData.colorValue.trim()) {
+      alert('请选择颜色值')
+      return
+    }
+
     try {
       if (editingColor) {
         await updateColor(editingColor.id, colorFormData)
@@ -228,7 +260,9 @@ function ProductManagement() {
     return (
       product.name.toLowerCase().includes(keyword) ||
       product.code.toLowerCase().includes(keyword) ||
-      (product.specification && product.specification.toLowerCase().includes(keyword))
+      (product.composition && product.composition.toLowerCase().includes(keyword)) ||
+      (product.needleType && product.needleType.toLowerCase().includes(keyword)) ||
+      (product.colorCode && product.colorCode.toLowerCase().includes(keyword))
     )
   })
 
@@ -249,11 +283,36 @@ function ProductManagement() {
       ),
     },
     {
-      key: 'specification',
-      title: '规格',
+      key: 'needleType',
+      title: '针型',
       render: (_: any, record: Product) => (
-        <span className="text-sm text-gray-600">{record.specification || '-'}</span>
+        <span className="text-sm text-gray-600">{record.needleType || '-'}</span>
       ),
+    },
+    {
+      key: 'colorCode',
+      title: '色号',
+      render: (_: any, record: Product) => {
+        if (!record.colorCode) return <span className="text-sm text-gray-600">-</span>
+        // 查找对应的色号
+        const color = colors.find((c) => c.id === record.colorCode)
+        if (color) {
+          return (
+            <div className="flex items-center gap-2">
+              {color.colorValue && (
+                <div
+                  className="w-5 h-5 rounded border border-gray-300"
+                  style={{ backgroundColor: color.colorValue }}
+                />
+              )}
+              <span className="text-sm text-gray-600">
+                {color.colorValue ? `${color.colorValue} ${color.name}` : `${color.code} - ${color.name}`}
+              </span>
+            </div>
+          )
+        }
+        return <span className="text-sm text-gray-600">{record.colorCode}</span>
+      },
     },
     {
       key: 'unit',
@@ -270,12 +329,17 @@ function ProductManagement() {
       ),
     },
     {
-      key: 'enableDualUnit',
-      title: '双单位',
+      key: 'manufacturer',
+      title: '厂家',
       render: (_: any, record: Product) => (
-        <span className="text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-700">
-          {record.enableDualUnit ? '启用' : '未启用'}
-        </span>
+        <span className="text-sm text-gray-600">{record.manufacturer || '-'}</span>
+      ),
+    },
+    {
+      key: 'composition',
+      title: '成分',
+      render: (_: any, record: Product) => (
+        <span className="text-sm text-gray-600">{record.composition || '-'}</span>
       ),
     },
     {
@@ -308,6 +372,17 @@ function ProductManagement() {
           <Button
             variant="ghost"
             size="sm"
+            onClick={() => {
+              navigate(`/products/barcode-print?productId=${record.id}`)
+            }}
+            className="p-1.5 hover:bg-green-50 rounded-xl"
+            title="打印条码"
+          >
+            <Barcode className="w-4 h-4 text-green-600" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={() => handleOpenModal(record)}
             className="p-1.5 hover:bg-gray-100 rounded-xl"
           >
@@ -334,13 +409,22 @@ function ProductManagement() {
           <h1 className="text-2xl font-semibold text-gray-900">商品管理</h1>
           <p className="text-sm text-gray-600 mt-1">管理商品、色号、缸号信息</p>
         </div>
-        <Button
-          onClick={() => handleOpenModal()}
-          className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg"
-        >
-          <Plus className="w-4 h-4 mr-2" />
-          新建商品
-        </Button>
+        <div className="flex items-center gap-3">
+          <Button
+            onClick={() => navigate('/products/barcode-print')}
+            className="px-6 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg"
+          >
+            <Barcode className="w-4 h-4 mr-2" />
+            打印条码
+          </Button>
+          <Button
+            onClick={() => handleOpenModal()}
+            className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            新建商品
+          </Button>
+        </div>
       </div>
 
       {/* 搜索栏 */}
@@ -350,7 +434,7 @@ function ProductManagement() {
           <Input
             value={searchKeyword}
             onChange={(e) => setSearchKeyword(e.target.value)}
-            placeholder="搜索商品名称、编码、规格..."
+            placeholder="搜索商品名称、编码、成分、针型、色号..."
             className="flex-1"
           />
         </div>
@@ -366,7 +450,9 @@ function ProductManagement() {
             <p>暂无商品，点击"新建商品"创建第一个商品</p>
           </div>
         ) : (
-          <Table columns={columns} data={filteredProducts} rowKey={(record) => record.id} />
+          <div className="overflow-x-auto">
+            <Table columns={columns} data={filteredProducts} rowKey={(record) => record.id} />
+          </div>
         )}
       </div>
 
@@ -402,15 +488,6 @@ function ProductManagement() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">规格</label>
-                  <Input
-                    value={formData.specification}
-                    onChange={(e) => setFormData({ ...formData, specification: e.target.value })}
-                    placeholder="请输入规格"
-                    className="w-full"
-                  />
-                </div>
-                <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">成分</label>
                   <Input
                     value={formData.composition}
@@ -420,12 +497,11 @@ function ProductManagement() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">支数</label>
-                  <Input
-                    value={formData.count}
-                    onChange={(e) => setFormData({ ...formData, count: e.target.value })}
-                    placeholder="请输入支数"
-                    className="w-full"
+                  <label className="block text-sm font-medium text-gray-700 mb-2">厂家</label>
+                  <ManufacturerSelect
+                    value={formData.manufacturer || ''}
+                    onChange={(value) => setFormData({ ...formData, manufacturer: value })}
+                    placeholder="输入拼音或中文搜索厂家，支持快速新增"
                   />
                 </div>
                 <div>
@@ -435,11 +511,11 @@ function ProductManagement() {
                     onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
-                    <option value="kg">kg</option>
-                    <option value="g">g</option>
-                    <option value="ton">ton</option>
-                    <option value="斤">斤</option>
-                    <option value="件">件</option>
+                    {units.filter(u => u.isEnabled).map((unit) => (
+                      <option key={unit.id} value={unit.name}>
+                        {unit.name}
+                      </option>
+                    ))}
                   </select>
                 </div>
                 <div>
@@ -447,66 +523,166 @@ function ProductManagement() {
                   <select
                     value={formData.type}
                     onChange={(e) =>
-                      setFormData({ ...formData, type: e.target.value as '原料' | '半成品' | '成品' })
+                      setFormData({ ...formData, type: e.target.value as '纱线' | '面料' })
                     }
                     className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
-                    <option value="原料">原料</option>
-                    <option value="半成品">半成品</option>
-                    <option value="成品">成品</option>
+                    <option value="纱线">纱线</option>
+                    <option value="面料">面料</option>
                   </select>
                 </div>
-                <div className="col-span-2">
-                  <label className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      checked={formData.isWhiteYarn}
-                      onChange={(e) => setFormData({ ...formData, isWhiteYarn: e.target.checked })}
-                      className="w-4 h-4"
-                    />
-                    <span className="text-sm font-medium text-gray-700">白坯纱线</span>
-                  </label>
-                </div>
-                <div className="col-span-2">
-                  <label className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      checked={formData.enableDualUnit}
-                      onChange={(e) =>
-                        setFormData({ ...formData, enableDualUnit: e.target.checked })
-                      }
-                      className="w-4 h-4"
-                    />
-                    <span className="text-sm font-medium text-gray-700">启用双单位</span>
-                  </label>
-                </div>
-                {formData.enableDualUnit && (
+                {/* 纱线类型字段 */}
+                {formData.type === '纱线' && (
                   <>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">辅助单位</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">针型</label>
                       <Input
-                        value={formData.auxiliaryUnit}
-                        onChange={(e) =>
-                          setFormData({ ...formData, auxiliaryUnit: e.target.value })
-                        }
-                        placeholder="如：件、包"
+                        value={formData.needleType}
+                        onChange={(e) => setFormData({ ...formData, needleType: e.target.value })}
+                        placeholder="请输入针型"
                         className="w-full"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">单件重量</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">支数</label>
                       <Input
-                        type="number"
-                        value={formData.unitWeight}
-                        onChange={(e) =>
-                          setFormData({ ...formData, unitWeight: parseFloat(e.target.value) || 0 })
-                        }
-                        placeholder="请输入单件重量"
+                        value={formData.count}
+                        onChange={(e) => setFormData({ ...formData, count: e.target.value })}
+                        placeholder="请输入支数"
+                        className="w-full"
+                      />
+                    </div>
+                    <div className="col-span-2">
+                      <label className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={formData.isWhiteYarn}
+                          onChange={(e) => setFormData({ ...formData, isWhiteYarn: e.target.checked })}
+                          className="w-4 h-4"
+                        />
+                        <span className="text-sm font-medium text-gray-700">白坯纱线</span>
+                      </label>
+                    </div>
+                  </>
+                )}
+                {/* 面料类型字段 */}
+                {formData.type === '面料' && (
+                  <>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">幅宽</label>
+                      <Input
+                        value={formData.width}
+                        onChange={(e) => setFormData({ ...formData, width: e.target.value })}
+                        placeholder="请输入幅宽"
+                        className="w-full"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">克重</label>
+                      <Input
+                        value={formData.weight}
+                        onChange={(e) => setFormData({ ...formData, weight: e.target.value })}
+                        placeholder="请输入克重"
                         className="w-full"
                       />
                     </div>
                   </>
                 )}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">色号</label>
+                  {editingProduct ? (
+                    <>
+                      <select
+                        value={formData.colorCode}
+                        onChange={(e) => setFormData({ ...formData, colorCode: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value="">请选择色号</option>
+                        {getColorsByProduct(editingProduct.id).map((color) => (
+                          <option key={color.id} value={color.id}>
+                            {color.colorValue ? `${color.colorValue} ${color.name}` : `${color.code} - ${color.name}`}
+                          </option>
+                        ))}
+                      </select>
+                      {getColorsByProduct(editingProduct.id).length === 0 && (
+                        <div className="text-xs text-orange-600 mt-1">
+                          该商品暂无色号，请先<a href="#" onClick={(e) => { e.preventDefault(); handleManageColors(editingProduct); }} className="underline">添加色号</a>
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <div className="px-3 py-2 border border-gray-200 rounded-xl text-sm bg-gray-100 text-gray-500">
+                      请先保存商品后再选择色号
+                    </div>
+                  )}
+                </div>
+                <div className="col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    商品图片 <span className="text-gray-500 text-xs">(最多9张)</span>
+                  </label>
+                  <div className="grid grid-cols-3 gap-3">
+                    {formData.images.map((image, index) => (
+                      <div key={index} className="relative group">
+                        <img
+                          src={image}
+                          alt={`商品图片 ${index + 1}`}
+                          className="w-full h-32 object-cover rounded-lg border border-gray-200"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const newImages = formData.images.filter((_, i) => i !== index)
+                            setFormData({ ...formData, images: newImages })
+                          }}
+                          className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ))}
+                    {formData.images.length < 9 && (
+                      <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-blue-500 transition-colors">
+                        <Upload className="w-6 h-6 text-gray-400 mb-2" />
+                        <span className="text-xs text-gray-500">上传图片</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          multiple
+                          className="hidden"
+                          onChange={(e) => {
+                            const files = Array.from(e.target.files || [])
+                            const remainingSlots = 9 - formData.images.length
+                            if (files.length > remainingSlots) {
+                              alert(`最多只能上传${remainingSlots}张图片`)
+                              files.splice(remainingSlots)
+                            }
+                            
+                            const newImages: string[] = []
+                            let loadedCount = 0
+                            
+                            files.forEach((file) => {
+                              const reader = new FileReader()
+                              reader.onload = (event) => {
+                                const base64 = event.target?.result as string
+                                newImages.push(base64)
+                                loadedCount++
+                                if (loadedCount === files.length) {
+                                  setFormData({
+                                    ...formData,
+                                    images: [...formData.images, ...newImages],
+                                  })
+                                }
+                              }
+                              reader.readAsDataURL(file)
+                            })
+                            // 重置input，以便可以再次选择相同的文件
+                            e.target.value = ''
+                          }}
+                        />
+                      </label>
+                    )}
+                  </div>
+                </div>
                 <div className="col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-2">描述</label>
                   <textarea
@@ -575,20 +751,22 @@ function ProductManagement() {
                         className="bg-white rounded-lg p-4 border border-gray-200 flex items-center justify-between"
                       >
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center">
-                            <Palette className="w-5 h-5 text-purple-600" />
-                          </div>
-                          <div>
-                            <div className="text-sm font-medium text-gray-900">
-                              {color.code} - {color.name}
+                          {color.colorValue ? (
+                            <div
+                              className="w-10 h-10 rounded border-2 border-gray-300 flex-shrink-0"
+                              style={{ backgroundColor: color.colorValue }}
+                            />
+                          ) : (
+                            <div className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center flex-shrink-0">
+                              <Palette className="w-5 h-5 text-purple-600" />
                             </div>
-                            {color.colorValue && (
-                              <div className="text-xs text-gray-500 mt-1">
-                                色值：{color.colorValue}
-                              </div>
-                            )}
+                          )}
+                          <div className="flex-1">
+                            <div className="text-sm font-medium text-gray-900">
+                              {color.colorValue ? `${color.colorValue} ${color.name}` : `${color.code} - ${color.name}`}
+                            </div>
                             <div className="text-xs text-gray-500 mt-1">
-                              状态：<span className={color.status === '在售' ? 'text-green-600' : 'text-gray-600'}>{color.status}</span>
+                              编码：{color.code} | 状态：<span className={color.status === '在售' ? 'text-green-600' : 'text-gray-600'}>{color.status}</span>
                             </div>
                           </div>
                         </div>
@@ -645,14 +823,17 @@ function ProductManagement() {
                         className="w-full"
                       />
                     </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">色值</label>
-                      <Input
-                        value={colorFormData.colorValue}
-                        onChange={(e) => setColorFormData({ ...colorFormData, colorValue: e.target.value })}
-                        placeholder="请输入色值（如：#FF0000）"
-                        className="w-full"
+                    <div className="col-span-2">
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        颜色值 <span className="text-red-500">*</span>
+                      </label>
+                      <ColorPicker
+                        value={colorFormData.colorValue || '#000000'}
+                        onChange={(color) => setColorFormData({ ...colorFormData, colorValue: color })}
                       />
+                      <div className="text-xs text-gray-500 mt-1">
+                        选择颜色后，色号将显示为：{colorFormData.colorValue || '#000000'} {colorFormData.name || '色号名称'}
+                      </div>
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">状态</label>

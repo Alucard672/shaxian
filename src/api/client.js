@@ -1,9 +1,42 @@
 // API基础配置
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api'
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://t.jiyizhiyun.com/api'
 
 // 通用请求函数
 async function apiRequest(endpoint, options = {}) {
-  const url = `${API_BASE_URL}${endpoint}`
+  // 从localStorage获取会话信息
+  let sessionId = ''
+  const userStr = localStorage.getItem('user')
+  if (userStr) {
+    try {
+      const user = JSON.parse(userStr)
+      if (user && user.sessionId) {
+        sessionId = user.sessionId
+      }
+    } catch (e) {
+      console.error('Failed to parse user session info:', e)
+    }
+  }
+
+  // 获取租户ID
+  const tenantId = localStorage.getItem('currentTenantId')
+
+  // 构建带sessionId和tenantId的URL
+  let url = `${API_BASE_URL}${endpoint}`
+  const queryParams = []
+  if (sessionId) {
+    queryParams.push(`sessionId=${sessionId}`)
+  }
+  if (tenantId) {
+    queryParams.push(`tenantId=${tenantId}`)
+    // 为了兼容某些可能使用 session.tenantId 结构的 backend
+    // queryParams.push(`session.tenantId=${tenantId}`) 
+  }
+
+  if (queryParams.length > 0) {
+    const separator = url.includes('?') ? '&' : '?'
+    url += `${separator}${queryParams.join('&')}`
+  }
+
   const defaultOptions = {
     headers: {
       'Content-Type': 'application/json',
@@ -11,9 +44,13 @@ async function apiRequest(endpoint, options = {}) {
   }
 
   // 添加租户ID到请求头
-  const tenantId = localStorage.getItem('currentTenantId')
   if (tenantId) {
     defaultOptions.headers['X-Tenant-Id'] = tenantId
+  }
+
+  // 同时在请求头中添加会话ID，以防后端需要
+  if (sessionId) {
+    defaultOptions.headers['X-Session-Id'] = sessionId
   }
 
   const config = {
@@ -27,13 +64,23 @@ async function apiRequest(endpoint, options = {}) {
 
   try {
     const response = await fetch(url, config)
-    
+    // ...
+
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({ message: '请求失败' }))
+      // API返回格式为 {success: false, message: "..."}
       throw new Error(errorData.message || `HTTP error! status: ${response.status}`)
     }
 
-    return await response.json()
+    const result = await response.json()
+
+    // 处理ApiResponse格式：{success: true, message: "...", data: {...}}
+    // 如果响应包含data字段，返回data；否则返回整个响应
+    if (result && typeof result === 'object' && 'data' in result) {
+      return result.data
+    }
+
+    return result
   } catch (error) {
     if (error.message.includes('Failed to fetch')) {
       throw new Error('无法连接到后端服务器。请确保后端服务已启动（运行 mvn spring-boot:run 在 server-springboot 目录下）')
@@ -55,97 +102,128 @@ export const authApi = {
       method: 'POST',
     })
   },
+  register: async (data) => {
+    return apiRequest('/auth/register', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+  },
+}
+
+// 租户管理API
+export const tenantApi = {
+  createTenant: async (data) => {
+    return apiRequest('/tenants', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+  },
+  getUserTenants: async () => {
+    return apiRequest('/auth/user-tenants')
+  },
+  switchTenant: async (tenantId) => {
+    return apiRequest('/auth/switch-tenant', {
+      method: 'POST',
+      body: JSON.stringify({ tenantId }),
+    })
+  },
+  joinTenant: async (code) => {
+    return apiRequest('/tenants/join', {
+      method: 'POST',
+      body: JSON.stringify({ code }),
+    })
+  },
 }
 
 // 系统设置API
 export const settingsApi = {
   // 门店信息
   getStoreInfo: async () => {
-    return apiRequest('/settings/store')
+    return apiRequest('/store')
   },
   updateStoreInfo: async (data) => {
-    return apiRequest('/settings/store', {
+    return apiRequest('/store', {
       method: 'PUT',
       body: JSON.stringify(data),
     })
   },
-  
+
   // 员工管理
   getAllEmployees: async () => {
-    return apiRequest('/settings/employees')
+    return apiRequest('/employees')
   },
   getEmployee: async (id) => {
-    return apiRequest(`/settings/employees/${id}`)
+    return apiRequest(`/employees/${id}`)
   },
   createEmployee: async (data) => {
-    return apiRequest('/settings/employees', {
+    return apiRequest('/employees', {
       method: 'POST',
       body: JSON.stringify(data),
     })
   },
   updateEmployee: async (id, data) => {
-    return apiRequest(`/settings/employees/${id}`, {
+    return apiRequest(`/employees/${id}`, {
       method: 'PUT',
       body: JSON.stringify(data),
     })
   },
   deleteEmployee: async (id) => {
-    return apiRequest(`/settings/employees/${id}`, {
+    return apiRequest(`/employees/${id}`, {
       method: 'DELETE',
     })
   },
-  
+
   // 角色管理
   getAllRoles: async () => {
-    return apiRequest('/settings/roles')
+    return apiRequest('/roles')
   },
   createRole: async (data) => {
-    return apiRequest('/settings/roles', {
+    return apiRequest('/roles', {
       method: 'POST',
       body: JSON.stringify(data),
     })
   },
   updateRole: async (id, data) => {
-    return apiRequest(`/settings/roles/${id}`, {
+    return apiRequest(`/roles/${id}`, {
       method: 'PUT',
       body: JSON.stringify(data),
     })
   },
   deleteRole: async (id) => {
-    return apiRequest(`/settings/roles/${id}`, {
+    return apiRequest(`/roles/${id}`, {
       method: 'DELETE',
     })
   },
-  
+
   // 自定义查询
   getAllQueries: async (params) => {
     const queryString = params ? '?' + new URLSearchParams(params).toString() : ''
-    return apiRequest(`/settings/queries${queryString}`)
+    return apiRequest(`/queries${queryString}`)
   },
   createQuery: async (data) => {
-    return apiRequest('/settings/queries', {
+    return apiRequest('/queries', {
       method: 'POST',
       body: JSON.stringify(data),
     })
   },
-  
+
   // 库存预警设置
   getInventoryAlert: async () => {
-    return apiRequest('/settings/inventory-alert')
+    return apiRequest('/inventory-alert')
   },
   updateInventoryAlert: async (data) => {
-    return apiRequest('/settings/inventory-alert', {
+    return apiRequest('/inventory-alert', {
       method: 'PUT',
       body: JSON.stringify(data),
     })
   },
-  
+
   // 系统参数
   getParams: async () => {
-    return apiRequest('/settings/params')
+    return apiRequest('/system-params')
   },
   updateParams: async (data) => {
-    return apiRequest('/settings/params', {
+    return apiRequest('/system-params', {
       method: 'PUT',
       body: JSON.stringify(data),
     })
@@ -178,7 +256,7 @@ export const accountApi = {
     // 注意：后端可能没有单独的获取所有收款记录的接口，这里返回空数组
     return []
   },
-  
+
   // 应付账款
   getAllPayables: async (params) => {
     const queryString = params ? '?' + new URLSearchParams(params).toString() : ''
@@ -231,7 +309,7 @@ export const contactApi = {
       method: 'DELETE',
     })
   },
-  
+
   // 供应商管理
   getAllSuppliers: async () => {
     return apiRequest('/contacts/suppliers')
@@ -261,8 +339,17 @@ export const contactApi = {
 // 采购API
 export const purchaseApi = {
   getAll: async (params) => {
-    const queryString = params ? '?' + new URLSearchParams(params).toString() : ''
-    return apiRequest(`/purchases${queryString}`)
+    // API文档要求：request参数是必需的，需要包装查询参数
+    // 同时支持pageNo和pageSize参数
+    const request = params || {}
+    const pageNo = params?.pageNo || 1
+    const pageSize = params?.pageSize || 100
+    // 构建查询字符串：pageNo, pageSize, request
+    const queryParams = new URLSearchParams()
+    queryParams.append('pageNo', pageNo.toString())
+    queryParams.append('pageSize', pageSize.toString())
+    queryParams.append('request', JSON.stringify(request))
+    return apiRequest(`/purchases?${queryParams.toString()}`)
   },
   getById: async (id) => {
     return apiRequest(`/purchases/${id}`)
@@ -289,8 +376,17 @@ export const purchaseApi = {
 // 销售API
 export const salesApi = {
   getAll: async (params) => {
-    const queryString = params ? '?' + new URLSearchParams(params).toString() : ''
-    return apiRequest(`/sales${queryString}`)
+    // API文档要求：request参数是必需的，需要包装查询参数
+    // 同时支持pageNo和pageSize参数
+    const request = params || {}
+    const pageNo = params?.pageNo || 1
+    const pageSize = params?.pageSize || 100
+    // 构建查询字符串：pageNo, pageSize, request
+    const queryParams = new URLSearchParams()
+    queryParams.append('pageNo', pageNo.toString())
+    queryParams.append('pageSize', pageSize.toString())
+    queryParams.append('request', JSON.stringify(request))
+    return apiRequest(`/sales?${queryParams.toString()}`)
   },
   getById: async (id) => {
     return apiRequest(`/sales/${id}`)
@@ -323,8 +419,17 @@ export const salesApi = {
 // 染色加工API
 export const dyeingApi = {
   getAll: async (params) => {
-    const queryString = params ? '?' + new URLSearchParams(params).toString() : ''
-    return apiRequest(`/dyeing${queryString}`)
+    // API文档要求：request参数是必需的，需要包装查询参数
+    // 同时支持pageNo和pageSize参数
+    const request = params || {}
+    const pageNo = params?.pageNo || 1
+    const pageSize = params?.pageSize || 100
+    // 构建查询字符串：pageNo, pageSize, request
+    const queryParams = new URLSearchParams()
+    queryParams.append('pageNo', pageNo.toString())
+    queryParams.append('pageSize', pageSize.toString())
+    queryParams.append('request', JSON.stringify(request))
+    return apiRequest(`/dyeing?${queryParams.toString()}`)
   },
   getById: async (id) => {
     return apiRequest(`/dyeing/${id}`)
@@ -375,7 +480,7 @@ export const inventoryApi = {
       method: 'DELETE',
     })
   },
-  
+
   // 库存盘点单
   getAllChecks: async (params) => {
     const queryString = params ? '?' + new URLSearchParams(params).toString() : ''
@@ -428,7 +533,7 @@ export const productApi = {
       method: 'DELETE',
     })
   },
-  
+
   // 色号管理
   getColors: async (productId) => {
     return apiRequest(`/products/${productId}/colors`)
@@ -450,7 +555,7 @@ export const productApi = {
       method: 'DELETE',
     })
   },
-  
+
   // 缸号管理
   getBatches: async (colorId) => {
     return apiRequest(`/products/colors/${colorId}/batches`)

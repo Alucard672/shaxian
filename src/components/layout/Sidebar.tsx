@@ -43,11 +43,6 @@ const menuItems: MenuItem[] = [
     label: '往来单位',
     icon: Users,
     path: '/contacts',
-    children: [
-      { id: 'contacts-all', label: '全部', icon: Users, path: '/contacts' },
-      { id: 'customer', label: '客户管理', icon: Users, path: '/customer' },
-      { id: 'supplier', label: '供应商管理', icon: Users, path: '/supplier' },
-    ],
   },
   {
     id: 'purchase',
@@ -85,12 +80,12 @@ const menuItems: MenuItem[] = [
     icon: BarChart3,
     path: '/report',
   },
-  {
-    id: 'tenant',
-    label: '租户管理',
-    icon: Building2,
-    path: '/tenant',
-  },
+  // {
+  //   id: 'tenant',
+  //   label: '租户管理',
+  //   icon: Building2,
+  //   path: '/tenant',
+  // },
   {
     id: 'settings',
     label: '系统设置',
@@ -195,7 +190,7 @@ function Sidebar() {
           })}
         </div>
       </nav>
-      
+
       {/* 设置菜单固定在底部 */}
       {settingsMenu && (
         <div className="border-t border-gray-200 pt-2 pb-4 px-3">

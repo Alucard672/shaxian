@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { StoreInfo, Employee, InventoryAlertSettings, Role, CustomQuery, SystemInfo, SystemParams } from '@/types/settings'
+import { Unit } from '@/types/unit'
 import { settingsApi } from '@/api/client'
 
 interface SettingsState {
@@ -47,6 +48,14 @@ interface SettingsState {
   // 系统参数设置
   systemParams: SystemParams
   updateSystemParams: (params: Partial<SystemParams>) => Promise<void>
+  
+  // 单位管理
+  units: Unit[]
+  loadUnits: () => Promise<void>
+  addUnit: (unit: Omit<Unit, 'id' | 'createdAt' | 'updatedAt'>) => Promise<Unit>
+  updateUnit: (id: string, unit: Partial<Unit>) => Promise<void>
+  deleteUnit: (id: string) => Promise<void>
+  getUnit: (id: string) => Unit | undefined
   
   // 系统信息
   systemInfo: SystemInfo
@@ -326,5 +335,125 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
       console.error('Failed to update system params:', error)
       throw error
     }
+  },
+  
+  // 单位管理
+  loadUnits: async () => {
+    try {
+      // 注意：API文档中没有units接口，使用本地存储
+      // 如果将来需要API支持，可以在这里添加
+      const localUnits = localStorage.getItem('units')
+      if (localUnits) {
+        set({ units: JSON.parse(localUnits) })
+      } else {
+        // 初始化默认单位
+        const defaultUnits: Unit[] = [
+          {
+            id: 'unit-001',
+            name: 'kg',
+            code: 'KG',
+            category: '重量',
+            sortOrder: 1,
+            isEnabled: true,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          },
+          {
+            id: 'unit-002',
+            name: 'g',
+            code: 'G',
+            category: '重量',
+            sortOrder: 2,
+            isEnabled: true,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          },
+          {
+            id: 'unit-003',
+            name: 'ton',
+            code: 'TON',
+            category: '重量',
+            sortOrder: 3,
+            isEnabled: true,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          },
+          {
+            id: 'unit-004',
+            name: '斤',
+            code: 'JIN',
+            category: '重量',
+            sortOrder: 4,
+            isEnabled: true,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          },
+          {
+            id: 'unit-005',
+            name: '件',
+            code: 'PIECE',
+            category: '数量',
+            sortOrder: 5,
+            isEnabled: true,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          },
+        ]
+        set({ units: defaultUnits })
+        localStorage.setItem('units', JSON.stringify(defaultUnits))
+      }
+    } catch (error: any) {
+      console.error('Failed to load units:', error)
+      // 如果出错，尝试使用本地存储的默认值
+      const localUnits = localStorage.getItem('units')
+      if (localUnits) {
+        try {
+          set({ units: JSON.parse(localUnits) })
+        } catch (e) {
+          // 如果本地存储的数据也损坏了，使用默认值
+          set({ units: [] })
+        }
+      }
+    }
+  },
+  
+  addUnit: async (unitData) => {
+    // 注意：API文档中没有units接口，直接使用本地存储
+    const newUnit: Unit = {
+      id: `unit-${Date.now()}`,
+      ...unitData,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    }
+    set((state) => ({
+      units: [...state.units, newUnit]
+    }))
+    const { units } = get()
+    localStorage.setItem('units', JSON.stringify(units))
+    return newUnit
+  },
+  
+  updateUnit: async (id, unitData) => {
+    // 注意：API文档中没有units接口，直接使用本地存储
+    set((state) => ({
+      units: state.units.map((u) =>
+        u.id === id ? { ...u, ...unitData, updatedAt: new Date().toISOString() } : u
+      )
+    }))
+    const { units } = get()
+    localStorage.setItem('units', JSON.stringify(units))
+  },
+  
+  deleteUnit: async (id) => {
+    // 注意：API文档中没有units接口，直接使用本地存储
+    set((state) => ({
+      units: state.units.filter((u) => u.id !== id)
+    }))
+    const { units } = get()
+    localStorage.setItem('units', JSON.stringify(units))
+  },
+  
+  getUnit: (id) => {
+    return get().units.find((u) => u.id === id)
   },
 }))

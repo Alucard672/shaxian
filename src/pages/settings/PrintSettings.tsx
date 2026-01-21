@@ -5,7 +5,7 @@ import { usePrintStore } from '@/store/printStore'
 import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
 import Table from '@/components/ui/Table'
-import { Plus, Edit, Trash2, FileText, Printer, Settings, ArrowLeft } from 'lucide-react'
+import { Plus, Edit, Trash2, FileText, Printer, Settings, ArrowLeft, Barcode } from 'lucide-react'
 
 interface PrintTemplate {
   id: string
@@ -25,6 +25,7 @@ function PrintSettings() {
   const [templates, setTemplates] = useState<PrintTemplate[]>([])
   const [loading, setLoading] = useState(false)
   const [selectedTab, setSelectedTab] = useState<'templates' | 'records' | 'settings'>('templates')
+  const [showTemplateTypeModal, setShowTemplateTypeModal] = useState(false)
 
   useEffect(() => {
     loadTemplates()
@@ -58,11 +59,24 @@ function PrintSettings() {
   }
 
   const handleCreateTemplate = () => {
-    navigate('/settings/print/template/new')
+    setShowTemplateTypeModal(true)
   }
 
-  const handleEditTemplate = (id: string) => {
-    navigate(`/settings/print/template/${id}`)
+  const handleSelectTemplateType = (type: 'document' | 'barcode') => {
+    setShowTemplateTypeModal(false)
+    if (type === 'document') {
+      navigate('/settings/print/template/new')
+    } else {
+      navigate('/settings/print/barcode-template/new')
+    }
+  }
+
+  const handleEditTemplate = (id: string, documentType?: string) => {
+    if (documentType === '条码打印') {
+      navigate(`/settings/print/barcode-template/${id}`)
+    } else {
+      navigate(`/settings/print/template/${id}`)
+    }
   }
 
   const printRecords = getPrintRecords()
@@ -106,7 +120,7 @@ function PrintSettings() {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => handleEditTemplate(record.id)}
+            onClick={() => handleEditTemplate(record.id, record.documentType)}
             className="p-1.5 hover:bg-gray-100 rounded-xl"
           >
             <Edit className="w-4 h-4 text-gray-600" />
@@ -275,6 +289,54 @@ function PrintSettings() {
                 <input type="checkbox" className="sr-only peer" defaultChecked />
                 <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600" />
               </label>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 模板类型选择对话框 */}
+      {showTemplateTypeModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">选择模板类型</h3>
+            <p className="text-sm text-gray-600 mb-6">请选择要创建的模板类型</p>
+            
+            <div className="space-y-3">
+              <button
+                onClick={() => handleSelectTemplateType('document')}
+                className="w-full p-4 border-2 border-gray-200 rounded-xl hover:border-blue-500 hover:bg-blue-50 transition-colors text-left"
+              >
+                <div className="flex items-center gap-3">
+                  <FileText className="w-6 h-6 text-blue-600" />
+                  <div>
+                    <div className="font-medium text-gray-900">单据模板</div>
+                    <div className="text-sm text-gray-500">用于销售单、进货单等单据打印</div>
+                  </div>
+                </div>
+              </button>
+              
+              <button
+                onClick={() => handleSelectTemplateType('barcode')}
+                className="w-full p-4 border-2 border-gray-200 rounded-xl hover:border-blue-500 hover:bg-blue-50 transition-colors text-left"
+              >
+                <div className="flex items-center gap-3">
+                  <Barcode className="w-6 h-6 text-blue-600" />
+                  <div>
+                    <div className="font-medium text-gray-900">条码模板</div>
+                    <div className="text-sm text-gray-500">用于商品条码标签打印</div>
+                  </div>
+                </div>
+              </button>
+            </div>
+            
+            <div className="mt-6 flex justify-end">
+              <Button
+                variant="ghost"
+                onClick={() => setShowTemplateTypeModal(false)}
+                className="px-4"
+              >
+                取消
+              </Button>
             </div>
           </div>
         </div>

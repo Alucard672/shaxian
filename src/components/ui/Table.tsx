@@ -31,7 +31,7 @@ function Table<T extends Record<string, any>>({
 
   return (
     <div className={cn('overflow-x-auto', className)}>
-      <table className="w-full border-collapse">
+      <table className="w-full border-collapse min-w-full">
         <thead>
           <tr className="bg-gray-50">
             {columns.map((column) => (

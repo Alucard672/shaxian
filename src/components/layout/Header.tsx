@@ -16,7 +16,8 @@ function Header() {
   const navigate = useNavigate()
   const [user, setUser] = useState<UserInfo | null>(null)
   const [showUserMenu, setShowUserMenu] = useState(false)
-  const [currentTenant, setCurrentTenant] = useState<string>('')
+  const [currentTenantName, setCurrentTenantName] = useState<string>('')
+  const [currentTenantId, setCurrentTenantId] = useState<string>('')
 
   useEffect(() => {
     // 从localStorage加载用户信息
@@ -32,8 +33,12 @@ function Header() {
 
     // 加载当前租户信息
     const tenantId = localStorage.getItem('currentTenantId')
+    const tenantName = localStorage.getItem('currentTenantName')
     if (tenantId) {
-      setCurrentTenant(tenantId)
+      setCurrentTenantId(tenantId)
+    }
+    if (tenantName) {
+      setCurrentTenantName(tenantName)
     }
   }, [])
 
@@ -62,10 +67,10 @@ function Header() {
       {/* 右侧：用户信息和操作 */}
       <div className="flex items-center gap-4">
         {/* 租户信息 */}
-        {currentTenant && (
+        {currentTenantId && (
           <div className="flex items-center gap-2 text-sm text-gray-600">
             <Building2 className="w-4 h-4" />
-            <span>租户: {currentTenant}</span>
+            <span>租户: {currentTenantName || currentTenantId}</span>
           </div>
         )}
 

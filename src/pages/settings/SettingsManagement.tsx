@@ -11,6 +11,7 @@ import {
   BookOpen,
   Trash2,
   Printer,
+  Database,
 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 
@@ -117,6 +118,18 @@ function SettingsManagement() {
       ],
     },
     {
+      id: 'basic-data',
+      title: '基础资料',
+      description: '管理系统基础数据，包括单位等基础信息',
+      icon: Database,
+      iconBg: 'bg-gradient-to-br from-teal-100 to-teal-200',
+      iconColor: '#14B8A6',
+      features: [
+        '• 单位管理',
+        '• 基础数据维护',
+      ],
+    },
+    {
       id: 'clear-data',
       title: '清空数据',
       description: '清空系统中的测试数据，用于重新开始测试',
@@ -165,6 +178,8 @@ function SettingsManagement() {
                   navigate('/settings/inventory-alert')
                 } else if (card.id === 'print') {
                   navigate('/settings/print')
+                } else if (card.id === 'basic-data') {
+                  navigate('/settings/basic-data')
                 } else if (card.id === 'clear-data') {
                   navigate('/settings/clear-data')
                 }

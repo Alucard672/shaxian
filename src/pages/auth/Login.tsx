@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { LogIn, Eye, EyeOff } from 'lucide-react'
 import Button from '@/components/ui/Button'
 
@@ -23,15 +23,13 @@ function Login() {
     setLoading(true)
     try {
       const { authApi } = await import('@/api/client')
-      const data = await authApi.login({ phone, password })
-
-      if (!data.success) {
-        setError(data.message || '登录失败')
-        return
-      }
+      // apiRequest 已经提取了 data 字段，返回的是用户信息对象
+      // API响应格式: {success: true, message: "登录成功", data: {id, name, phone, ...}}
+      // apiRequest 返回的是 data 字段的内容，即用户信息对象
+      const userData = await authApi.login({ phone, password })
 
       // 保存用户信息到localStorage
-      localStorage.setItem('user', JSON.stringify(data.user))
+      localStorage.setItem('user', JSON.stringify(userData))
       localStorage.setItem('isAuthenticated', 'true')
 
       // 登录成功，跳转到租户选择页面
@@ -117,7 +115,13 @@ function Login() {
 
         {/* 底部提示 */}
         <div className="mt-6 text-center text-sm text-gray-600">
-          <p>首次登录请使用默认密码：123456</p>
+          <p className="mb-2">首次登录请使用默认密码：123456</p>
+          <div className="flex justify-center items-center space-x-2">
+            <span>还没有账号？</span>
+            <Link to="/register" className="text-blue-600 hover:text-blue-700 font-medium">
+              立即注册
+            </Link>
+          </div>
         </div>
       </div>
     </div>
