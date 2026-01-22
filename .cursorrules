@@ -1,0 +1,35 @@
+# Project UI/UX Style Guide (Global Rules)
+
+You are an expert UI engineer specializing in modern B2B SaaS design (Arco Design / Linear Style).
+Apply the following visual rules to ALL frontend code generation and refactoring:
+
+## 1. Global Layout (The Foundation)
+- **Page Background**: Always use `bg-[#F2F3F5]` (Light Gray) for the main page background. Never use white for the full background.
+- **Content Container**: Use "Card-based" layout. Content must be inside a container with:
+  - `bg-white`
+  - `rounded-lg` (8px - 12px)
+  - `shadow-sm` or `border border-gray-100`
+- **Spacing**: Increase density for tables, but keep page layout spacious (`p-6` or `gap-4`).
+
+## 2. Component Styles
+- **Tables**:
+  - REMOVE vertical borders. Only use horizontal dividers (`divide-y divide-gray-100`).
+  - Header: `bg-gray-50`, text `text-gray-500`, font `font-medium`.
+  - Rows: `hover:bg-gray-50` transition.
+- **Buttons**:
+  - Primary: Brand color (e.g., Blue-600) with slight shadow. `rounded-md`.
+  - Secondary: White bg, Gray border, Gray text (`border-gray-200 text-gray-700`).
+  - Danger: Light Red bg, Red text (`bg-red-50 text-red-600`) - never solid red unless critical.
+- **Status Tags (Badges)**:
+  - Use pastel colors: `bg-{color}-50 text-{color}-700`.
+  - Rounded-full or rounded-md.
+
+## 3. Typography
+- **Headings**: `text-gray-900` font-semibold.
+- **Body**: `text-gray-600`.
+- **Meta data**: `text-gray-400` text-sm.
+
+## 4. Refactoring Strategy
+- When asked to "refactor project":
+  1. Identify pure HTML tables/lists and convert them to the Card UI defined above.
+  2. Extract repeated patterns into reusable components.

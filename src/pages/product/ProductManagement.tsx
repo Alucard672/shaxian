@@ -35,6 +35,7 @@ function ProductManagement() {
   const [isColorModalOpen, setIsColorModalOpen] = useState(false)
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
   const [editingColor, setEditingColor] = useState<Color | null>(null)
+  const [isColorFormOpen, setIsColorFormOpen] = useState(false)
   const [colorFormData, setColorFormData] = useState({
     code: '',
     name: '',
@@ -180,6 +181,7 @@ function ProductManagement() {
     setIsColorModalOpen(false)
     setSelectedProduct(null)
     setEditingColor(null)
+    setIsColorFormOpen(false)
     setColorFormData({
       code: '',
       name: '',
@@ -190,6 +192,7 @@ function ProductManagement() {
   }
 
   const handleOpenColorModal = (color?: Color) => {
+    setIsColorFormOpen(true)
     if (color) {
       setEditingColor(color)
       setColorFormData({
@@ -232,8 +235,15 @@ function ProductManagement() {
         await addColor(selectedProduct.id, colorFormData)
         alert('色号创建成功')
       }
-      await loadColors(selectedProduct.id)
-      handleOpenColorModal()
+      // 尝试刷新列表，如果失败也不影响（新色号已经添加到状态中了）
+      try {
+        await loadColors(selectedProduct.id)
+      } catch (loadError: any) {
+        // 加载失败不影响，因为新色号已经通过 addColor 添加到状态中了
+        console.warn('刷新色号列表失败，但新色号已保存:', loadError)
+      }
+      setIsColorFormOpen(false)
+      setEditingColor(null)
     } catch (error: any) {
       alert('保存失败：' + (error.message || '未知错误'))
     }
@@ -306,7 +316,7 @@ function ProductManagement() {
                 />
               )}
               <span className="text-sm text-gray-600">
-                {color.colorValue ? `${color.colorValue} ${color.name}` : `${color.code} - ${color.name}`}
+                {color.code} {color.name}
               </span>
             </div>
           )
@@ -600,7 +610,7 @@ function ProductManagement() {
                         <option value="">请选择色号</option>
                         {getColorsByProduct(editingProduct.id).map((color) => (
                           <option key={color.id} value={color.id}>
-                            {color.colorValue ? `${color.colorValue} ${color.name}` : `${color.code} - ${color.name}`}
+                            {color.code} {color.name}
                           </option>
                         ))}
                       </select>
@@ -721,7 +731,7 @@ function ProductManagement() {
                 onClick={handleCloseColorModal}
                 className="p-2 hover:bg-gray-100 rounded-xl transition-colors"
               >
-                <Trash2 className="w-5 h-5 text-gray-400" />
+                <X className="w-5 h-5 text-gray-400" />
               </button>
             </div>
 
@@ -763,10 +773,10 @@ function ProductManagement() {
                           )}
                           <div className="flex-1">
                             <div className="text-sm font-medium text-gray-900">
-                              {color.colorValue ? `${color.colorValue} ${color.name}` : `${color.code} - ${color.name}`}
+                              {color.code} {color.name}
                             </div>
                             <div className="text-xs text-gray-500 mt-1">
-                              编码：{color.code} | 状态：<span className={color.status === '在售' ? 'text-green-600' : 'text-gray-600'}>{color.status}</span>
+                              状态：<span className={color.status === '在售' ? 'text-green-600' : 'text-gray-600'}>{color.status}</span>
                             </div>
                           </div>
                         </div>
@@ -795,7 +805,7 @@ function ProductManagement() {
               </div>
 
               {/* 添加/编辑色号表单 */}
-              {editingColor !== null && (
+              {isColorFormOpen && (
                 <div className="bg-white rounded-xl p-4 border border-gray-200">
                   <h3 className="text-lg font-medium text-gray-900 mb-4">
                     {editingColor ? '编辑色号' : '添加色号'}
@@ -858,7 +868,7 @@ function ProductManagement() {
                     </div>
                   </div>
                   <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-200 mt-4">
-                    <Button variant="outline" onClick={() => handleOpenColorModal()}>
+                    <Button variant="outline" onClick={() => setIsColorFormOpen(false)}>
                       取消
                     </Button>
                     <Button onClick={handleSaveColor} className="bg-purple-600 hover:bg-purple-700 text-white">

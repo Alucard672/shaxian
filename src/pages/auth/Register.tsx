@@ -46,16 +46,33 @@ function Register() {
 
         setLoading(true)
         try {
+            const phoneValue = formData.phone.trim()
+            const passwordValue = formData.password
+
             await authApi.register({
-                phone: formData.phone,
-                password: formData.password,
+                phone: phoneValue,
+                password: passwordValue,
                 tenantCode: formData.tenantCode || undefined
             })
 
-            // 注册成功，跳转到登录页
-            navigate('/login', {
-                state: { message: '注册成功，请登录' }
-            })
+            // 注册成功后，自动登录并直接进入系统（企业已在 CRM 中登记，无需选择）
+            const userData = await authApi.login({ phone: phoneValue, password: passwordValue })
+            localStorage.setItem('user', JSON.stringify(userData))
+            localStorage.setItem('isAuthenticated', 'true')
+
+            // 如果用户数据中包含 tenantId，自动设置
+            const user = userData as any
+            if (user && (user.tenantId !== null && user.tenantId !== undefined)) {
+              localStorage.setItem('currentTenantId', String(user.tenantId))
+              if (user.tenantName) {
+                localStorage.setItem('currentTenantName', user.tenantName)
+              }
+              if (user.tenantCode) {
+                localStorage.setItem('currentTenantCode', user.tenantCode)
+              }
+            }
+
+            navigate('/')
         } catch (error: any) {
             setError(error.message || '注册失败，请稍后重试')
         } finally {

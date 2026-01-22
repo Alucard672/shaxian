@@ -51,6 +51,10 @@ interface ProductState {
   mapProductTypeToApi: (type: string) => string
   mapProductTypeFromApi: (type: string) => string
   
+  // 色号状态映射
+  mapColorStatusToApi: (status: string) => string
+  mapColorStatusFromApi: (status: string) => string
+  
   // 商品操作
   addProduct: (data: Omit<Product, 'id' | 'createdAt' | 'updatedAt'>) => Promise<Product>
   updateProduct: (id: string, data: Partial<Product>) => Promise<void>
@@ -122,10 +126,17 @@ export const useProductStore = create<ProductState>((set, get) => ({
     try {
       if (productId) {
         const colors = await productApi.getColors(productId)
+        // 转换后端返回的状态值为前端显示值
+        const mappedColors = colors.map((c: any) => ({
+          ...c,
+          id: String(c.id),
+          productId: String(c.productId || productId),
+          status: get().mapColorStatusFromApi(c.status || 'ON_SALE'),
+        }))
         set((state) => ({
           colors: [
             ...state.colors.filter((c) => c.productId !== productId),
-            ...colors,
+            ...mappedColors,
           ],
         }))
       } else {
@@ -135,7 +146,13 @@ export const useProductStore = create<ProductState>((set, get) => ({
         for (const product of products) {
           try {
             const colors = await productApi.getColors(product.id)
-            allColors.push(...colors)
+            const mappedColors = colors.map((c: any) => ({
+              ...c,
+              id: String(c.id),
+              productId: String(c.productId || product.id),
+              status: get().mapColorStatusFromApi(c.status || 'ON_SALE'),
+            }))
+            allColors.push(...mappedColors)
           } catch (error) {
             console.error(`Failed to load colors for product ${product.id}:`, error)
           }
@@ -144,7 +161,15 @@ export const useProductStore = create<ProductState>((set, get) => ({
       }
     } catch (error: any) {
       console.error('Failed to load colors:', error)
-      set((state) => ({ ...state, error: error.message || 'Failed to load colors' }))
+      // 500错误通常是后端问题，保留现有数据，不清空色号列表
+      const errorMessage = error?.message || ''
+      if (errorMessage.includes('500') || errorMessage.includes('系统运行异常')) {
+        console.warn('后端服务异常，保留现有色号数据。色号可能已创建成功，请稍后刷新页面查看')
+        // 不清空现有数据，只设置错误状态
+        set((state) => ({ ...state, error: '后端服务异常，无法加载色号列表。已创建的色号可能已保存成功。' }))
+      } else {
+        set((state) => ({ ...state, error: error.message || 'Failed to load colors' }))
+      }
     }
   },
 
@@ -209,6 +234,24 @@ export const useProductStore = create<ProductState>((set, get) => ({
       'FINISHED': '面料',        // 成品也映射为面料
     }
     return typeMap[type] || type
+  },
+
+  // 色号状态映射：前端中文 -> 后端枚举
+  mapColorStatusToApi: (status: string): string => {
+    const statusMap: Record<string, string> = {
+      '在售': 'ON_SALE',
+      '停售': 'DISCONTINUED',
+    }
+    return statusMap[status] || status
+  },
+
+  // 色号状态映射：后端枚举 -> 前端中文
+  mapColorStatusFromApi: (status: string): string => {
+    const statusMap: Record<string, string> = {
+      'ON_SALE': '在售',
+      'DISCONTINUED': '停售',
+    }
+    return statusMap[status] || status
   },
 
   // 商品操作
@@ -333,11 +376,27 @@ export const useProductStore = create<ProductState>((set, get) => ({
   // 色号操作
   addColor: async (productId, data) => {
     try {
-      const newColor = await productApi.createColor(productId, data)
+      // 转换前端状态值为后端枚举值
+      const apiData: any = {
+        code: data.code,
+        name: data.name,
+        status: get().mapColorStatusToApi(data.status || '在售'),
+      }
+      if (data.colorValue) apiData.colorValue = data.colorValue
+      if (data.description) apiData.description = data.description
+      
+      const newColor = await productApi.createColor(productId, apiData)
+      // 转换返回的状态值为前端显示值
+      const mappedColor = {
+        ...newColor,
+        id: String(newColor.id),
+        productId: String(newColor.productId || productId),
+        status: get().mapColorStatusFromApi(newColor.status || 'ON_SALE'),
+      }
       set((state) => ({
-        colors: [...state.colors, newColor]
+        colors: [...state.colors, mappedColor]
       }))
-      return newColor
+      return mappedColor
     } catch (error: any) {
       console.error('Failed to add color:', error)
       throw error
@@ -346,9 +405,23 @@ export const useProductStore = create<ProductState>((set, get) => ({
 
   updateColor: async (id, data) => {
     try {
-      const updated = await productApi.updateColor(id, data)
+      // 转换前端状态值为后端枚举值
+      const apiData: any = {}
+      if (data.code !== undefined) apiData.code = data.code
+      if (data.name !== undefined) apiData.name = data.name
+      if (data.status !== undefined) apiData.status = get().mapColorStatusToApi(data.status)
+      if (data.colorValue !== undefined) apiData.colorValue = data.colorValue
+      if (data.description !== undefined) apiData.description = data.description
+      
+      const updated = await productApi.updateColor(id, apiData)
+      // 转换返回的状态值为前端显示值
+      const mappedColor = {
+        ...updated,
+        id: String(updated.id),
+        status: get().mapColorStatusFromApi(updated.status || 'ON_SALE'),
+      }
       set((state) => ({
-        colors: state.colors.map((c) => c.id === id ? updated : c)
+        colors: state.colors.map((c) => c.id === id ? mappedColor : c)
       }))
     } catch (error: any) {
       console.error('Failed to update color:', error)

@@ -9,10 +9,10 @@
 在 `.env` 文件中设置 API 基础 URL：
 
 ```env
-VITE_API_BASE_URL=http://localhost:3000/api
+VITE_API_BASE_URL=http://t.jiyizhiyun.com/biz/api
 ```
 
-如果不设置，默认使用 `http://localhost:3000/api`。
+如果不设置，默认使用内置的线上地址（当前为 `http://t.jiyizhiyun.com/biz/api`）。
 
 ## 使用示例
 

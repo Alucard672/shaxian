@@ -1,5 +1,5 @@
 // API基础配置
-const DEFAULT_API_BASE_URL = 'http://t.jiyizhiyun.com/api';
+const DEFAULT_API_BASE_URL = 'http://t.jiyizhiyun.com/biz/api';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || DEFAULT_API_BASE_URL
 
@@ -66,14 +66,40 @@ async function apiRequest(endpoint, options = {}) {
 
   try {
     const response = await fetch(url, config)
-    // ...
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({ message: '请求失败' }))
+      const contentType = response.headers.get('content-type') || ''
+      let message = `HTTP error! status: ${response.status}`
+
+      // 优先读取后端返回的 message（兼容 JSON / 非 JSON）
+      try {
+        if (contentType.includes('application/json')) {
+          const errorData = await response.json().catch(() => null)
+          if (errorData && typeof errorData === 'object') {
+            message = errorData.message || message
+          }
+        } else {
+          const text = await response.text().catch(() => '')
+          if (text) {
+            message = `${message} (${text.slice(0, 200)})`
+          }
+        }
+      } catch {
+        // ignore
+      }
+
+      console.error('API request failed', {
+        url,
+        status: response.status,
+        contentType,
+        message,
+      })
+
       // API返回格式为 {success: false, message: "..."}
-      throw new Error(errorData.message || `HTTP error! status: ${response.status}`)
+      throw new Error(message)
     }
 
+    // 成功响应：按 JSON 解析（后端为 ApiResponse / data）
     const result = await response.json()
 
     // 处理ApiResponse格式：{success: true, message: "...", data: {...}}
@@ -84,8 +110,22 @@ async function apiRequest(endpoint, options = {}) {
 
     return result
   } catch (error) {
-    if (error.message.includes('Failed to fetch')) {
-      throw new Error('无法连接到后端服务器。请确保后端服务已启动（运行 mvn spring-boot:run 在 server-springboot 目录下）')
+    const message = error?.message || ''
+
+    // fetch 网络错误 / 被浏览器拦截（如 Mixed Content）
+    if (message.includes('Failed to fetch')) {
+      if (typeof window !== 'undefined') {
+        const pageProtocol = window.location?.protocol
+        // https 页面请求 http 接口会被浏览器拦截（Mixed Content）
+        if (pageProtocol === 'https:' && API_BASE_URL.startsWith('http://')) {
+          throw new Error(
+            `当前页面是 HTTPS，但接口地址是 HTTP（${API_BASE_URL}）。浏览器会拦截请求，导致无法登录/请求失败。` +
+              `请将页面部署到 HTTP，或给后端接口配置 HTTPS，或通过同源反向代理转发接口。`
+          )
+        }
+      }
+
+      throw new Error(`请求失败（网络异常或被浏览器拦截）。请检查接口地址是否可访问：${API_BASE_URL}`)
     }
     throw error
   }

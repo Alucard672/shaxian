@@ -76,24 +76,44 @@ import Profile from './pages/profile/Profile'
 // 路由保护组件
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true'
-  const currentTenantId = localStorage.getItem('currentTenantId')
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />
   }
 
-  // 如果已登录但没有选择租户，跳转到租户选择页面
+  // 尝试从用户信息中提取 tenantId（企业已在 CRM 中登记，无需手动选择）
+  let currentTenantId = localStorage.getItem('currentTenantId')
   if (!currentTenantId) {
-    return <Navigate to="/tenant/select" replace />
+    const userStr = localStorage.getItem('user')
+    if (userStr) {
+      try {
+        const userData = JSON.parse(userStr)
+        if (userData && (userData.tenantId !== null && userData.tenantId !== undefined)) {
+          currentTenantId = String(userData.tenantId)
+          localStorage.setItem('currentTenantId', currentTenantId)
+          if (userData.tenantName) {
+            localStorage.setItem('currentTenantName', userData.tenantName)
+          }
+          if (userData.tenantCode) {
+            localStorage.setItem('currentTenantCode', userData.tenantCode)
+          }
+        }
+      } catch (e) {
+        console.error('Failed to parse user data:', e)
+      }
+    }
   }
 
+  // 直接进入系统（不再强制要求选择租户，企业信息已在 CRM 中）
   return <Layout>{children}</Layout>
 }
 
 function App() {
-  const basename = import.meta.env.PROD
-    ? import.meta.env.BASE_URL.replace(/\/$/, '')
-    : '/'
+  const baseUrl = import.meta.env.BASE_URL || '/'
+  // Vite's BASE_URL ends with "/" (e.g. "/" or "/shaxian/").
+  // For BrowserRouter, keep "/" as-is; otherwise trim the trailing slash.
+  const basename =
+    baseUrl === '/' ? '/' : baseUrl.replace(/\/$/, '')
 
   return (
     <BrowserRouter basename={basename}>
