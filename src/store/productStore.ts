@@ -143,20 +143,57 @@ export const useProductStore = create<ProductState>((set, get) => ({
         // 加载所有商品的色号
         const { products } = get()
         const allColors: Color[] = []
-        for (const product of products) {
-          try {
-            const colors = await productApi.getColors(product.id)
-            const mappedColors = colors.map((c: any) => ({
-              ...c,
-              id: String(c.id),
-              productId: String(c.productId || product.id),
-              status: get().mapColorStatusFromApi(c.status || 'ON_SALE'),
-            }))
-            allColors.push(...mappedColors)
-          } catch (error) {
-            console.error(`Failed to load colors for product ${product.id}:`, error)
+        
+        // 过滤掉无效的商品 ID（确保 ID 存在且有效）
+        const validProducts = products.filter(p => {
+          if (!p || !p.id) return false
+          const productId = String(p.id).trim()
+          // 过滤掉明显无效的 ID
+          if (!productId || productId === 'undefined' || productId === 'null' || productId === '0') {
+            return false
           }
-        }
+          return true
+        })
+        
+        // 使用 Promise.allSettled 并行加载，即使部分失败也不影响其他
+        const colorPromises = validProducts.map(async (product) => {
+          try {
+            const productId = String(product.id).trim()
+            const colors = await productApi.getColors(productId)
+            
+            // 确保返回的是数组
+            if (Array.isArray(colors)) {
+              return colors.map((c: any) => ({
+                ...c,
+                id: String(c.id),
+                productId: String(c.productId || productId),
+                status: get().mapColorStatusFromApi(c.status || 'ON_SALE'),
+              }))
+            }
+            return []
+          } catch (error: any) {
+            // 静默处理 500 错误，不记录到控制台
+            const errorMessage = error?.message || ''
+            if (errorMessage.includes('500') || errorMessage.includes('系统运行异常')) {
+              // 完全静默，不输出任何日志
+              return []
+            }
+            // 其他错误才记录
+            console.error(`Failed to load colors for product ${product.id}:`, error)
+            return []
+          }
+        })
+        
+        // 等待所有请求完成（无论成功或失败）
+        const results = await Promise.allSettled(colorPromises)
+        
+        // 收集所有成功的结果
+        results.forEach((result) => {
+          if (result.status === 'fulfilled' && Array.isArray(result.value)) {
+            allColors.push(...result.value)
+          }
+        })
+        
         set({ colors: allColors })
       }
     } catch (error: any) {
@@ -188,14 +225,50 @@ export const useProductStore = create<ProductState>((set, get) => ({
         // 加载所有色号的缸号
         const { colors } = get()
         const allBatches: Batch[] = []
-        for (const color of colors) {
-          try {
-            const batches = await productApi.getBatches(color.id)
-            allBatches.push(...batches)
-          } catch (error) {
-            console.error(`Failed to load batches for color ${color.id}:`, error)
+        
+        // 过滤掉无效的色号 ID
+        const validColors = colors.filter(c => {
+          if (!c || !c.id) return false
+          const colorId = String(c.id).trim()
+          if (!colorId || colorId === 'undefined' || colorId === 'null' || colorId === '0') {
+            return false
           }
-        }
+          return true
+        })
+        
+        // 使用 Promise.allSettled 并行加载
+        const batchPromises = validColors.map(async (color) => {
+          try {
+            const colorId = String(color.id).trim()
+            const batches = await productApi.getBatches(colorId)
+            
+            if (Array.isArray(batches)) {
+              return batches
+            }
+            return []
+          } catch (error: any) {
+            // 静默处理 500 错误
+            const errorMessage = error?.message || ''
+            if (errorMessage.includes('500') || errorMessage.includes('系统运行异常')) {
+              // 完全静默，不输出任何日志
+              return []
+            }
+            // 其他错误才记录
+            console.error(`Failed to load batches for color ${color.id}:`, error)
+            return []
+          }
+        })
+        
+        // 等待所有请求完成
+        const results = await Promise.allSettled(batchPromises)
+        
+        // 收集所有成功的结果
+        results.forEach((result) => {
+          if (result.status === 'fulfilled' && Array.isArray(result.value)) {
+            allBatches.push(...result.value)
+          }
+        })
+        
         set({ batches: allBatches })
       }
     } catch (error: any) {
@@ -208,11 +281,27 @@ export const useProductStore = create<ProductState>((set, get) => ({
   loadAll: async () => {
     set({ loading: true, error: null })
     try {
+      // 先加载商品列表
       await get().loadProducts()
-      await get().loadColors()
-      await get().loadBatches()
+      
+      // 加载色号和缸号时，即使部分失败也不影响整体
+      try {
+        await get().loadColors()
+      } catch (error: any) {
+        console.warn('部分色号加载失败，但不影响页面使用:', error)
+        // 不设置全局错误，允许页面继续使用
+      }
+      
+      try {
+        await get().loadBatches()
+      } catch (error: any) {
+        console.warn('部分缸号加载失败，但不影响页面使用:', error)
+        // 不设置全局错误，允许页面继续使用
+      }
+      
       set({ loading: false })
     } catch (error: any) {
+      // 只有商品列表加载失败才设置错误
       set({ error: error.message || 'Failed to load product data', loading: false })
     }
   },
@@ -276,7 +365,6 @@ export const useProductStore = create<ProductState>((set, get) => ({
       const productId = String(newProduct.id)
       const frontendFields = {
         manufacturer: data.manufacturer,
-        needleType: data.needleType,
         width: data.width,
         weight: data.weight,
         colorCode: data.colorCode,
@@ -322,7 +410,6 @@ export const useProductStore = create<ProductState>((set, get) => ({
       const currentProduct = get().products.find((p) => p.id === id)
       const frontendFields = {
         manufacturer: data.manufacturer !== undefined ? data.manufacturer : currentProduct?.manufacturer,
-        needleType: data.needleType !== undefined ? data.needleType : currentProduct?.needleType,
         width: data.width !== undefined ? data.width : currentProduct?.width,
         weight: data.weight !== undefined ? data.weight : currentProduct?.weight,
         colorCode: data.colorCode !== undefined ? data.colorCode : currentProduct?.colorCode,

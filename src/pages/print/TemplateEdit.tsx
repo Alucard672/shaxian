@@ -207,10 +207,24 @@ function TemplateEdit() {
         return field
       }
       
+      // 映射 API 枚举值到前端显示值
+      const mapTypeFromApi = (apiType: string) => {
+        if (apiType === 'A4_TEMPLATE') return 'A4模板'
+        if (apiType === 'TRIPLE_FORM') return '三联单'
+        return apiType || 'A4模板'
+      }
+      
+      const mapDocumentTypeFromApi = (apiDocType: string) => {
+        if (apiDocType === 'SALES_ORDER') return '销售单'
+        if (apiDocType === 'PURCHASE_ORDER') return '进货单'
+        if (apiDocType === 'BARCODE_PRINT') return '条码打印'
+        return apiDocType || '销售单'
+      }
+      
       setFormData({
         name: data.name || '',
-        type: data.type || 'A4模板',
-        documentType: data.documentType || '销售单',
+        type: mapTypeFromApi(data.type),
+        documentType: mapDocumentTypeFromApi(data.documentType),
         description: data.description || '',
         pageSettings: parseJsonField(data.pageSettings, formData.pageSettings),
         titleSettings: parseJsonField(data.titleSettings, formData.titleSettings),
@@ -243,11 +257,37 @@ function TemplateEdit() {
 
     setLoading(true)
     try {
+      // 将对象字段序列化为 JSON 字符串，并映射枚举值
+      const apiData: any = {
+        name: formData.name,
+        description: formData.description || '',
+        // 映射模板类型：A4模板 -> A4_TEMPLATE, 三联单 -> TRIPLE_FORM
+        type: formData.type === 'A4模板' ? 'A4_TEMPLATE' : 'TRIPLE_FORM',
+        // 映射单据类型：销售单 -> SALES_ORDER, 进货单 -> PURCHASE_ORDER, 条码打印 -> BARCODE_PRINT
+        documentType: formData.documentType === '销售单' 
+          ? 'SALES_ORDER' 
+          : formData.documentType === '进货单' 
+          ? 'PURCHASE_ORDER' 
+          : 'BARCODE_PRINT',
+        // 将对象字段序列化为 JSON 字符串
+        pageSettings: JSON.stringify(formData.pageSettings),
+        titleSettings: JSON.stringify(formData.titleSettings),
+        basicInfoFields: JSON.stringify(formData.basicInfoFields),
+        productFields: JSON.stringify(formData.productFields),
+        summaryFields: JSON.stringify(formData.summaryFields),
+        otherElements: JSON.stringify(formData.otherElements),
+      }
+      
+      // 如果有条码设置，也序列化
+      if (formData.barcodeSettings) {
+        apiData.barcodeSettings = JSON.stringify(formData.barcodeSettings)
+      }
+
       if (isNew) {
-        await templateApi.create(formData)
+        await templateApi.create(apiData)
         alert('模板创建成功')
       } else if (id) {
-        await templateApi.update(id, formData)
+        await templateApi.update(id, apiData)
         alert('模板更新成功')
       }
       navigate('/settings/print')

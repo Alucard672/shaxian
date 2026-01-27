@@ -94,7 +94,7 @@ function ContactDetail({ contact, type, onEdit, onClose }: ContactDetailProps) {
           <div>
             <h2 className="text-xl font-semibold text-gray-900">查看详情</h2>
             <p className="text-sm text-gray-600 mt-0.5">
-              {isCustomer ? '客户' : '供应商'} - {contact.code}
+              {isCustomer ? '客户' : '供应商'} - {contact.name}
             </p>
           </div>
         </div>
@@ -113,14 +113,8 @@ function ContactDetail({ contact, type, onEdit, onClose }: ContactDetailProps) {
           <h3 className="text-lg font-semibold text-gray-900">基本信息</h3>
           
           <div className="space-y-4">
-            {/* 第一行：单位编号、单位名称 */}
+            {/* 第一行：单位名称 */}
             <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">单位编号</label>
-                <div className="w-full px-3 py-2 h-[36px] bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-700">
-                  {contact.code}
-                </div>
-              </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   单位名称 <span className="text-red-500">*</span>
@@ -131,16 +125,8 @@ function ContactDetail({ contact, type, onEdit, onClose }: ContactDetailProps) {
               </div>
             </div>
 
-            {/* 第二行：联系人、联系电话 */}
+            {/* 第二行：联系电话 */}
             <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  联系人 <span className="text-red-500">*</span>
-                </label>
-                <div className="w-full px-3 py-2 h-[36px] border border-gray-200 rounded-xl text-sm text-gray-900">
-                  {contact.contactPerson || '-'}
-                </div>
-              </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   联系电话 <span className="text-red-500">*</span>

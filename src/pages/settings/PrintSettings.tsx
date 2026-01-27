@@ -5,7 +5,7 @@ import { usePrintStore } from '@/store/printStore'
 import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
 import Table from '@/components/ui/Table'
-import { Plus, Edit, Trash2, FileText, Printer, Settings, ArrowLeft, Barcode } from 'lucide-react'
+import { Plus, Edit, Trash2, FileText, Printer, Settings, ArrowLeft, Barcode, X } from 'lucide-react'
 
 interface PrintTemplate {
   id: string
@@ -67,13 +67,15 @@ function PrintSettings() {
     if (type === 'document') {
       navigate('/settings/print/template/new')
     } else {
-      navigate('/settings/print/barcode-template/new')
+      // 条码模板已改为固定样式，重定向到条码打印页面
+      navigate('/products/barcode-print')
     }
   }
 
   const handleEditTemplate = (id: string, documentType?: string) => {
     if (documentType === '条码打印') {
-      navigate(`/settings/print/barcode-template/${id}`)
+      // 条码模板已改为固定样式，重定向到条码打印页面
+      navigate('/products/barcode-print')
     } else {
       navigate(`/settings/print/template/${id}`)
     }
@@ -314,19 +316,17 @@ function PrintSettings() {
                   </div>
                 </div>
               </button>
-              
-              <button
-                onClick={() => handleSelectTemplateType('barcode')}
-                className="w-full p-4 border-2 border-gray-200 rounded-xl hover:border-blue-500 hover:bg-blue-50 transition-colors text-left"
-              >
-                <div className="flex items-center gap-3">
-                  <Barcode className="w-6 h-6 text-blue-600" />
-                  <div>
-                    <div className="font-medium text-gray-900">条码模板</div>
-                    <div className="text-sm text-gray-500">用于商品条码标签打印</div>
+            </div>
+            <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+              <div className="flex items-start gap-2">
+                <Barcode className="w-5 h-5 text-blue-600 mt-0.5" />
+                <div className="flex-1">
+                  <div className="text-sm font-medium text-blue-900">条码打印</div>
+                  <div className="text-xs text-blue-700 mt-1">
+                    条码标签已使用固定样式模板，无需自定义。请前往"商品管理" → "条码打印"页面使用。
                   </div>
                 </div>
-              </button>
+              </div>
             </div>
             
             <div className="mt-6 flex justify-end">
@@ -335,7 +335,8 @@ function PrintSettings() {
                 onClick={() => setShowTemplateTypeModal(false)}
                 className="px-4"
               >
-                取消
+                <X className="w-4 h-4 mr-2" />
+                关闭
               </Button>
             </div>
           </div>

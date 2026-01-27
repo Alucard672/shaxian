@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useInventoryCheckStore } from '@/store/inventoryCheckStore'
 import Card from '../../components/ui/Card'
@@ -19,7 +19,11 @@ import DateRangePicker from '../../components/ui/DateRangePicker'
 
 function InventoryCheckList() {
   const navigate = useNavigate()
-  const { orders } = useInventoryCheckStore()
+  const { orders, loadOrders } = useInventoryCheckStore()
+
+  useEffect(() => {
+    loadOrders()
+  }, [loadOrders])
 
   const [searchKeyword, setSearchKeyword] = useState('')
   const [statusFilter, setStatusFilter] = useState<

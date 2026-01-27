@@ -2,10 +2,12 @@ import { useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useInventoryStore } from '@/store/inventoryStore'
 import { useProductStore } from '@/store/productStore'
+import { useSettingsStore } from '@/store/settingsStore'
 import Card from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
 import Table from '../../components/ui/Table'
 import Pagination from '../../components/ui/Pagination'
+import VisibleColumnsConfigModal from '../../components/ui/VisibleColumnsConfigModal'
 import {
   Package,
   AlertTriangle,
@@ -16,14 +18,30 @@ import {
   Edit,
   Settings,
   Eye,
+  LayoutList,
 } from 'lucide-react'
 import { format } from 'date-fns'
 import InventoryDetail from '../../components/inventory/InventoryDetail'
+
+const INVENTORY_DOC_KEY = 'inventory-list'
+const INVENTORY_COLUMN_OPTIONS = [
+  { id: 'product', label: '商品信息' },
+  { id: 'color', label: '色号' },
+  { id: 'batch', label: '缸号' },
+  { id: 'stock', label: '当前库存' },
+  { id: 'price', label: '单价' },
+  { id: 'totalValue', label: '库存总值' },
+  { id: 'location', label: '仓位' },
+  { id: 'updateTime', label: '更新时间' },
+]
+const INVENTORY_DEFAULT_VISIBLE = INVENTORY_COLUMN_OPTIONS.map((c) => c.id)
 
 function Inventory() {
   const navigate = useNavigate()
   const { getInventoryDetails } = useInventoryStore()
   const { products, colors, batches } = useProductStore()
+  const { getDocumentVisibleColumns } = useSettingsStore()
+  const [showColumnsModal, setShowColumnsModal] = useState(false)
 
   const [searchKeyword, setSearchKeyword] = useState('')
   const [filterType, setFilterType] = useState<'全部库存' | '低库存预警' | '库存异常'>('全部库存')
@@ -147,8 +165,8 @@ function Inventory() {
     },
   ]
 
-  // 表格列定义
-  const inventoryColumns = [
+  const visibleColumnKeys = getDocumentVisibleColumns(INVENTORY_DOC_KEY, INVENTORY_DEFAULT_VISIBLE)
+  const allInventoryColumns = [
     {
       key: 'product',
       title: '商品信息',
@@ -285,15 +303,35 @@ function Inventory() {
       ),
     },
   ]
+  const inventoryColumns = allInventoryColumns.filter(
+    (c) => c.key === 'actions' || visibleColumnKeys.includes(c.key)
+  )
 
   return (
     <div className="space-y-6">
+      <VisibleColumnsConfigModal
+        open={showColumnsModal}
+        onClose={() => setShowColumnsModal(false)}
+        docKey={INVENTORY_DOC_KEY}
+        title="库存列表"
+        columns={INVENTORY_COLUMN_OPTIONS}
+        defaultVisible={INVENTORY_DEFAULT_VISIBLE}
+      />
       {/* 页面标题 */}
-      <div>
-        <h1 className="text-2xl font-semibold text-gray-900 mb-2">库存管理</h1>
-        <p className="text-gray-600">
-          实时追踪库存状态,支持按商品、色号、缸号三级查询和库存预警
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold text-gray-900 mb-2">库存管理</h1>
+          <p className="text-gray-600">
+            实时追踪库存状态,支持按商品、色号、缸号三级查询和库存预警
+          </p>
+        </div>
+        <button
+          onClick={() => setShowColumnsModal(true)}
+          className="p-2 hover:bg-gray-100 rounded-lg text-gray-500 transition-colors"
+          title="自定义列显示"
+        >
+          <LayoutList className="w-5 h-5" />
+        </button>
       </div>
 
       {/* 统计卡片 */}

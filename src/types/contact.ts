@@ -1,8 +1,8 @@
-// 客户类型枚举
-export type CustomerType = '直客' | '经销商'
+// 客户类型（直客、经销商为预设，支持自定义）
+export type CustomerType = string
 
 // 客户状态枚举
-export type CustomerStatus = '正常' | '冻结'
+export type CustomerStatus = '正常' | '停用'
 
 // 供应商类型枚举
 export type SupplierType = '厂家' | '贸易商'
@@ -17,7 +17,7 @@ export type SettlementCycle = '现结' | '月结' | '季结'
 export interface Customer {
   id: string
   name: string
-  code: string // 客户编码
+  code?: string // 已去掉编码字段，可选兼容历史数据
   contactPerson?: string // 联系人
   phone?: string // 联系电话
   address?: string // 联系地址
@@ -33,7 +33,7 @@ export interface Customer {
 export interface Supplier {
   id: string
   name: string
-  code: string // 供应商编码
+  code?: string // 已去掉编码字段，可选兼容历史数据
   contactPerson?: string // 联系人
   phone?: string // 联系电话
   address?: string // 联系地址

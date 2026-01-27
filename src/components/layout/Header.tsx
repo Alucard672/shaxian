@@ -55,7 +55,7 @@ function Header() {
   }
 
   return (
-    <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6 shadow-sm">
+    <header className="h-16 bg-white border-b border-gray-100 flex items-center justify-between px-6 shadow-sm z-10">
       {/* 左侧：Logo和标题 */}
       <div className="flex items-center gap-4">
         <div className="flex items-center gap-2">

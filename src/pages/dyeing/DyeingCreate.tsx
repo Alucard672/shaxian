@@ -3,12 +3,28 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { useDyeingStore } from '@/store/dyeingStore'
 import { useProductStore } from '@/store/productStore'
 import { useContactStore } from '@/store/contactStore'
+import { useSettingsStore } from '@/store/settingsStore'
 import { DyeingOrderFormData, DyeingOrderItem } from '@/types/dyeing'
 import Button from '../../components/ui/Button'
 import Tooltip from '../../components/ui/Tooltip'
-import { X, Plus, Trash2, FileText, Calendar, AlertCircle } from 'lucide-react'
+import DateInput from '../../components/ui/DateInput'
+import SelectWithAdd from '../../components/ui/SelectWithAdd'
+import RequiredFieldsConfigModal from '@/components/ui/RequiredFieldsConfigModal'
+import { RequiredMark } from '@/components/ui/RequiredMark'
+import { X, Plus, Trash2, FileText, Calendar, AlertCircle, Settings } from 'lucide-react'
 import { format } from 'date-fns'
 import { cn } from '@/utils/cn'
+
+const DYEING_PAGE_KEY = 'dyeing'
+const DYEING_FIELDS = [
+  { id: 'greyBatchId', label: '白坯缸号' },
+  { id: 'factoryId', label: '加工厂' },
+  { id: 'shipmentDate', label: '发货日期' },
+  { id: 'expectedCompletionDate', label: '预计完成日期' },
+  { id: 'processingPrice', label: '加工单价' },
+  { id: 'remark', label: '备注' },
+] as const
+const DYEING_DEFAULT_REQUIRED = ['greyBatchId', 'factoryId', 'processingPrice']
 
 interface ColorItemForm extends Omit<DyeingOrderItem, 'id'> {
   tempId?: string
@@ -16,13 +32,16 @@ interface ColorItemForm extends Omit<DyeingOrderItem, 'id'> {
 
 function DyeingCreate() {
   const navigate = useNavigate()
-  const { id } = useParams<{ id: string }>()
+  const { id } = useParams<{ id?: string }>()
   const { addOrder, updateOrder, getOrder, loadOrders } = useDyeingStore()
   const { products, colors, batches, loadAll: loadProducts } = useProductStore()
-  const { getSuppliers, loadAll: loadContacts } = useContactStore()
+  const { getSuppliers, loadAll: loadContacts, addSupplier } = useContactStore()
+  const { getPageRequiredFields } = useSettingsStore()
+  const [showRequiredModal, setShowRequiredModal] = useState(false)
+  const requiredFields = getPageRequiredFields(DYEING_PAGE_KEY, DYEING_DEFAULT_REQUIRED)
 
-  const isEditMode = !!id
-  const existingOrder = isEditMode ? getOrder(id!) : null
+  const isEditMode = !!(id && id !== 'create')
+  const existingOrder = isEditMode && id ? getOrder(id) : null
   
   // 加载数据
   useEffect(() => {
@@ -190,13 +209,16 @@ function DyeingCreate() {
   }
 
   // 选择加工厂
-  const handleSelectFactory = (factoryOption: typeof factoryOptions[0]) => {
-    setFormData({
-      ...formData,
-      factoryId: factoryOption.supplier.id,
-      factoryName: factoryOption.supplier.name,
-      factoryPhone: factoryOption.supplier.phone || '',
-    })
+  const handleSelectFactory = (factoryId: string) => {
+    const selected = factoryOptions.find((f) => f.value === factoryId)
+    if (selected) {
+      setFormData({
+        ...formData,
+        factoryId: selected.supplier.id,
+        factoryName: selected.supplier.name,
+        factoryPhone: selected.supplier.phone || '',
+      })
+    }
   }
 
   // 计算总金额
@@ -205,27 +227,20 @@ function DyeingCreate() {
     return totalQuantity * formData.processingPrice
   }, [colorItems, formData.processingPrice])
 
-  // 提交表单
   const handleSubmit = async () => {
-    // 验证
-    if (!formData.greyBatchId || !formData.greyBatchCode) {
-      alert('请选择白坯缸号')
+    const missing: string[] = []
+    if (requiredFields.includes('greyBatchId') && (!formData.greyBatchId || !formData.greyBatchCode)) missing.push('白坯缸号')
+    if (requiredFields.includes('factoryId') && (!formData.factoryId || !formData.factoryName)) missing.push('加工厂')
+    if (requiredFields.includes('shipmentDate') && !formData.shipmentDate) missing.push('发货日期')
+    if (requiredFields.includes('expectedCompletionDate') && !formData.expectedCompletionDate) missing.push('预计完成日期')
+    if (requiredFields.includes('processingPrice') && (formData.processingPrice == null || formData.processingPrice <= 0)) missing.push('加工单价')
+    if (requiredFields.includes('remark') && !String(formData.remark || '').trim()) missing.push('备注')
+    if (missing.length) {
+      alert(`请填写必填项：${missing.join('、')}`)
       return
     }
     if (colorItems.length === 0) {
       alert('请至少添加一个目标色号')
-      return
-    }
-    if (!formData.factoryId || !formData.factoryName) {
-      alert('请选择加工厂')
-      return
-    }
-    if (!formData.shipmentDate || !formData.expectedCompletionDate) {
-      alert('请填写发货日期和预计完成日期')
-      return
-    }
-    if (formData.processingPrice <= 0) {
-      alert('请输入加工单价')
       return
     }
 
@@ -270,7 +285,14 @@ function DyeingCreate() {
           <h2 className="text-xl font-semibold text-gray-900">
             {isEditMode ? '编辑加工单' : '新建加工单'}
           </h2>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowRequiredModal(true)}
+              className="w-9 h-9 flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-xl transition-colors"
+              title="必填项设置"
+            >
+              <Settings className="w-5 h-5" />
+            </button>
             <Button
               variant="outline"
               onClick={() => navigate('/dyeing')}
@@ -293,6 +315,15 @@ function DyeingCreate() {
           </div>
         </div>
 
+        <RequiredFieldsConfigModal
+          open={showRequiredModal}
+          onClose={() => setShowRequiredModal(false)}
+          pageKey={DYEING_PAGE_KEY}
+          title="加工单"
+          fields={[...DYEING_FIELDS]}
+          defaultRequired={DYEING_DEFAULT_REQUIRED}
+        />
+
         {/* Form Content */}
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
           {/* 白坯信息 */}
@@ -313,7 +344,7 @@ function DyeingCreate() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  白坯缸号 <span className="text-red-500">*</span>
+                  白坯缸号 <RequiredMark required={requiredFields.includes('greyBatchId')} />
                 </label>
                 <select
                   value={formData.greyBatchId}
@@ -469,25 +500,35 @@ function DyeingCreate() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  加工厂 <span className="text-red-500">*</span>
+                  加工厂 <RequiredMark required={requiredFields.includes('factoryId')} />
                 </label>
-                <select
-                  value={formData.factoryId}
-                  onChange={(e) => {
-                    const selected = factoryOptions.find((f) => f.value === e.target.value)
-                    if (selected) {
-                      handleSelectFactory(selected)
+                <SelectWithAdd
+                  value={formData.factoryId || ''}
+                  onChange={(value) => handleSelectFactory(value)}
+                  options={factoryOptions.map((f) => ({
+                    value: f.value,
+                    label: f.label,
+                  }))}
+                  onAddNew={async (name) => {
+                    const supplierCode = `SUPP-${Date.now().toString().slice(-6)}`
+                    try {
+                      const newSupplier = await addSupplier({
+                        name: name.trim(),
+                        code: supplierCode,
+                        type: '厂家',
+                        status: '合作中',
+                        settlementCycle: '现结',
+                      })
+                      handleSelectFactory(newSupplier.id)
+                    } catch (error: any) {
+                      alert('添加供应商失败：' + (error.message || '未知错误'))
                     }
                   }}
-                  className="w-full px-3 py-2 h-9 border border-gray-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                >
-                  <option value="">请选择加工厂</option>
-                  {factoryOptions.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
+                  placeholder="选择加工厂"
+                  addText="快速添加供应商"
+                  searchable={true}
+                  className="text-sm"
+                />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">联系电话</label>
@@ -508,32 +549,20 @@ function DyeingCreate() {
             <h3 className="text-lg font-semibold text-gray-900 border-b border-gray-200 pb-3">时间安排</h3>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  发货日期 <span className="text-red-500">*</span>
-                </label>
-                <div className="relative">
-                  <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                  <input
-                    type="date"
-                    value={formData.shipmentDate}
-                    onChange={(e) => setFormData({ ...formData, shipmentDate: e.target.value })}
-                    className="w-full pl-10 pr-3 py-2 h-9 border border-gray-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  />
-                </div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">发货日期 <RequiredMark required={requiredFields.includes('shipmentDate')} /></label>
+                <DateInput
+                  value={formData.shipmentDate}
+                  onChange={(value) => setFormData({ ...formData, shipmentDate: value })}
+                  className="text-sm"
+                />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  预计完成日期 <span className="text-red-500">*</span>
-                </label>
-                <div className="relative">
-                  <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                  <input
-                    type="date"
-                    value={formData.expectedCompletionDate}
-                    onChange={(e) => setFormData({ ...formData, expectedCompletionDate: e.target.value })}
-                    className="w-full pl-10 pr-3 py-2 h-9 border border-gray-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  />
-                </div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">预计完成日期 <RequiredMark required={requiredFields.includes('expectedCompletionDate')} /></label>
+                <DateInput
+                  value={formData.expectedCompletionDate}
+                  onChange={(value) => setFormData({ ...formData, expectedCompletionDate: value })}
+                  className="text-sm"
+                />
               </div>
             </div>
           </div>
@@ -544,7 +573,7 @@ function DyeingCreate() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  加工单价 (元/kg) <span className="text-red-500">*</span>
+                  加工单价 (元/kg) <RequiredMark required={requiredFields.includes('processingPrice')} />
                 </label>
                 <input
                   type="number"
@@ -570,7 +599,7 @@ function DyeingCreate() {
 
           {/* 备注 */}
           <div className="space-y-4">
-            <h3 className="text-lg font-semibold text-gray-900 border-b border-gray-200 pb-3">备注</h3>
+            <h3 className="text-lg font-semibold text-gray-900 border-b border-gray-200 pb-3">备注 <RequiredMark required={requiredFields.includes('remark')} /></h3>
             <textarea
               value={formData.remark || ''}
               onChange={(e) => setFormData({ ...formData, remark: e.target.value })}

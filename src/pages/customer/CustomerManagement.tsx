@@ -30,7 +30,8 @@ function CustomerManagement() {
         error,
         loadAll,
         deleteCustomer,
-        getCustomer
+        getCustomer,
+        updateCustomer
     } = useContactStore()
 
     // 加载数据
@@ -42,7 +43,7 @@ function CustomerManagement() {
     const { orders: salesOrders } = useSalesStore()
 
     const [searchKeyword, setSearchKeyword] = useState('')
-    const [statusFilter, setStatusFilter] = useState<'全部' | '正常' | '冻结'>('全部')
+    const [statusFilter, setStatusFilter] = useState<'全部' | '正常' | '停用'>('全部')
     const [currentPage, setCurrentPage] = useState(1)
     const [showDetail, setShowDetail] = useState(false)
     const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null)
@@ -52,7 +53,7 @@ function CustomerManagement() {
     const stats = useMemo(() => {
         const totalCustomers = customers.length
         const activeCustomers = customers.filter((c) => c.status === '正常').length
-        const frozenCustomers = customers.filter((c) => c.status === '冻结').length
+        const inactiveCustomers = customers.filter((c) => c.status === '停用').length
         const thisMonthNew = customers.filter((c) => {
             const createdDate = new Date(c.createdAt)
             const now = new Date()
@@ -62,7 +63,7 @@ function CustomerManagement() {
         return {
             totalCustomers,
             activeCustomers,
-            frozenCustomers,
+            inactiveCustomers,
             thisMonthNew,
         }
     }, [customers])
@@ -82,8 +83,6 @@ function CustomerManagement() {
             result = result.filter(
                 (c) =>
                     c.name.toLowerCase().includes(keyword) ||
-                    c.code.toLowerCase().includes(keyword) ||
-                    (c.contactPerson && c.contactPerson.toLowerCase().includes(keyword)) ||
                     (c.phone && c.phone.toLowerCase().includes(keyword))
             )
         }
@@ -131,8 +130,8 @@ function CustomerManagement() {
             bgColor: 'bg-success-50/50',
         },
         {
-            label: '冻结客户',
-            value: stats.frozenCustomers,
+            label: '停用客户',
+            value: stats.inactiveCustomers,
             icon: Users,
             iconBg: 'bg-gray-100',
             bgColor: 'bg-gray-50/50',
@@ -150,18 +149,11 @@ function CustomerManagement() {
     const statusTabs = [
         { key: '全部', label: '全部' },
         { key: '正常', label: '正常' },
-        { key: '冻结', label: '冻结' },
+        { key: '停用', label: '停用' },
     ]
 
     // 表格列定义
     const customerColumns = [
-        {
-            key: 'code',
-            title: '客户编号',
-            render: (_: any, record: Customer) => (
-                <span className="text-gray-600 text-sm">{record.code}</span>
-            ),
-        },
         {
             key: 'name',
             title: '客户名称',
@@ -176,13 +168,6 @@ function CustomerManagement() {
                 <span className="px-2.5 py-1 bg-primary-100 text-primary-700 text-sm font-medium rounded-full">
                     {record.type}
                 </span>
-            ),
-        },
-        {
-            key: 'contactPerson',
-            title: '联系人',
-            render: (_: any, record: Customer) => (
-                <span className="text-gray-900 text-sm">{record.contactPerson || '-'}</span>
             ),
         },
         {
@@ -265,6 +250,17 @@ function CustomerManagement() {
                     navigate(`/customer/${record.id}/edit`)
                 }
 
+                const handleToggleStatus = async () => {
+                    const newStatus = record.status === '正常' ? '停用' : '正常'
+                    if (confirm(`确定要${newStatus === '停用' ? '停用' : '启用'}客户"${record.name}"吗？`)) {
+                        try {
+                            await updateCustomer(record.id, { status: newStatus })
+                        } catch (error: any) {
+                            alert(`操作失败: ${error.message || '未知错误'}`)
+                        }
+                    }
+                }
+
                 return (
                     <div className="flex items-center gap-2">
                         <button
@@ -280,6 +276,17 @@ function CustomerManagement() {
                             className="p-1.5 hover:bg-gray-100 rounded"
                         >
                             <Edit className="w-4 h-4 text-gray-600" />
+                        </button>
+                        <button
+                            onClick={handleToggleStatus}
+                            title={record.status === '正常' ? '停用' : '启用'}
+                            className={`px-2 py-1 text-xs font-medium rounded transition-colors ${
+                                record.status === '正常'
+                                    ? 'text-orange-600 hover:bg-orange-50'
+                                    : 'text-green-600 hover:bg-green-50'
+                            }`}
+                        >
+                            {record.status === '正常' ? '停用' : '启用'}
                         </button>
                     </div>
                 )
@@ -351,7 +358,7 @@ function CustomerManagement() {
                             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
                             <input
                                 type="text"
-                                placeholder="搜索客户名称、编号、联系人..."
+                                placeholder="搜索客户名称、电话..."
                                 value={searchKeyword}
                                 onChange={(e) => {
                                     setSearchKeyword(e.target.value)

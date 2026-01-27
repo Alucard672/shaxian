@@ -1,76 +1,74 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useProductStore } from '@/store/productStore'
+import { useSettingsStore } from '@/store/settingsStore'
 import { Product, Color, Batch } from '@/types/product'
-import { templateApi } from '@/api/client'
 import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
 import Table from '@/components/ui/Table'
-import { ArrowLeft, Printer, Package, Search, Plus, X, Barcode, Settings, FileText } from 'lucide-react'
-import { generateBarcodeHTML, generateBarcodeHTMLFromTemplate, openPrintDialog } from '@/utils/barcodeService'
-import { BarcodeTemplate, DataSourceType } from '@/types/barcodeTemplate'
+import { ArrowLeft, Printer, Package, Search, Plus, X, Barcode } from 'lucide-react'
+import { generateFixedBarcodeHTML, openPrintDialog, type BarcodePaperSize } from '@/utils/barcodeService'
+import { productShareApi } from '@/api/client'
+
+const BARCODE_PAPER_KEY = 'barcode-paper-size'
+
+const PAPER_PRESETS: { label: string; widthMm: number; heightMm: number }[] = [
+  { label: '100×50 mm', widthMm: 100, heightMm: 50 },
+  { label: '70×40 mm', widthMm: 70, heightMm: 40 },
+  { label: '60×40 mm', widthMm: 60, heightMm: 40 },
+  { label: '50×30 mm', widthMm: 50, heightMm: 30 },
+  { label: '40×30 mm', widthMm: 40, heightMm: 30 },
+  { label: '自定义', widthMm: 0, heightMm: 0 },
+]
 
 interface SelectedItem {
   product: Product
   color?: Color
   batch?: Batch
+  shareCode?: string
   quantity: number
 }
 
 function BarcodePrint() {
   const navigate = useNavigate()
   const { products, colors, batches, loadProducts, loadColors, loadBatches } = useProductStore()
+  const { storeInfo, loadStoreInfo } = useSettingsStore()
   
   const [selectedItems, setSelectedItems] = useState<SelectedItem[]>([])
   const [searchKeyword, setSearchKeyword] = useState('')
-  const [templates, setTemplates] = useState<any[]>([])
-  const [selectedTemplateId, setSelectedTemplateId] = useState<string>('')
-  const [barcodeDataSource, setBarcodeDataSource] = useState<DataSourceType>('barcodeValue')  // 条码数据源
-  const [showTemplateTypeModal, setShowTemplateTypeModal] = useState(false)  // 模板类型选择对话框
-  const [barcodeSettings, setBarcodeSettings] = useState({
-    width: 2,
-    height: 60,
-    format: 'CODE128' as 'CODE128' | 'EAN13' | 'EAN8' | 'CODE39',
-    displayValue: true,
-    fontSize: 14,
-    textMargin: 2,
-    margin: 10,
-  })
+
+  const loadPaperSize = (): BarcodePaperSize => {
+    try {
+      const raw = localStorage.getItem(BARCODE_PAPER_KEY)
+      if (raw) {
+        const o = JSON.parse(raw) as { widthMm?: number; heightMm?: number }
+        if (typeof o?.widthMm === 'number' && typeof o?.heightMm === 'number' && o.widthMm >= 40 && o.heightMm >= 30) {
+          return { widthMm: o.widthMm, heightMm: o.heightMm }
+        }
+      }
+    } catch (_) {}
+    return { widthMm: 100, heightMm: 50 }
+  }
+
+  const [paperSize, setPaperSize] = useState<BarcodePaperSize>(loadPaperSize)
+  const [paperCustom, setPaperCustom] = useState({ widthMm: 100, heightMm: 50 })
+  const [paperPresetIndex, setPaperPresetIndex] = useState(0)
 
   useEffect(() => {
     loadProducts()
     loadColors()
     loadBatches()
-    loadTemplates()
-  }, [loadProducts, loadColors, loadBatches])
+    loadStoreInfo()
+  }, [loadProducts, loadColors, loadBatches, loadStoreInfo])
 
-  const loadTemplates = async () => {
-    try {
-      const data = await templateApi.getAll()
-      const barcodeTemplates = data.filter((t: any) => t.documentType === '条码打印')
-      setTemplates(barcodeTemplates)
-      // 如果有默认模板，自动选择
-      const defaultTemplate = barcodeTemplates.find((t: any) => t.isDefault)
-      if (defaultTemplate) {
-        setSelectedTemplateId(defaultTemplate.id)
-        // 从模板加载设置
-        if (defaultTemplate.barcodeSettings) {
-          setBarcodeSettings(defaultTemplate.barcodeSettings)
-        }
-      }
-    } catch (error: any) {
-      console.error('Failed to load templates:', error)
-    }
-  }
-
-  const handleSelectTemplateType = (type: 'document' | 'barcode') => {
-    setShowTemplateTypeModal(false)
-    if (type === 'document') {
-      navigate('/settings/print/template/new')
-    } else {
-      navigate('/settings/print/barcode-template/new')
-    }
-  }
+  useEffect(() => {
+    const loaded = loadPaperSize()
+    const idx = PAPER_PRESETS.findIndex(
+      (p) => p.widthMm === loaded.widthMm && p.heightMm === loaded.heightMm
+    )
+    setPaperPresetIndex(idx >= 0 ? idx : PAPER_PRESETS.length - 1)
+    if (idx < 0) setPaperCustom(loaded)
+  }, [])
 
   // 从URL参数中获取商品ID，如果有则自动添加
   useEffect(() => {
@@ -98,12 +96,10 @@ function BarcodePrint() {
     )
 
     if (existingIndex >= 0) {
-      // 如果已存在，增加数量
       const newItems = [...selectedItems]
       newItems[existingIndex].quantity += 1
       setSelectedItems(newItems)
     } else {
-      // 添加新项
       setSelectedItems([
         ...selectedItems,
         {
@@ -126,37 +122,100 @@ function BarcodePrint() {
     setSelectedItems(newItems)
   }
 
-  const handlePrint = () => {
+  const applyPaperSize = (size: BarcodePaperSize) => {
+    setPaperSize(size)
+    try {
+      localStorage.setItem(BARCODE_PAPER_KEY, JSON.stringify(size))
+    } catch (_) {}
+  }
+
+  const handlePaperPresetChange = (idx: number) => {
+    setPaperPresetIndex(idx)
+    const p = PAPER_PRESETS[idx]
+    if (p.widthMm > 0 && p.heightMm > 0) {
+      const size = { widthMm: p.widthMm, heightMm: p.heightMm }
+      setPaperCustom(size)
+      applyPaperSize(size)
+    } else {
+      setPaperCustom(paperSize)
+    }
+  }
+
+  const handlePaperCustomChange = (field: 'widthMm' | 'heightMm', v: number) => {
+    const next = { ...paperCustom, [field]: Math.max(field === 'widthMm' ? 40 : 30, Math.min(300, v)) }
+    setPaperCustom(next)
+    applyPaperSize(next)
+  }
+
+  const handlePrint = async () => {
     if (selectedItems.length === 0) {
       alert('请至少选择一个商品')
       return
     }
+    const size = paperPresetIndex === PAPER_PRESETS.length - 1 ? paperCustom : paperSize
 
-    // 检查是否选择了模板
-    if (selectedTemplateId) {
-      const template = templates.find((t: any) => t.id === selectedTemplateId)
-      if (template && template.barcodeTemplate) {
-        // 使用新模板系统，但覆盖条码元素的数据源
-        const modifiedTemplate = {
-          ...template.barcodeTemplate,
-          elements: template.barcodeTemplate.elements.map((el: any) => {
-            if (el.type === 'barcode') {
-              return {
-                ...el,
-                dataSource: barcodeDataSource  // 使用用户选择的数据源
-              }
+    // 打印前为每个商品生成分享码（免登录扫码查看）
+    const uniqueProductIds = Array.from(new Set(selectedItems.map((it) => it.product.id)))
+    const shareCodeMap = new Map<string, string>()
+    const shareErrors: Array<{ productId: string; message: string }> = []
+    try {
+      await Promise.all(
+        uniqueProductIds.map(async (pid) => {
+          try {
+            const res: any = await (productShareApi as any).generateShareCode(pid)
+            const code = res?.shareCode || res?.data?.shareCode || res?.share_code
+            if (code) {
+              shareCodeMap.set(pid, String(code))
+            } else {
+              shareErrors.push({
+                productId: String(pid),
+                message: '后端返回的分享码为空',
+              })
             }
-            return el
-          })
-        }
-        const html = generateBarcodeHTMLFromTemplate(selectedItems, modifiedTemplate)
-        openPrintDialog(html)
-        return
-      }
+          } catch (e: any) {
+            const errMsg = e?.message || '生成分享码失败'
+            shareErrors.push({
+              productId: String(pid),
+              message: errMsg,
+            })
+            console.error(`商品 ${pid} 分享码生成失败:`, e)
+          }
+        })
+      )
+    } catch (e) {
+      console.error('批量生成分享码时发生错误:', e)
     }
 
-    // 使用旧设置系统（兼容性）
-    const html = generateBarcodeHTML(selectedItems, barcodeSettings)
+    // 如果分享码全部生成失败，提示用户（否则二维码会退化为需要登录的链接）
+    if (shareCodeMap.size === 0) {
+      const errorDetails = shareErrors.length > 0 
+        ? `\n\n错误详情：${shareErrors.map(e => `商品 ${e.productId}: ${e.message}`).join('\n')}`
+        : ''
+      const shouldContinue = confirm(
+        `生成商品分享码失败，二维码将无法免登录查看。${errorDetails}\n\n` +
+        `可能原因：\n` +
+        `1. 后端服务异常（500错误）\n` +
+        `2. 数据库操作失败\n` +
+        `3. 会话已过期\n\n` +
+        `是否仍要继续打印？（二维码将使用旧链接，扫码后需要登录）`
+      )
+      if (!shouldContinue) {
+        return
+      }
+    } else if (shareErrors.length > 0) {
+      console.warn('部分商品分享码生成失败：', shareErrors)
+      alert(
+        `警告：${shareErrors.length} 个商品的分享码生成失败，这些商品的二维码将无法免登录查看。\n\n` +
+        `失败的商品：${shareErrors.map(e => e.productId).join(', ')}`
+      )
+    }
+
+    const itemsWithShare = selectedItems.map((it) => ({
+      ...it,
+      shareCode: shareCodeMap.get(it.product.id) || it.shareCode,
+    }))
+
+    const html = await generateFixedBarcodeHTML(itemsWithShare, storeInfo, size)
     openPrintDialog(html)
   }
 
@@ -216,7 +275,6 @@ function BarcodePrint() {
                     if (color) {
                       const colorBatches = getBatchesByColor(color.id)
                       if (colorBatches.length > 0) {
-                        // 如果有缸号，让用户选择缸号
                         const batchId = prompt('请输入缸号ID（可选）')
                         if (batchId) {
                           const batch = colorBatches.find((b) => b.id === batchId)
@@ -308,38 +366,17 @@ function BarcodePrint() {
           </Button>
           <div>
             <h1 className="text-2xl font-semibold text-gray-900">条码打印</h1>
-            <p className="text-sm text-gray-600 mt-1">选择商品并打印条码</p>
+            <p className="text-sm text-gray-600 mt-1">选择商品并打印条码标签</p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            onClick={() => {
-              const templateType = prompt(
-                '请选择要创建的模板类型：\n\n1. 单据模板（销售单、进货单等）\n2. 条码模板（商品条码标签）\n\n请输入序号（1或2）：',
-                '2'
-              )
-              
-              if (templateType === '1') {
-                navigate('/settings/print/template/new')
-              } else if (templateType === '2') {
-                navigate('/settings/print/barcode-template/new')
-              }
-            }}
-            className="px-4 py-2 flex items-center gap-2"
-          >
-            <Settings className="w-4 h-4" />
-            新建模板
-          </Button>
-          <Button
-            onClick={handlePrint}
-            disabled={selectedItems.length === 0}
-            className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg"
-          >
-            <Printer className="w-4 h-4 mr-2" />
-            打印条码
-          </Button>
-        </div>
+        <Button
+          onClick={handlePrint}
+          disabled={selectedItems.length === 0}
+          className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg"
+        >
+          <Printer className="w-4 h-4 mr-2" />
+          打印条码
+        </Button>
       </div>
 
       <div className="grid grid-cols-2 gap-6">
@@ -368,147 +405,62 @@ function BarcodePrint() {
           </div>
         </div>
 
-        {/* 右侧：已选商品和设置 */}
+        {/* 右侧：纸张设置 + 已选商品列表 */}
         <div className="space-y-4">
-          {/* 模板选择 */}
           <div className="bg-white rounded-2xl p-4 border border-gray-200">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-900">打印模板</h3>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowTemplateTypeModal(true)}
-                className="flex items-center gap-2 px-3 py-1.5 hover:bg-gray-50"
-                title="新建模板"
-              >
-                <Settings className="w-4 h-4 text-gray-600" />
-                <span className="text-sm text-gray-700">新建模板</span>
-              </Button>
-            </div>
-            {templates.length > 0 ? (
-              <select
-                value={selectedTemplateId}
-                onChange={(e) => {
-                  setSelectedTemplateId(e.target.value)
-                  const template = templates.find((t: any) => t.id === e.target.value)
-                  if (template && template.barcodeSettings) {
-                    setBarcodeSettings(template.barcodeSettings)
-                  }
-                }}
-                className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="">使用默认设置</option>
-                {templates.map((template: any) => (
-                  <option key={template.id} value={template.id}>
-                    {template.name}
-                  </option>
-                ))}
-              </select>
-            ) : (
-              <div className="text-sm text-gray-500 mb-2">
-                暂无条码打印模板，点击右上角图标创建模板
-              </div>
-            )}
-          </div>
-
-          {/* 条码设置 */}
-          <div className="bg-white rounded-2xl p-4 border border-gray-200">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">条码设置</h3>
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">纸张设置</h3>
+            <p className="text-sm text-gray-500 mb-3">按实际标签纸尺寸设置，打印时与打印机纸张一致。</p>
             <div className="space-y-3">
-              {/* 数据源选择 - 只在选择了模板时显示 */}
-              {selectedTemplateId && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">条码数据源</label>
-                  <select
-                    value={barcodeDataSource}
-                    onChange={(e) => setBarcodeDataSource(e.target.value as DataSourceType)}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="barcodeValue">条码值（商品编码-色号-缸号）</option>
-                    <option value="productCode">商品编码</option>
-                    <option value="productName">商品名称</option>
-                    <option value="colorCode">色号编码</option>
-                    <option value="colorName">色号名称</option>
-                    <option value="batchCode">缸号编码</option>
-                  </select>
-                  <div className="text-xs text-gray-500 mt-1">
-                    选择条码内容的数据源，将覆盖模板中的设置
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1.5">纸张尺寸</label>
+                <div className="flex flex-wrap gap-2">
+                  {PAPER_PRESETS.map((p, idx) => (
+                    <button
+                      key={p.label}
+                      type="button"
+                      onClick={() => handlePaperPresetChange(idx)}
+                      className={`px-3 py-1.5 text-sm rounded-lg border transition-colors ${
+                        paperPresetIndex === idx
+                          ? 'border-blue-500 bg-blue-50 text-blue-700'
+                          : 'border-gray-200 hover:border-gray-300 text-gray-700'
+                      }`}
+                    >
+                      {p.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              {paperPresetIndex === PAPER_PRESETS.length - 1 && (
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">宽度 (mm)</label>
+                    <Input
+                      type="number"
+                      value={paperCustom.widthMm}
+                      onChange={(e) => handlePaperCustomChange('widthMm', Number(e.target.value) || 40)}
+                      min={40}
+                      max={300}
+                      className="w-full"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">高度 (mm)</label>
+                    <Input
+                      type="number"
+                      value={paperCustom.heightMm}
+                      onChange={(e) => handlePaperCustomChange('heightMm', Number(e.target.value) || 30)}
+                      min={30}
+                      max={300}
+                      className="w-full"
+                    />
                   </div>
                 </div>
               )}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">条码格式</label>
-                <select
-                  value={barcodeSettings.format}
-                  onChange={(e) =>
-                    setBarcodeSettings({
-                      ...barcodeSettings,
-                      format: e.target.value as any,
-                    })
-                  }
-                  className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm"
-                >
-                  <option value="CODE128">CODE128</option>
-                  <option value="EAN13">EAN13</option>
-                  <option value="EAN8">EAN8</option>
-                  <option value="CODE39">CODE39</option>
-                </select>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">宽度</label>
-                  <Input
-                    type="number"
-                    value={barcodeSettings.width}
-                    onChange={(e) =>
-                      setBarcodeSettings({
-                        ...barcodeSettings,
-                        width: parseFloat(e.target.value) || 2,
-                      })
-                    }
-                    className="w-full"
-                    min={1}
-                    max={5}
-                    step={0.5}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">高度</label>
-                  <Input
-                    type="number"
-                    value={barcodeSettings.height}
-                    onChange={(e) =>
-                      setBarcodeSettings({
-                        ...barcodeSettings,
-                        height: parseInt(e.target.value) || 60,
-                      })
-                    }
-                    className="w-full"
-                    min={20}
-                    max={200}
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    checked={barcodeSettings.displayValue}
-                    onChange={(e) =>
-                      setBarcodeSettings({
-                        ...barcodeSettings,
-                        displayValue: e.target.checked,
-                      })
-                    }
-                    className="w-4 h-4"
-                  />
-                  <span className="text-sm text-gray-700">显示条码值</span>
-                </label>
-              </div>
+              <p className="text-xs text-gray-400">
+                当前：{paperPresetIndex === PAPER_PRESETS.length - 1 ? paperCustom.widthMm : paperSize.widthMm} × {paperPresetIndex === PAPER_PRESETS.length - 1 ? paperCustom.heightMm : paperSize.heightMm} mm
+              </p>
             </div>
           </div>
-
-          {/* 已选商品列表 */}
           <div className="bg-white rounded-2xl p-4 border border-gray-200">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">
               已选商品 ({selectedItems.length})
@@ -528,57 +480,8 @@ function BarcodePrint() {
           </div>
         </div>
       </div>
-
-      {/* 模板类型选择对话框 */}
-      {showTemplateTypeModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl p-6 max-w-md w-full mx-4">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">选择模板类型</h3>
-            <p className="text-sm text-gray-600 mb-6">请选择要创建的模板类型</p>
-            
-            <div className="space-y-3">
-              <button
-                onClick={() => handleSelectTemplateType('document')}
-                className="w-full p-4 border-2 border-gray-200 rounded-xl hover:border-blue-500 hover:bg-blue-50 transition-colors text-left"
-              >
-                <div className="flex items-center gap-3">
-                  <FileText className="w-6 h-6 text-blue-600" />
-                  <div>
-                    <div className="font-medium text-gray-900">单据模板</div>
-                    <div className="text-sm text-gray-500">用于销售单、进货单等单据打印</div>
-                  </div>
-                </div>
-              </button>
-              
-              <button
-                onClick={() => handleSelectTemplateType('barcode')}
-                className="w-full p-4 border-2 border-gray-200 rounded-xl hover:border-blue-500 hover:bg-blue-50 transition-colors text-left"
-              >
-                <div className="flex items-center gap-3">
-                  <Barcode className="w-6 h-6 text-blue-600" />
-                  <div>
-                    <div className="font-medium text-gray-900">条码模板</div>
-                    <div className="text-sm text-gray-500">用于商品条码标签打印</div>
-                  </div>
-                </div>
-              </button>
-            </div>
-            
-            <div className="mt-6 flex justify-end">
-              <Button
-                variant="ghost"
-                onClick={() => setShowTemplateTypeModal(false)}
-                className="px-4"
-              >
-                取消
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   )
 }
 
 export default BarcodePrint
-

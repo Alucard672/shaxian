@@ -121,7 +121,7 @@ function TabBar() {
 
   return (
     <>
-      <div className="bg-white border-b border-gray-200 flex items-center gap-1 px-2 overflow-x-auto">
+      <div className="bg-white border-b border-gray-100 shadow-sm flex items-center gap-1 px-2 overflow-x-auto">
         {tabs.map((tab) => {
           const isActive = activeTab === tab.key
           return (

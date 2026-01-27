@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
+import { useSettingsStore } from '@/store/settingsStore'
 import {
   LayoutDashboard,
   Package,
@@ -97,6 +98,7 @@ const menuItems: MenuItem[] = [
 function Sidebar() {
   const navigate = useNavigate()
   const location = useLocation()
+  const { systemParams } = useSettingsStore()
   const [expandedMenus, setExpandedMenus] = useState<Set<string>>(new Set())
 
   const isActive = (path: string) => {
@@ -124,14 +126,23 @@ function Sidebar() {
     }
   }
 
+  // 根据系统参数过滤菜单项
+  const filteredMenuItems = menuItems.filter((item) => {
+    // 如果染色加工流程未启用，隐藏染色加工菜单
+    if (item.id === 'dyeing' && !systemParams.enableDyeingProcess) {
+      return false
+    }
+    return true
+  })
+
   // 分离设置菜单和其他菜单
-  const regularMenus = menuItems.filter((item) => item.id !== 'settings')
-  const settingsMenu = menuItems.find((item) => item.id === 'settings')
+  const regularMenus = filteredMenuItems.filter((item) => item.id !== 'settings')
+  const settingsMenu = filteredMenuItems.find((item) => item.id === 'settings')
 
   return (
-    <aside className="w-64 bg-white border-r border-gray-200 flex flex-col">
-      <nav className="flex-1 overflow-y-auto py-4">
-        <div className="px-3 space-y-1">
+    <aside className="w-52 bg-white shadow-sm border-r border-gray-100 flex flex-col">
+      <nav className="flex-1 min-h-0 overflow-y-auto py-2">
+        <div className="px-3 space-y-2">
           {regularMenus.map((item) => {
             const Icon = item.icon
             const hasChildren = item.children && item.children.length > 0
@@ -163,7 +174,7 @@ function Sidebar() {
 
                 {/* 子菜单 */}
                 {hasChildren && isExpanded && (
-                  <div className="ml-8 mt-1 space-y-1">
+                  <div className="ml-8 mt-1 space-y-2">
                     {item.children!.map((child) => {
                       const ChildIcon = child.icon
                       const childActive = isActive(child.path)
@@ -191,9 +202,10 @@ function Sidebar() {
         </div>
       </nav>
 
-      {/* 设置菜单固定在底部 */}
       {settingsMenu && (
-        <div className="border-t border-gray-200 pt-2 pb-4 px-3">
+        <>
+          <div className="flex-shrink-0 h-2" />
+          <div className="border-t border-gray-200 pt-2 pb-2 px-3 flex-shrink-0">
           {(() => {
             const item = settingsMenu
             const Icon = item.icon
@@ -213,7 +225,8 @@ function Sidebar() {
               </button>
             )
           })()}
-        </div>
+          </div>
+        </>
       )}
     </aside>
   )

@@ -47,6 +47,9 @@ export interface SalesOrder {
   updatedAt: string
 }
 
+// 支付方式
+export type PaymentMethod = '现金' | '微信' | '支付宝' | '银行卡' | '扫码付'
+
 // 销售单表单数据
 export interface SalesOrderFormData {
   customerId: string
@@ -59,6 +62,7 @@ export interface SalesOrderFormData {
   contactPhone?: string
   items: Omit<SalesOrderItem, 'id' | 'amount'>[]
   paidAmount: number
+  paymentMethod?: PaymentMethod // 收款方式
   receivedAmount?: number
   remark?: string
 }

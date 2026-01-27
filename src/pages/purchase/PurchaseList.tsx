@@ -3,19 +3,38 @@ import { useNavigate } from 'react-router-dom'
 import { usePurchaseStore } from '@/store/purchaseStore'
 import { useContactStore } from '@/store/contactStore'
 import { usePrintStore } from '@/store/printStore'
+import { useSettingsStore } from '@/store/settingsStore'
 import { PurchaseOrder, PurchaseOrderStatus } from '@/types/purchase'
 import Button from '@/components/ui/Button'
 import Table from '@/components/ui/Table'
+import DateRangePicker from '@/components/ui/DateRangePicker'
+import VisibleColumnsConfigModal from '@/components/ui/VisibleColumnsConfigModal'
 import { templateApi } from '@/api/client'
 import { generatePrintContent, openPrintDialog } from '@/utils/printService'
-import { Plus, Edit, Trash2, Eye, Search, FileText, Printer } from 'lucide-react'
+import { Plus, Edit, Trash2, Eye, Search, FileText, Printer, LayoutList } from 'lucide-react'
+import { formatAmount } from '@/utils/formatNumber'
 import { parseISO, startOfDay, endOfDay } from 'date-fns'
+
+const PURCHASE_DOC_KEY = 'purchase-list'
+const PURCHASE_COLUMN_OPTIONS = [
+  { id: 'orderNumber', label: '采购单号' },
+  { id: 'supplierName', label: '供应商' },
+  { id: 'purchaseDate', label: '采购日期' },
+  { id: 'totalAmount', label: '总金额' },
+  { id: 'paidAmount', label: '已付金额' },
+  { id: 'unpaidAmount', label: '欠款金额' },
+  { id: 'status', label: '状态' },
+  { id: 'operator', label: '经办人' },
+]
+const PURCHASE_DEFAULT_VISIBLE = PURCHASE_COLUMN_OPTIONS.map((c) => c.id)
 
 function PurchaseList() {
   const navigate = useNavigate()
   const { orders, loading, loadOrders, deleteOrder } = usePurchaseStore()
   const { suppliers } = useContactStore()
   const { addPrintRecord } = usePrintStore()
+  const { getDocumentVisibleColumns } = useSettingsStore()
+  const [showColumnsModal, setShowColumnsModal] = useState(false)
 
   const [searchKeyword, setSearchKeyword] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('全部状态')
@@ -192,7 +211,8 @@ function PurchaseList() {
     }
   }
 
-  const columns = [
+  const visibleColumnKeys = getDocumentVisibleColumns(PURCHASE_DOC_KEY, PURCHASE_DEFAULT_VISIBLE)
+  const allColumns = [
     {
       key: 'orderNumber',
       title: '采购单号',
@@ -222,7 +242,7 @@ function PurchaseList() {
       title: '总金额',
       render: (_: any, record: PurchaseOrder) => (
         <span className="text-sm font-medium text-gray-900">
-          ¥{record.totalAmount.toFixed(2)}
+          {formatAmount(record.totalAmount)}
         </span>
       ),
     },
@@ -230,14 +250,14 @@ function PurchaseList() {
       key: 'paidAmount',
       title: '已付金额',
       render: (_: any, record: PurchaseOrder) => (
-        <span className="text-sm text-gray-600">¥{record.paidAmount.toFixed(2)}</span>
+        <span className="text-sm text-gray-600">{formatAmount(record.paidAmount)}</span>
       ),
     },
     {
       key: 'unpaidAmount',
       title: '欠款金额',
       render: (_: any, record: PurchaseOrder) => (
-        <span className="text-sm text-red-600">¥{record.unpaidAmount.toFixed(2)}</span>
+        <span className="text-sm text-red-600">{formatAmount(record.unpaidAmount)}</span>
       ),
     },
     {
@@ -298,22 +318,40 @@ function PurchaseList() {
       ),
     },
   ]
+  const columns = allColumns.filter((c) => c.key === 'actions' || visibleColumnKeys.includes(c.key))
 
   return (
     <div className="space-y-6 p-8">
+      <VisibleColumnsConfigModal
+        open={showColumnsModal}
+        onClose={() => setShowColumnsModal(false)}
+        docKey={PURCHASE_DOC_KEY}
+        title="进货单列表"
+        columns={PURCHASE_COLUMN_OPTIONS}
+        defaultVisible={PURCHASE_DEFAULT_VISIBLE}
+      />
       {/* 页面标题和操作按钮 */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-semibold text-gray-900">采购管理</h1>
           <p className="text-sm text-gray-600 mt-1">管理采购进货单</p>
         </div>
-        <Button
-          onClick={() => navigate('/purchase/create')}
-          className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg"
-        >
-          <Plus className="w-4 h-4 mr-2" />
-          新建采购单
-        </Button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowColumnsModal(true)}
+            className="p-2 hover:bg-gray-100 rounded-lg text-gray-500 transition-colors"
+            title="自定义列显示"
+          >
+            <LayoutList className="w-5 h-5" />
+          </button>
+          <Button
+            onClick={() => navigate('/purchase/create')}
+            className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            新建采购单
+          </Button>
+        </div>
       </div>
 
       {/* 统计卡片 */}
@@ -371,26 +409,18 @@ function PurchaseList() {
               <option value="已作废">已作废</option>
             </select>
           </div>
-          <div className="grid grid-cols-2 gap-2">
-            <input
-              type="date"
-              value={startDate}
-              onChange={(e) => {
-                setStartDate(e.target.value)
+          <div>
+            <DateRangePicker
+              startDate={startDate}
+              endDate={endDate}
+              onStartDateChange={(value) => {
+                setStartDate(value)
                 setCurrentPage(1)
               }}
-              placeholder="开始日期"
-              className="px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-            <input
-              type="date"
-              value={endDate}
-              onChange={(e) => {
-                setEndDate(e.target.value)
+              onEndDateChange={(value) => {
+                setEndDate(value)
                 setCurrentPage(1)
               }}
-              placeholder="结束日期"
-              className="px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
         </div>

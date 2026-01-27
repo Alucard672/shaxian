@@ -43,6 +43,9 @@ export interface PurchaseOrder {
   updatedAt: string
 }
 
+// 支付方式
+export type PaymentMethod = '现金' | '微信' | '支付宝' | '银行卡' | '扫码付'
+
 // 进货单表单数据
 export interface PurchaseOrderFormData {
   supplierId: string
@@ -51,6 +54,7 @@ export interface PurchaseOrderFormData {
   expectedDate?: string
   items: Omit<PurchaseOrderItem, 'id' | 'amount'>[]
   paidAmount: number
+  paymentMethod?: PaymentMethod // 收款方式
   remark?: string
 }
 

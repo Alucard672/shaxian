@@ -59,7 +59,21 @@ export interface SystemInfo {
 
 // 系统参数设置
 export interface SystemParams {
-  // 染色加工流程
-  enableDyeingProcess: boolean // 是否启用染色加工流程，默认false
+  enableDyeingProcess: boolean
+  allowNegativeStock: boolean
+  productRequiredFields?: string[]
+  /** 商品类型：纱线 / 面料，决定商品表单显示哪些属性 */
+  productType?: '纱线' | '面料'
 }
+
+/** 页面级必填项配置：pageKey -> 必填字段 id 列表 */
+export type PageRequiredFieldsMap = Record<string, string[]>
+
+export interface PageFieldOption {
+  id: string
+  label: string
+}
+
+/** 单据列显示配置：documentKey -> 显示的列 key 列表，空数组表示全部显示 */
+export type DocumentVisibleColumnsMap = Record<string, string[]>
 

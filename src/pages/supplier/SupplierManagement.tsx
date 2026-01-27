@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { useContactStore } from '@/store/contactStore'
 import { useAccountStore } from '@/store/accountStore'
 import { usePurchaseStore } from '@/store/purchaseStore'
@@ -29,7 +29,8 @@ function SupplierManagement() {
         error,
         loadAll,
         deleteSupplier,
-        getSupplier
+        getSupplier,
+        updateSupplier
     } = useContactStore()
 
     // 加载数据
@@ -81,8 +82,6 @@ function SupplierManagement() {
             result = result.filter(
                 (s) =>
                     s.name.toLowerCase().includes(keyword) ||
-                    s.code.toLowerCase().includes(keyword) ||
-                    (s.contactPerson && s.contactPerson.toLowerCase().includes(keyword)) ||
                     (s.phone && s.phone.toLowerCase().includes(keyword))
             )
         }
@@ -155,13 +154,6 @@ function SupplierManagement() {
     // 表格列定义
     const supplierColumns = [
         {
-            key: 'code',
-            title: '供应商编号',
-            render: (_: any, record: Supplier) => (
-                <span className="text-gray-600 text-sm">{record.code}</span>
-            ),
-        },
-        {
             key: 'name',
             title: '供应商名称',
             render: (_: any, record: Supplier) => (
@@ -175,13 +167,6 @@ function SupplierManagement() {
                 <span className="px-2.5 py-1 bg-purple-100 text-purple-700 text-sm font-medium rounded-full">
                     {record.type}
                 </span>
-            ),
-        },
-        {
-            key: 'contactPerson',
-            title: '联系人',
-            render: (_: any, record: Supplier) => (
-                <span className="text-gray-900 text-sm">{record.contactPerson || '-'}</span>
             ),
         },
         {
@@ -262,6 +247,17 @@ function SupplierManagement() {
                     navigate(`/supplier/${record.id}/edit`)
                 }
 
+                const handleToggleStatus = async () => {
+                    const newStatus = record.status === '合作中' ? '已停用' : '合作中'
+                    if (confirm(`确定要${newStatus === '已停用' ? '停用' : '启用'}供应商"${record.name}"吗？`)) {
+                        try {
+                            await updateSupplier(record.id, { status: newStatus })
+                        } catch (error: any) {
+                            alert(`操作失败: ${error.message || '未知错误'}`)
+                        }
+                    }
+                }
+
                 return (
                     <div className="flex items-center gap-2">
                         <button
@@ -277,6 +273,17 @@ function SupplierManagement() {
                             className="p-1.5 hover:bg-gray-100 rounded"
                         >
                             <Edit className="w-4 h-4 text-gray-600" />
+                        </button>
+                        <button
+                            onClick={handleToggleStatus}
+                            title={record.status === '合作中' ? '停用' : '启用'}
+                            className={`px-2 py-1 text-xs font-medium rounded transition-colors ${
+                                record.status === '合作中'
+                                    ? 'text-orange-600 hover:bg-orange-50'
+                                    : 'text-green-600 hover:bg-green-50'
+                            }`}
+                        >
+                            {record.status === '合作中' ? '停用' : '启用'}
                         </button>
                     </div>
                 )
@@ -348,7 +355,7 @@ function SupplierManagement() {
                             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
                             <input
                                 type="text"
-                                placeholder="搜索供应商名称、编号、联系人..."
+                                placeholder="搜索供应商名称、电话..."
                                 value={searchKeyword}
                                 onChange={(e) => {
                                     setSearchKeyword(e.target.value)
@@ -363,13 +370,15 @@ function SupplierManagement() {
                             导出
                         </Button>
                         {/* 新增供应商按钮 */}
-                        <Button
-                            className="h-[38px] rounded-lg bg-primary-600 hover:bg-primary-700"
-                            onClick={() => navigate('/supplier/create')}
-                        >
-                            <Plus className="w-4 h-4 mr-2" />
-                            新增供应商
-                        </Button>
+                        <Link to="/supplier/create">
+                            <Button
+                                type="button"
+                                className="h-[38px] rounded-lg bg-primary-600 hover:bg-primary-700"
+                            >
+                                <Plus className="w-4 h-4 mr-2" />
+                                新增供应商
+                            </Button>
+                        </Link>
                     </div>
 
                     {/* 第二行：状态标签页 */}

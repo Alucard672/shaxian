@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { useEffect, useState } from 'react'
+import { useSettingsStore } from './store/settingsStore'
 import Layout from './components/layout/Layout'
 import Dashboard from './pages/Dashboard'
 import Login from './pages/auth/Login'
@@ -8,11 +9,15 @@ import Register from './pages/auth/Register'
 // 商品管理
 import ProductManagement from './pages/product/ProductManagement'
 import BarcodePrint from './pages/product/BarcodePrint'
+import ProductDetailPage from './pages/product/ProductDetailPage'
+import ProductSharePage from './pages/product/ProductSharePage'
 
 // 往来单位
 import ContactManagement from './pages/contact/ContactManagement'
 import CustomerManagement from './pages/customer/CustomerManagement'
+import CustomerForm from './pages/customer/CustomerForm'
 import SupplierManagement from './pages/supplier/SupplierManagement'
+import SupplierForm from './pages/supplier/SupplierForm'
 
 // 采购管理
 import PurchaseList from './pages/purchase/PurchaseList'
@@ -50,7 +55,6 @@ import FundReport from './pages/report/FundReport'
 // 打印管理
 import PrintSettings from './pages/settings/PrintSettings'
 import TemplateEdit from './pages/print/TemplateEdit'
-import BarcodeTemplateEdit from './pages/print/BarcodeTemplateEdit'
 
 // 系统设置
 import SettingsManagement from './pages/settings/SettingsManagement'
@@ -108,6 +112,17 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   return <Layout>{children}</Layout>
 }
 
+// 染色加工路由保护组件（检查系统参数）
+function DyeingRoute({ children }: { children: React.ReactNode }) {
+  const { systemParams } = useSettingsStore()
+  
+  if (!systemParams.enableDyeingProcess) {
+    return <Navigate to="/" replace />
+  }
+  
+  return <ProtectedRoute>{children}</ProtectedRoute>
+}
+
 function App() {
   const baseUrl = import.meta.env.BASE_URL || '/'
   // Vite's BASE_URL ends with "/" (e.g. "/" or "/shaxian/").
@@ -154,6 +169,15 @@ function App() {
             </ProtectedRoute>
           }
         />
+        {/* 商品分享页（公开访问，分享码免登录）须在 /product/:id 之前，否则 /product/share/xxx 会匹配成 id=share */}
+        <Route
+          path="/product/share/:code"
+          element={<ProductSharePage />}
+        />
+        <Route
+          path="/product/:id"
+          element={<ProductDetailPage />}
+        />
 
         {/* 往来单位 */}
         <Route
@@ -165,10 +189,42 @@ function App() {
           }
         />
         <Route
+          path="/customer/create"
+          element={
+            <ProtectedRoute>
+              <CustomerForm />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/customer/:id/edit"
+          element={
+            <ProtectedRoute>
+              <CustomerForm />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/customer"
           element={
             <ProtectedRoute>
               <CustomerManagement />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/supplier/create"
+          element={
+            <ProtectedRoute>
+              <SupplierForm />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/supplier/:id/edit"
+          element={
+            <ProtectedRoute>
+              <SupplierForm />
             </ProtectedRoute>
           }
         />
@@ -253,17 +309,25 @@ function App() {
         <Route
           path="/dyeing"
           element={
-            <ProtectedRoute>
+            <DyeingRoute>
               <DyeingList />
-            </ProtectedRoute>
+            </DyeingRoute>
           }
         />
         <Route
           path="/dyeing/create"
           element={
-            <ProtectedRoute>
+            <DyeingRoute>
               <DyeingCreate />
-            </ProtectedRoute>
+            </DyeingRoute>
+          }
+        />
+        <Route
+          path="/dyeing/:id/edit"
+          element={
+            <DyeingRoute>
+              <DyeingCreate />
+            </DyeingRoute>
           }
         />
 
@@ -293,6 +357,22 @@ function App() {
           }
         />
         <Route
+          path="/inventory/adjustment/:id/edit"
+          element={
+            <ProtectedRoute>
+              <AdjustmentCreate />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/inventory/adjustment/:id"
+          element={
+            <ProtectedRoute>
+              <AdjustmentCreate />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/inventory/check"
           element={
             <ProtectedRoute>
@@ -302,6 +382,22 @@ function App() {
         />
         <Route
           path="/inventory/check/create"
+          element={
+            <ProtectedRoute>
+              <InventoryCheckCreate />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/inventory/check/:id/edit"
+          element={
+            <ProtectedRoute>
+              <InventoryCheckCreate />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/inventory/check/:id"
           element={
             <ProtectedRoute>
               <InventoryCheckCreate />
@@ -414,7 +510,7 @@ function App() {
           path="/settings/print/barcode-template/:id"
           element={
             <ProtectedRoute>
-              <BarcodeTemplateEdit />
+              <Navigate to="/products/barcode-print" replace />
             </ProtectedRoute>
           }
         />

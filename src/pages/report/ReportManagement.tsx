@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useReportStore } from '@/store/reportStore'
 import Card from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
+import DateRangePicker from '../../components/ui/DateRangePicker'
 import {
   DollarSign,
   Package,
@@ -43,6 +44,8 @@ function ReportManagement() {
   } = useReportStore()
 
   const [dateRange, setDateRange] = useState<DateRange>('本月')
+  const [customStartDate, setCustomStartDate] = useState<string>('')
+  const [customEndDate, setCustomEndDate] = useState<string>('')
   const [chartType, setChartType] = useState<'line' | 'bar'>('line')
 
   // 统计数据
@@ -196,8 +199,8 @@ function ReportManagement() {
 
       {/* 日期筛选和操作 */}
       <Card className="p-4 rounded-xl">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
+        <div className="flex items-center justify-between flex-wrap gap-4">
+          <div className="flex items-center gap-2 flex-wrap">
             {dateRangeButtons.map((range) => (
               <button
                 key={range}
@@ -211,6 +214,16 @@ function ReportManagement() {
                 {range}
               </button>
             ))}
+            {dateRange === '自定义' && (
+              <div className="ml-2">
+                <DateRangePicker
+                  startDate={customStartDate}
+                  endDate={customEndDate}
+                  onStartDateChange={setCustomStartDate}
+                  onEndDateChange={setCustomEndDate}
+                />
+              </div>
+            )}
           </div>
           <div className="flex items-center gap-3">
             <Button variant="outline" className="h-[38px] rounded-lg border-gray-300">

@@ -1,7 +1,32 @@
 import { create } from 'zustand'
-import { StoreInfo, Employee, InventoryAlertSettings, Role, CustomQuery, SystemInfo, SystemParams } from '@/types/settings'
+import { StoreInfo, Employee, InventoryAlertSettings, Role, CustomQuery, SystemInfo, SystemParams, PageRequiredFieldsMap, DocumentVisibleColumnsMap } from '@/types/settings'
 import { Unit } from '@/types/unit'
 import { settingsApi } from '@/api/client'
+
+const PAGE_REQUIRED_FIELDS_KEY = 'pageRequiredFields'
+const DOCUMENT_VISIBLE_COLUMNS_KEY = 'documentVisibleColumns'
+
+function loadPageRequiredFields(): PageRequiredFieldsMap {
+  try {
+    const raw = localStorage.getItem(PAGE_REQUIRED_FIELDS_KEY)
+    if (raw) {
+      const parsed = JSON.parse(raw) as PageRequiredFieldsMap
+      return typeof parsed === 'object' && parsed !== null ? parsed : {}
+    }
+  } catch (_) {}
+  return {}
+}
+
+function loadDocumentVisibleColumns(): DocumentVisibleColumnsMap {
+  try {
+    const raw = localStorage.getItem(DOCUMENT_VISIBLE_COLUMNS_KEY)
+    if (raw) {
+      const parsed = JSON.parse(raw) as DocumentVisibleColumnsMap
+      return typeof parsed === 'object' && parsed !== null ? parsed : {}
+    }
+  } catch (_) {}
+  return {}
+}
 
 interface SettingsState {
   // 门店信息
@@ -48,6 +73,15 @@ interface SettingsState {
   // 系统参数设置
   systemParams: SystemParams
   updateSystemParams: (params: Partial<SystemParams>) => Promise<void>
+
+  // 页面级必填项自定义（存 localStorage）
+  pageRequiredFields: PageRequiredFieldsMap
+  getPageRequiredFields: (pageKey: string, defaultFields: string[]) => string[]
+  setPageRequiredFields: (pageKey: string, fields: string[]) => void
+
+  documentVisibleColumns: DocumentVisibleColumnsMap
+  getDocumentVisibleColumns: (docKey: string, allColumnKeys: string[]) => string[]
+  setDocumentVisibleColumns: (docKey: string, keys: string[]) => void
   
   // 单位管理
   units: Unit[]
@@ -84,7 +118,10 @@ const defaultSystemInfo: SystemInfo = {
 }
 
 const defaultSystemParams: SystemParams = {
-  enableDyeingProcess: false, // 默认不启用染色加工流程
+  enableDyeingProcess: false,
+  allowNegativeStock: false,
+  productRequiredFields: ['name', 'code'],
+  productType: '纱线', // 商品类型：纱线 | 面料，决定表单显示纱线属性（支数）或面料属性（幅宽、克重）
 }
 
 export const useSettingsStore = create<SettingsState>((set, get) => ({
@@ -96,6 +133,8 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   inventoryAlertSettings: defaultInventoryAlertSettings,
   systemParams: defaultSystemParams,
   systemInfo: defaultSystemInfo,
+  pageRequiredFields: typeof window !== 'undefined' ? loadPageRequiredFields() : {},
+  documentVisibleColumns: typeof window !== 'undefined' ? loadDocumentVisibleColumns() : {},
   units: [],
   loading: false,
   error: null,
@@ -336,6 +375,33 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
       console.error('Failed to update system params:', error)
       throw error
     }
+  },
+
+  getPageRequiredFields: (pageKey, defaultFields) => {
+    const map = get().pageRequiredFields
+    if (map[pageKey] && Array.isArray(map[pageKey])) return map[pageKey]
+    return defaultFields
+  },
+  setPageRequiredFields: (pageKey, fields) => {
+    const next = { ...get().pageRequiredFields, [pageKey]: fields }
+    set({ pageRequiredFields: next })
+    try {
+      localStorage.setItem(PAGE_REQUIRED_FIELDS_KEY, JSON.stringify(next))
+    } catch (_) {}
+  },
+
+  getDocumentVisibleColumns: (docKey, allColumnKeys) => {
+    const map = get().documentVisibleColumns
+    const saved = map[docKey]
+    if (saved && Array.isArray(saved) && saved.length > 0) return saved
+    return allColumnKeys
+  },
+  setDocumentVisibleColumns: (docKey, keys) => {
+    const next = { ...get().documentVisibleColumns, [docKey]: keys }
+    set({ documentVisibleColumns: next })
+    try {
+      localStorage.setItem(DOCUMENT_VISIBLE_COLUMNS_KEY, JSON.stringify(next))
+    } catch (_) {}
   },
   
   // 单位管理

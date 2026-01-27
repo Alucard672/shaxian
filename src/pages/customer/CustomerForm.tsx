@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { useContactStore } from '@/store/contactStore'
@@ -6,15 +6,14 @@ import { CustomerType, CustomerStatus } from '@/types/contact'
 import Button from '../../components/ui/Button'
 import Input from '../../components/ui/Input'
 import Textarea from '../../components/ui/Textarea'
+import SelectWithAdd from '../../components/ui/SelectWithAdd'
 import { ArrowLeft, Save } from 'lucide-react'
 
 interface CustomerFormData {
     name: string
-    code: string
-    contactPerson?: string
     phone?: string
     address?: string
-    type: CustomerType
+    type: string
     status: CustomerStatus
     creditLimit?: number
     remark?: string
@@ -45,11 +44,12 @@ function CustomerForm() {
         handleSubmit,
         formState: { errors },
         setValue,
+        watch,
+        setError,
+        clearErrors,
     } = useForm<CustomerFormData>({
         defaultValues: existingCustomer ? {
             name: existingCustomer.name,
-            code: existingCustomer.code,
-            contactPerson: existingCustomer.contactPerson || '',
             phone: existingCustomer.phone || '',
             address: existingCustomer.address || '',
             type: existingCustomer.type,
@@ -58,8 +58,6 @@ function CustomerForm() {
             remark: existingCustomer.remark || '',
         } : {
             name: '',
-            code: '',
-            contactPerson: '',
             phone: '',
             address: '',
             type: '直客',
@@ -73,8 +71,6 @@ function CustomerForm() {
     useEffect(() => {
         if (isEditMode && existingCustomer) {
             setValue('name', existingCustomer.name)
-            setValue('code', existingCustomer.code)
-            setValue('contactPerson', existingCustomer.contactPerson || '')
             setValue('phone', existingCustomer.phone || '')
             setValue('address', existingCustomer.address || '')
             setValue('type', existingCustomer.type)
@@ -84,12 +80,26 @@ function CustomerForm() {
         }
     }, [isEditMode, existingCustomer, setValue])
 
+    const typeOptions = useMemo(() => {
+        const base = [
+            { value: '直客', label: '直客' },
+            { value: '经销商', label: '经销商' },
+        ]
+        if (existingCustomer?.type && !base.some((o) => o.value === existingCustomer.type)) {
+            return [...base, { value: existingCustomer.type, label: existingCustomer.type }]
+        }
+        return base
+    }, [existingCustomer?.type])
+
     const onSubmit = async (data: CustomerFormData) => {
+        if (!String(data.type || '').trim()) {
+            setError('type', { type: 'manual', message: '请选择或输入客户类型' })
+            return
+        }
+        clearErrors('type')
         try {
             const customerData = {
                 name: data.name,
-                code: data.code,
-                contactPerson: data.contactPerson,
                 phone: data.phone,
                 address: data.address,
                 type: data.type,
@@ -162,15 +172,6 @@ function CustomerForm() {
                             error={errors.name?.message}
                         />
                         <Input
-                            label="客户编码 *"
-                            {...register('code', { required: '客户编码不能为空' })}
-                            error={errors.code?.message}
-                        />
-                        <Input
-                            label="联系人"
-                            {...register('contactPerson')}
-                        />
-                        <Input
                             label="联系电话"
                             {...register('phone')}
                         />
@@ -192,14 +193,18 @@ function CustomerForm() {
                             <label className="block text-sm font-medium text-gray-700 mb-2">
                                 客户类型 *
                             </label>
-                            <select
-                                {...register('type', { required: '客户类型不能为空' })}
-                                className={`w-full px-3 py-2 h-9 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 ${errors.type ? 'border-danger-500' : 'border-gray-200'
-                                    }`}
-                            >
-                                <option value="直客">直客</option>
-                                <option value="经销商">经销商</option>
-                            </select>
+                            <SelectWithAdd
+                                value={watch('type')}
+                                onChange={(v) => {
+                                    setValue('type', v, { shouldValidate: true })
+                                    clearErrors('type')
+                                }}
+                                options={typeOptions}
+                                placeholder="选择或输入客户类型"
+                                addText="添加新类型"
+                                emptyText="暂无类型，输入后按回车添加"
+                                allowAdd
+                            />
                             {errors.type && (
                                 <p className="mt-1 text-sm text-danger-500">{errors.type.message}</p>
                             )}
@@ -214,7 +219,7 @@ function CustomerForm() {
                                     }`}
                             >
                                 <option value="正常">正常</option>
-                                <option value="冻结">冻结</option>
+                                <option value="停用">停用</option>
                             </select>
                             {errors.status && (
                                 <p className="mt-1 text-sm text-danger-500">{errors.status.message}</p>

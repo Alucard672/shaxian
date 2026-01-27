@@ -5,6 +5,7 @@ import Card from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
 import Table from '../../components/ui/Table'
 import Pagination from '../../components/ui/Pagination'
+import DateRangePicker from '../../components/ui/DateRangePicker'
 import { Package, Download, Filter, ArrowLeft } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import {
@@ -21,7 +22,7 @@ import {
 } from 'recharts'
 import { format, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfQuarter, endOfQuarter, startOfYear, endOfYear, subDays } from 'date-fns'
 
-type DateRange = '今日' | '本周' | '本月' | '本季度' | '本年'
+type DateRange = '今日' | '本周' | '本月' | '本季度' | '本年' | '自定义'
 
 function PurchaseReport() {
   const navigate = useNavigate()
@@ -29,11 +30,19 @@ function PurchaseReport() {
   const { products } = useProductStore()
 
   const [dateRange, setDateRange] = useState<DateRange>('本月')
+  const [customStartDate, setCustomStartDate] = useState<string>('')
+  const [customEndDate, setCustomEndDate] = useState<string>('')
   const [currentPage, setCurrentPage] = useState(1)
   const pageSize = 10
 
   const getDateRange = useMemo(() => {
     const now = new Date()
+    if (dateRange === '自定义' && customStartDate && customEndDate) {
+      return {
+        start: startOfDay(new Date(customStartDate)),
+        end: endOfDay(new Date(customEndDate)),
+      }
+    }
     switch (dateRange) {
       case '今日':
         return { start: startOfDay(now), end: endOfDay(now) }
@@ -48,7 +57,7 @@ function PurchaseReport() {
       default:
         return { start: startOfMonth(now), end: endOfMonth(now) }
     }
-  }, [dateRange])
+  }, [dateRange, customStartDate, customEndDate])
 
   const filteredOrders = useMemo(() => {
     const { start, end } = getDateRange
@@ -140,19 +149,29 @@ function PurchaseReport() {
       </div>
 
       <Card className="p-4 rounded-xl">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            {(['今日', '本周', '本月', '本季度', '本年'] as DateRange[]).map((range) => (
+        <div className="flex items-center justify-between flex-wrap gap-4">
+          <div className="flex items-center gap-2 flex-wrap">
+            {(['今日', '本周', '本月', '本季度', '本年', '自定义'] as DateRange[]).map((range) => (
               <button
                 key={range}
                 onClick={() => setDateRange(range)}
                 className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors ${
-                  dateRange === range ? 'bg-primary-500 text-white' : 'bg-gray-100 text-gray-700'
+                  dateRange === range ? 'bg-primary-500 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
               >
                 {range}
               </button>
             ))}
+            {dateRange === '自定义' && (
+              <div className="ml-2">
+                <DateRangePicker
+                  startDate={customStartDate}
+                  endDate={customEndDate}
+                  onStartDateChange={setCustomStartDate}
+                  onEndDateChange={setCustomEndDate}
+                />
+              </div>
+            )}
           </div>
           <div className="flex items-center gap-3">
             <Button variant="outline" className="h-[38px] rounded-lg">

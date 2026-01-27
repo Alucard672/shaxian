@@ -12,8 +12,6 @@ type ContactFormType = 'customer' | 'supplier'
 
 interface ContactFormData {
   name: string
-  code: string
-  contactPerson?: string
   phone?: string
   address?: string
   type?: CustomerType | SupplierType
@@ -60,8 +58,6 @@ function ContactForm() {
   } = useForm<ContactFormData>({
     defaultValues: existingContact ? {
       name: existingContact.name,
-      code: existingContact.code,
-      contactPerson: existingContact.contactPerson || '',
       phone: existingContact.phone || '',
       address: existingContact.address || '',
       type: existingContact.type as CustomerType | SupplierType,
@@ -71,8 +67,6 @@ function ContactForm() {
       remark: existingContact.remark || '',
     } : {
       name: '',
-      code: '',
-      contactPerson: '',
       phone: '',
       address: '',
       type: isCustomer ? '直客' : '厂家',
@@ -87,8 +81,6 @@ function ContactForm() {
   useEffect(() => {
     if (isEditMode && existingContact) {
       setValue('name', existingContact.name)
-      setValue('code', existingContact.code)
-      setValue('contactPerson', existingContact.contactPerson || '')
       setValue('phone', existingContact.phone || '')
       setValue('address', existingContact.address || '')
       setValue('type', existingContact.type as CustomerType | SupplierType)
@@ -107,8 +99,6 @@ function ContactForm() {
       if (isCustomer) {
         const customerData = {
           name: data.name,
-          code: data.code,
-          contactPerson: data.contactPerson,
           phone: data.phone,
           address: data.address,
           type: data.type as CustomerType,
@@ -125,8 +115,6 @@ function ContactForm() {
       } else {
         const supplierData = {
           name: data.name,
-          code: data.code,
-          contactPerson: data.contactPerson,
           phone: data.phone,
           address: data.address,
           type: data.type as SupplierType,
@@ -203,15 +191,6 @@ function ContactForm() {
               error={errors.name?.message}
             />
             <Input
-              label={`${isCustomer ? '客户' : '供应商'}编码 *`}
-              {...register('code', { required: `${isCustomer ? '客户' : '供应商'}编码不能为空` })}
-              error={errors.code?.message}
-            />
-            <Input
-              label="联系人"
-              {...register('contactPerson')}
-            />
-            <Input
               label="联系电话"
               {...register('phone')}
             />
@@ -259,7 +238,7 @@ function ContactForm() {
                     }`}
                   >
                     <option value="正常">正常</option>
-                    <option value="冻结">冻结</option>
+                    <option value="停用">停用</option>
                   </select>
                   {errors.status && (
                     <p className="mt-1 text-sm text-danger-500">{errors.status.message}</p>

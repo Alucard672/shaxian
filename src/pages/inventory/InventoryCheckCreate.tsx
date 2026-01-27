@@ -9,6 +9,7 @@ import Button from '../../components/ui/Button'
 import Input from '../../components/ui/Input'
 import Select from '../../components/ui/Select'
 import Textarea from '../../components/ui/Textarea'
+import DateInput from '../../components/ui/DateInput'
 import InventoryCheckPreview from '../../components/inventory/InventoryCheckPreview'
 import { X, Plus, FileText, AlertCircle, Eye } from 'lucide-react'
 import { format } from 'date-fns'
@@ -24,7 +25,7 @@ const WAREHOUSE_OPTIONS = [
 function InventoryCheckCreate() {
   const navigate = useNavigate()
   const { id } = useParams<{ id: string }>()
-  const { addOrder, updateOrder, getOrder } = useInventoryCheckStore()
+  const { addOrder, updateOrder, getOrder, loadOrders } = useInventoryCheckStore()
   const { getInventoryDetails } = useInventoryStore()
   const { products } = useProductStore()
 
@@ -50,6 +51,10 @@ function InventoryCheckCreate() {
       unit: item.unit,
     })) || []
   )
+
+  useEffect(() => {
+    if (isEditMode) loadOrders()
+  }, [isEditMode, loadOrders])
 
   // 加载编辑模式数据
   useEffect(() => {
@@ -265,12 +270,10 @@ function InventoryCheckCreate() {
                 required
                 className="col-span-1"
               />
-              <Input
+              <DateInput
                 label="计划日期"
-                type="date"
                 value={planDate}
-                onChange={(e) => setPlanDate(e.target.value)}
-                required
+                onChange={setPlanDate}
                 className="col-span-1"
               />
               <Textarea

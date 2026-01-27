@@ -5,6 +5,7 @@ import Card from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
 import Table from '../../components/ui/Table'
 import Pagination from '../../components/ui/Pagination'
+import DateRangePicker from '../../components/ui/DateRangePicker'
 import {
   Download,
   Filter,
@@ -50,6 +51,8 @@ function AccountManagement() {
   const [searchKeyword, setSearchKeyword] = useState('')
   const [tabType, setTabType] = useState<AccountType>('全部')
   const [viewType, setViewType] = useState<ViewType>('流水')
+  const [startDate, setStartDate] = useState<string>('')
+  const [endDate, setEndDate] = useState<string>('')
   const [currentPage, setCurrentPage] = useState(1)
   const [showStatement, setShowStatement] = useState(false)
   const [showPaymentModal, setShowPaymentModal] = useState(false)
@@ -221,6 +224,16 @@ function AccountManagement() {
       })
     }
 
+    // 日期范围筛选
+    if (startDate || endDate) {
+      result = result.filter((a) => {
+        const accountDate = new Date(a.documentDate)
+        if (startDate && accountDate < new Date(startDate)) return false
+        if (endDate && accountDate > new Date(endDate)) return false
+        return true
+      })
+    }
+
     if (searchKeyword) {
       const keyword = searchKeyword.toLowerCase()
       result = result.filter(
@@ -233,7 +246,7 @@ function AccountManagement() {
     return result.sort(
       (a, b) => new Date(b.documentDate).getTime() - new Date(a.documentDate).getTime()
     )
-  }, [allAccounts, tabType, searchKeyword])
+  }, [allAccounts, tabType, searchKeyword, startDate, endDate])
 
   // 筛选汇总数据
   const filteredSummary = useMemo(() => {
@@ -252,7 +265,7 @@ function AccountManagement() {
       result = result.filter(
         (s) =>
           s.name.toLowerCase().includes(keyword) ||
-          s.code.toLowerCase().includes(keyword)
+          (s.code ?? '').toLowerCase().includes(keyword)
       )
     }
 
@@ -491,7 +504,7 @@ function AccountManagement() {
       key: 'code',
       title: '单位编码',
       render: (_: any, record: typeof summaryData[0]) => (
-        <span className="text-gray-600 text-sm">{record.code}</span>
+        <span className="text-gray-600 text-sm">{record.code ?? '-'}</span>
       ),
     },
     {
@@ -685,12 +698,13 @@ function AccountManagement() {
                 汇总
               </button>
             </div>
-            <div className="relative flex-1 max-w-[274px]">
-              <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <input
-                type="text"
+            <div className="flex-1 max-w-[320px]">
+              <DateRangePicker
+                startDate={startDate}
+                endDate={endDate}
+                onStartDateChange={setStartDate}
+                onEndDateChange={setEndDate}
                 placeholder="选择日期范围"
-                className="w-full pl-10 pr-4 py-2 h-[38px] border border-gray-200 rounded-xl text-sm text-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
               />
             </div>
             <Button variant="outline" className="h-[39px] rounded-xl border-gray-200">

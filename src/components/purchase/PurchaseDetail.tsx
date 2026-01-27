@@ -213,14 +213,14 @@ function PurchaseDetail({ order, onEdit, onPrint, onClose }: PurchaseDetailProps
                         {item.batchCode}
                       </div>
                     </td>
-                    <td className="px-4 py-5 text-right text-base text-gray-900">
+                    <td className="px-4 py-5 text-right text-base text-red-600">
                       {item.quantity.toLocaleString()} {item.unit}
                     </td>
-                    <td className="px-4 py-5 text-right text-base text-gray-900">
-                      ¥{item.price.toFixed(2)}
+                    <td className="px-4 py-5 text-right text-base text-red-600">
+                      ¥{item.price.toFixed(2).replace(/\.?0+$/, '')}
                     </td>
-                    <td className="px-4 py-5 text-right text-base text-gray-900">
-                      ¥{item.amount.toFixed(2)}
+                    <td className="px-4 py-5 text-right text-base text-red-600">
+                      ¥{item.amount.toFixed(2).replace(/\.?0+$/, '')}
                     </td>
                   </tr>
                 ))}

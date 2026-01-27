@@ -21,8 +21,12 @@ VITE_API_BASE_URL=http://t.jiyizhiyun.com/biz/api
 ```javascript
 import { productApi } from '@/api/client';
 
-// 获取所有商品
-const products = await productApi.getAll();
+// 获取商品列表（支持分页和筛选）
+const products = await productApi.getAll({ 
+  pageNo: 1, 
+  pageSize: 20,
+  name: '32支' // 示例筛选条件
+});
 
 // 创建商品
 const newProduct = await productApi.create({
@@ -63,17 +67,27 @@ const order = await salesApi.create({
 import { productApi } from '@/api/client';
 
 try {
-  const products = await productApi.getAll();
+  const products = await productApi.getAll(); // 默认获取第一页
 } catch (error) {
   console.error('获取商品失败:', error.message);
   // 显示错误提示给用户
 }
 ```
 
+## 认证接口（与业务接口同 base）
+
+**基准 URL**：`http://t.jiyizhiyun.com/biz/api`（即 `VITE_API_BASE_URL`）。登录、登出、注册均使用该 base。
+
+| 接口 | 方法 | 路径 | 说明 |
+|------|------|------|------|
+| 登录 | POST | `/auth/login` | 请求体 `{ phone, password }`。不传租户，仅校验注册表/数据库对应用户即可登录。 |
+| 登出 | POST | `/auth/logout` | 需已登录（session）。 |
+| 注册 | POST | `/auth/register` | 请求体 `{ phone, password }`。 |
+
 ## API 列表
 
 ### 商品 API (productApi)
-- `getAll()` - 获取所有商品
+- `getAll(params)` - 获取商品列表（支持分页、筛选）
 - `getById(id)` - 获取单个商品
 - `create(data)` - 创建商品
 - `update(id, data)` - 更新商品

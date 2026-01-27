@@ -28,38 +28,29 @@ function Login() {
       const { authApi } = await import('@/api/client')
       let userData
 
+      const loginPayload = { phone: phoneValue, password: passwordValue }
+
       try {
-        // apiRequest 已经提取了 data 字段，返回的是用户信息对象
-        // API响应格式: {success: true, message: "登录成功", data: {...}}
-        userData = await authApi.login({ phone: phoneValue, password: passwordValue })
+        userData = await authApi.login(loginPayload)
       } catch (err: any) {
         const msg = err?.message || ''
-        // 如果账号不存在：自动注册一次，再自动登录（减少“已注册但输错账号/没记住”的摩擦）
         if (msg.includes('用户不存在')) {
-          await authApi.register({ phone: phoneValue, password: passwordValue })
-          userData = await authApi.login({ phone: phoneValue, password: passwordValue })
+          await authApi.register(loginPayload)
+          userData = await authApi.login(loginPayload)
         } else {
           throw err
         }
       }
 
-      // 保存用户信息到localStorage
       localStorage.setItem('user', JSON.stringify(userData))
       localStorage.setItem('isAuthenticated', 'true')
-
-      // 如果用户数据中包含 tenantId，自动设置（企业已在 CRM 中登记，无需选择）
       const user = userData as any
-      if (user && (user.tenantId !== null && user.tenantId !== undefined)) {
+      if (user?.tenantId != null) {
         localStorage.setItem('currentTenantId', String(user.tenantId))
-        if (user.tenantName) {
-          localStorage.setItem('currentTenantName', user.tenantName)
-        }
-        if (user.tenantCode) {
-          localStorage.setItem('currentTenantCode', user.tenantCode)
-        }
+        if (user.tenantName) localStorage.setItem('currentTenantName', user.tenantName)
+        if (user.tenantCode) localStorage.setItem('currentTenantCode', user.tenantCode)
       }
 
-      // 登录成功，直接进入系统主界面（跳过租户选择）
       navigate('/')
     } catch (error: any) {
       setError(error.message || '登录失败，请检查网络连接')

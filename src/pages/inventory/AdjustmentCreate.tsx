@@ -8,6 +8,8 @@ import Card from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
 import Input from '../../components/ui/Input'
 import Textarea from '../../components/ui/Textarea'
+import SelectWithAdd from '../../components/ui/SelectWithAdd'
+import DateInput from '../../components/ui/DateInput'
 import { X, Plus, FileText, Trash2, TrendingUp, TrendingDown, Package, AlertCircle } from 'lucide-react'
 import { format } from 'date-fns'
 import { cn } from '@/utils/cn'
@@ -28,8 +30,8 @@ interface AdjustmentItemForm {
 function AdjustmentCreate() {
   const navigate = useNavigate()
   const { id } = useParams<{ id: string }>()
-  const { addOrder, updateOrder, getOrder, completeOrder } = useAdjustmentStore()
-  const { products, colors, batches } = useProductStore()
+  const { addOrder, updateOrder, getOrder, completeOrder, loadOrders } = useAdjustmentStore()
+  const { products, colors, batches, getColorsByProduct, addColor, addBatch } = useProductStore()
   const { getInventoryDetails } = useInventoryStore()
 
   const isEditMode = !!id
@@ -88,6 +90,10 @@ function AdjustmentCreate() {
         }
       })
   }, [currentItemForm.colorId, batches, inventoryDetails])
+
+  useEffect(() => {
+    if (isEditMode) loadOrders()
+  }, [isEditMode, loadOrders])
 
   // 加载编辑模式数据
   useEffect(() => {
@@ -364,14 +370,10 @@ function AdjustmentCreate() {
 
             {/* 调整日期 */}
             <div className="space-y-2">
-              <label className="block text-sm font-medium text-gray-700">
-                调整日期 <span className="text-red-500">*</span>
-              </label>
-              <Input
-                type="date"
+              <DateInput
+                label="调整日期"
                 value={adjustmentDate}
-                onChange={(e) => setAdjustmentDate(e.target.value)}
-                className="h-[39px]"
+                onChange={setAdjustmentDate}
               />
             </div>
 
@@ -407,66 +409,109 @@ function AdjustmentCreate() {
               <div className="grid grid-cols-5 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">选择款号 *</label>
-                  <select
+                  <SelectWithAdd
                     value={currentItemForm.productId}
-                    onChange={(e) => {
+                    onChange={(value) => {
                       setCurrentItemForm({
-                        productId: e.target.value,
+                        productId: value,
                         colorId: '',
                         batchId: '',
                         quantity: currentItemForm.quantity,
                         remark: currentItemForm.remark,
                       })
                     }}
-                    className="w-full px-3 py-2 h-9 border border-gray-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                  >
-                    <option value="">请选择款号</option>
-                    {products.map((product) => (
-                      <option key={product.id} value={product.id}>
-                        {product.name} ({product.code})
-                      </option>
-                    ))}
-                  </select>
+                    options={products.map((product) => ({
+                      value: product.id,
+                      label: `${product.name} (${product.code})`,
+                    }))}
+                    onAddNew={async (value) => {
+                      if (confirm('商品不存在，是否前往商品管理页面添加新商品？')) {
+                        navigate('/products')
+                      }
+                    }}
+                    placeholder="选择或搜索款号"
+                    addText="前往添加新商品"
+                    allowAdd={false}
+                    searchable={true}
+                  />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">选择色号 *</label>
-                  <select
+                  <SelectWithAdd
                     value={currentItemForm.colorId}
-                    onChange={(e) => {
+                    onChange={(value) => {
                       setCurrentItemForm({
                         ...currentItemForm,
-                        colorId: e.target.value,
+                        colorId: value,
                         batchId: '',
                       })
                     }}
                     disabled={!currentItemForm.productId}
-                    className="w-full px-3 py-2 h-9 border border-gray-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 disabled:bg-gray-50 disabled:text-gray-400"
-                  >
-                    <option value="">请选择色号</option>
-                    {availableColors.map((color) => (
-                      <option key={color.id} value={color.id}>
-                        {color.name} ({color.code})
-                      </option>
-                    ))}
-                  </select>
+                    options={availableColors.map((color) => ({
+                      value: color.id,
+                      label: `${color.name} (${color.code})`,
+                    }))}
+                    onAddNew={async (value) => {
+                      if (!currentItemForm.productId) {
+                        alert('请先选择款号')
+                        return
+                      }
+                      const colorCode = `COL-${Date.now().toString().slice(-6)}`
+                      try {
+                        const newColor = await addColor(currentItemForm.productId, {
+                          code: colorCode,
+                          name: value,
+                          status: '在售',
+                        })
+                        setCurrentItemForm({
+                          ...currentItemForm,
+                          colorId: newColor.id,
+                          batchId: '',
+                        })
+                      } catch (error: any) {
+                        alert('添加色号失败：' + (error.message || '未知错误'))
+                      }
+                    }}
+                    placeholder={currentItemForm.productId ? "选择或输入色号名称" : "请先选择款号"}
+                    addText="快速添加色号"
+                    emptyText="暂无色号，输入名称后按回车添加"
+                    searchable={true}
+                  />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">选择缸号 *</label>
-                  <select
+                  <SelectWithAdd
                     value={currentItemForm.batchId}
-                    onChange={(e) =>
-                      setCurrentItemForm({ ...currentItemForm, batchId: e.target.value })
+                    onChange={(value) =>
+                      setCurrentItemForm({ ...currentItemForm, batchId: value })
                     }
                     disabled={!currentItemForm.colorId}
-                    className="w-full px-3 py-2 h-9 border border-gray-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 disabled:bg-gray-50 disabled:text-gray-400"
-                  >
-                    <option value="">请选择缸号</option>
-                    {availableBatches.map(({ batch, inventoryItem }) => (
-                      <option key={batch.id} value={batch.id}>
-                        {batch.code} (库存: {batch.stockQuantity} {products.find(p => p.id === inventoryItem?.productId)?.unit || 'kg'})
-                      </option>
-                    ))}
-                  </select>
+                    options={availableBatches.map(({ batch, inventoryItem }) => ({
+                      value: batch.id,
+                      label: `${batch.code} (库存: ${batch.stockQuantity} ${products.find(p => p.id === inventoryItem?.productId)?.unit || 'kg'})`,
+                    }))}
+                    onAddNew={async (code) => {
+                      if (!currentItemForm.colorId) {
+                        alert('请先选择色号')
+                        return
+                      }
+                      // 快速添加缸号：使用输入值作为编码，设置默认初始数量为0
+                      try {
+                        const newBatch = await addBatch(currentItemForm.colorId, {
+                          code: code.trim(),
+                          initialQuantity: 0,
+                          stockQuantity: 0,
+                        })
+                        setCurrentItemForm({ ...currentItemForm, batchId: newBatch.id })
+                      } catch (error: any) {
+                        alert('添加缸号失败：' + (error.message || '未知错误'))
+                      }
+                    }}
+                    placeholder={currentItemForm.colorId ? "选择或输入缸号编码" : "请先选择色号"}
+                    addText="快速添加缸号"
+                    emptyText="暂无缸号，输入编码后按回车添加"
+                    searchable={true}
+                  />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">调整数量 *</label>

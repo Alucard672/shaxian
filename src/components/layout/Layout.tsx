@@ -17,7 +17,7 @@ function Layout({ children }: LayoutProps) {
   }, [loadSystemParams])
 
   return (
-    <div className="h-screen bg-gray-50">
+    <div className="h-screen bg-[#F2F3F5]">
       <Header />
       <div className="flex h-[calc(100vh-4rem)]">
         <Sidebar />

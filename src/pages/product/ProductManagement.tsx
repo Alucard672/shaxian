@@ -5,10 +5,37 @@ import { useSettingsStore } from '@/store/settingsStore'
 import { Product, Color } from '@/types/product'
 import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
-import Table from '@/components/ui/Table'
+import ModernTable from '@/components/ui/ModernTable'
+import BaseCard from '@/components/ui/BaseCard'
+import StatusBadge from '@/components/ui/StatusBadge'
 import ManufacturerSelect from '@/components/ui/ManufacturerSelect'
-import { Plus, Edit, Trash2, Save, Package, Search, Palette, Upload, X, Image as ImageIcon, Barcode } from 'lucide-react'
+import SelectWithAdd from '@/components/ui/SelectWithAdd'
+import { Plus, Edit, Trash2, Save, Package, Search, Palette, Upload, X, Image as ImageIcon, Barcode, Settings, LayoutList } from 'lucide-react'
 import ColorPicker from '@/components/ui/ColorPicker'
+import RequiredFieldsConfigModal from '@/components/ui/RequiredFieldsConfigModal'
+import VisibleColumnsConfigModal from '@/components/ui/VisibleColumnsConfigModal'
+import { RequiredMark } from '@/components/ui/RequiredMark'
+
+const PRODUCT_PAGE_KEY = 'product'
+const PRODUCT_LIST_DOC_KEY = 'product-list'
+const PRODUCT_COLUMN_OPTIONS = [
+  { id: 'name', label: '商品名称' },
+  { id: 'unit', label: '单位' },
+  { id: 'manufacturer', label: '厂家' },
+  { id: 'composition', label: '成分' },
+  { id: 'colorCount', label: '色号数量' },
+]
+const PRODUCT_DEFAULT_VISIBLE = PRODUCT_COLUMN_OPTIONS.map((c) => c.id)
+const PRODUCT_FIELDS = [
+  { id: 'name', label: '商品名称' },
+  { id: 'code', label: '商品编码' },
+  { id: 'composition', label: '成分' },
+  { id: 'manufacturer', label: '厂家' },
+  { id: 'unit', label: '单位' },
+  { id: 'count', label: '支数' },
+  { id: 'width', label: '幅宽' },
+  { id: 'weight', label: '克重' },
+] as const
 
 function ProductManagement() {
   const navigate = useNavigate()
@@ -27,7 +54,11 @@ function ProductManagement() {
     getColorsByProduct,
   } = useProductStore()
   
-  const { units, loadUnits } = useSettingsStore()
+  const { units, loadUnits, addUnit, systemParams, getPageRequiredFields, getDocumentVisibleColumns } = useSettingsStore()
+  const defaultRequired = systemParams.productRequiredFields || ['name', 'code']
+  const requiredFields = getPageRequiredFields(PRODUCT_PAGE_KEY, defaultRequired)
+  const [showRequiredModal, setShowRequiredModal] = useState(false)
+  const [showColumnsModal, setShowColumnsModal] = useState(false)
 
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingProduct, setEditingProduct] = useState<Product | null>(null)
@@ -43,6 +74,14 @@ function ProductManagement() {
     description: '',
     status: '在售' as '在售' | '停售',
   })
+  type PendingColor = { code: string; name: string; colorValue?: string; status: '在售' | '停售' }
+  const [pendingColors, setPendingColors] = useState<PendingColor[]>([])
+  const [pendingColorForm, setPendingColorForm] = useState<{ code: string; name: string; colorValue: string; status: '在售' | '停售' }>({
+    code: '',
+    name: '',
+    colorValue: '',
+    status: '在售',
+  })
   const [formData, setFormData] = useState({
     name: '',
     code: '',
@@ -50,16 +89,15 @@ function ProductManagement() {
     composition: '',
     count: '',
     unit: 'kg',
-    type: '纱线' as '纱线' | '面料',
     isWhiteYarn: false,
     description: '',
-    manufacturer: '', // 厂家
-    needleType: '',
+    manufacturer: '',
     width: '',
     weight: '',
     colorCode: '',
     images: [] as string[],
   })
+  const productType = systemParams.productType || '纱线'
 
   useEffect(() => {
     loadProducts()
@@ -84,11 +122,9 @@ function ProductManagement() {
         composition: product.composition || '',
         count: product.count || '',
         unit: product.unit,
-        type: product.type,
         isWhiteYarn: product.isWhiteYarn || false,
         description: product.description || '',
         manufacturer: product.manufacturer || '',
-        needleType: product.needleType || '',
         width: product.width || '',
         weight: product.weight || '',
         colorCode: product.colorCode || '',
@@ -96,6 +132,8 @@ function ProductManagement() {
       })
     } else {
       setEditingProduct(null)
+      setPendingColors([])
+      setPendingColorForm({ code: '', name: '', colorValue: '', status: '在售' })
       setFormData({
         name: '',
         code: '',
@@ -103,11 +141,9 @@ function ProductManagement() {
         composition: '',
         count: '',
         unit: 'kg',
-        type: '纱线',
         isWhiteYarn: false,
         description: '',
         manufacturer: '',
-        needleType: '',
         width: '',
         weight: '',
         colorCode: '',
@@ -120,6 +156,8 @@ function ProductManagement() {
   const handleCloseModal = () => {
     setIsModalOpen(false)
     setEditingProduct(null)
+    setPendingColors([])
+    setPendingColorForm({ code: '', name: '', colorValue: '', status: '在售' })
     setFormData({
       name: '',
       code: '',
@@ -127,11 +165,9 @@ function ProductManagement() {
       composition: '',
       count: '',
       unit: 'kg',
-      type: '纱线',
       isWhiteYarn: false,
       description: '',
       manufacturer: '',
-      needleType: '',
       width: '',
       weight: '',
       colorCode: '',
@@ -139,23 +175,79 @@ function ProductManagement() {
     })
   }
 
+  const handleAddPendingColor = () => {
+    const { code, name, colorValue, status } = pendingColorForm
+    if (!code.trim() || !name.trim()) {
+      alert('请填写色号编码和名称')
+      return
+    }
+    setPendingColors((prev) => [...prev, { code: code.trim(), name: name.trim(), colorValue: colorValue || undefined, status }])
+    setPendingColorForm({ code: '', name: '', colorValue: '', status: '在售' })
+  }
+
+  const handleRemovePendingColor = (index: number) => {
+    setPendingColors((prev) => prev.filter((_, i) => i !== index))
+  }
+
   const handleSave = async () => {
-    if (!formData.name.trim() || !formData.code.trim()) {
-      alert('请填写商品名称和编码')
+    const fieldLabels: Record<string, string> = {
+      name: '商品名称',
+      code: '商品编码',
+      specification: '规格',
+      composition: '成分',
+      count: '支数',
+      unit: '单位',
+      manufacturer: '厂家',
+      width: '幅宽',
+      weight: '克重',
+    }
+    const allowedRequired = requiredFields.filter((f) => f !== 'type' && f !== 'needleType')
+    const typeSpecific = productType === '纱线' ? ['count'] : ['width', 'weight']
+    const toCheck = allowedRequired.filter((f) => {
+      if (['width', 'weight', 'count'].includes(f)) return typeSpecific.includes(f)
+      return true
+    })
+    const missingFields: string[] = []
+    toCheck.forEach((field) => {
+      const value = formData[field as keyof typeof formData]
+      if (!value || (typeof value === 'string' && !value.trim())) {
+        missingFields.push(fieldLabels[field] || field)
+      }
+    })
+    
+    if (missingFields.length > 0) {
+      alert(`请填写以下必填项：${missingFields.join('、')}`)
       return
     }
 
+    if (!editingProduct && formData.code.trim()) {
+      const exists = products.some((p) => (p.code || '').toLowerCase() === formData.code.trim().toLowerCase())
+      if (exists) {
+        alert('商品编码已存在，请使用其他编码后再保存。')
+        return
+      }
+    }
+
     try {
+      const payload = { ...formData, type: productType }
       if (editingProduct) {
-        await updateProduct(editingProduct.id, formData)
+        await updateProduct(editingProduct.id, payload)
         alert('商品更新成功')
       } else {
-        await addProduct(formData)
-        alert('商品创建成功')
+        const newProduct = await addProduct(payload)
+        for (const pc of pendingColors) {
+          await addColor(newProduct.id, { code: pc.code, name: pc.name, colorValue: pc.colorValue, status: pc.status })
+        }
+        alert(pendingColors.length ? '商品及色号创建成功' : '商品创建成功')
       }
       handleCloseModal()
     } catch (error: any) {
-      alert('保存失败：' + (error.message || '未知错误'))
+      const msg = error?.message || ''
+      if (msg.includes('已存在') || msg.includes('重复')) {
+        alert('保存失败：商品编码或名称与已有商品重复，请修改编码后重试。')
+      } else {
+        alert('保存失败：' + (msg || '未知错误'))
+      }
     }
   }
 
@@ -207,7 +299,7 @@ function ProductManagement() {
       setColorFormData({
         code: '',
         name: '',
-        colorValue: '',
+        colorValue: '', // 新增时不设置默认颜色
         description: '',
         status: '在售',
       })
@@ -222,10 +314,11 @@ function ProductManagement() {
       return
     }
 
-    if (!colorFormData.colorValue || !colorFormData.colorValue.trim()) {
-      alert('请选择颜色值')
-      return
-    }
+    // 颜色值改为可选，不再强制要求
+    // if (!colorFormData.colorValue || !colorFormData.colorValue.trim()) {
+    //   alert('请选择颜色值')
+    //   return
+    // }
 
     try {
       if (editingColor) {
@@ -271,12 +364,12 @@ function ProductManagement() {
       product.name.toLowerCase().includes(keyword) ||
       product.code.toLowerCase().includes(keyword) ||
       (product.composition && product.composition.toLowerCase().includes(keyword)) ||
-      (product.needleType && product.needleType.toLowerCase().includes(keyword)) ||
       (product.colorCode && product.colorCode.toLowerCase().includes(keyword))
     )
   })
 
-  const columns = [
+  const visibleColumnKeys = getDocumentVisibleColumns(PRODUCT_LIST_DOC_KEY, PRODUCT_DEFAULT_VISIBLE)
+  const allColumns = [
     {
       key: 'name',
       title: '商品名称',
@@ -293,49 +386,10 @@ function ProductManagement() {
       ),
     },
     {
-      key: 'needleType',
-      title: '针型',
-      render: (_: any, record: Product) => (
-        <span className="text-sm text-gray-600">{record.needleType || '-'}</span>
-      ),
-    },
-    {
-      key: 'colorCode',
-      title: '色号',
-      render: (_: any, record: Product) => {
-        if (!record.colorCode) return <span className="text-sm text-gray-600">-</span>
-        // 查找对应的色号
-        const color = colors.find((c) => c.id === record.colorCode)
-        if (color) {
-          return (
-            <div className="flex items-center gap-2">
-              {color.colorValue && (
-                <div
-                  className="w-5 h-5 rounded border border-gray-300"
-                  style={{ backgroundColor: color.colorValue }}
-                />
-              )}
-              <span className="text-sm text-gray-600">
-                {color.code} {color.name}
-              </span>
-            </div>
-          )
-        }
-        return <span className="text-sm text-gray-600">{record.colorCode}</span>
-      },
-    },
-    {
       key: 'unit',
       title: '单位',
       render: (_: any, record: Product) => (
         <span className="text-sm text-gray-600">{record.unit}</span>
-      ),
-    },
-    {
-      key: 'type',
-      title: '类型',
-      render: (_: any, record: Product) => (
-        <span className="text-sm text-gray-600">{record.type}</span>
       ),
     },
     {
@@ -410,16 +464,39 @@ function ProductManagement() {
       ),
     },
   ]
+  const columns = allColumns.filter((c) => c.key === 'actions' || visibleColumnKeys.includes(c.key))
 
   return (
     <div className="space-y-6 p-8">
+      <VisibleColumnsConfigModal
+        open={showColumnsModal}
+        onClose={() => setShowColumnsModal(false)}
+        docKey={PRODUCT_LIST_DOC_KEY}
+        title="商品列表"
+        columns={[...PRODUCT_COLUMN_OPTIONS]}
+        defaultVisible={PRODUCT_DEFAULT_VISIBLE}
+      />
       {/* 页面标题和操作按钮 */}
       <div className="flex items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold text-gray-900">商品管理</h1>
           <p className="text-sm text-gray-600 mt-1">管理商品、色号、缸号信息</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowColumnsModal(true)}
+            className="p-2 hover:bg-gray-100 rounded-lg text-gray-500 transition-colors"
+            title="自定义列显示"
+          >
+            <LayoutList className="w-5 h-5" />
+          </button>
+          <button
+            onClick={() => setShowRequiredModal(true)}
+            className="p-2 hover:bg-gray-100 rounded-lg text-gray-500 transition-colors"
+            title="必填项设置"
+          >
+            <Settings className="w-5 h-5" />
+          </button>
           <Button
             onClick={() => navigate('/products/barcode-print')}
             className="px-6 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg"
@@ -437,21 +514,30 @@ function ProductManagement() {
         </div>
       </div>
 
+      <RequiredFieldsConfigModal
+        open={showRequiredModal}
+        onClose={() => setShowRequiredModal(false)}
+        pageKey={PRODUCT_PAGE_KEY}
+        title="商品"
+        fields={[...PRODUCT_FIELDS]}
+        defaultRequired={defaultRequired}
+      />
+
       {/* 搜索栏 */}
-      <div className="bg-white rounded-2xl p-4 border border-gray-200">
+      <BaseCard padding="md">
         <div className="flex items-center gap-2">
           <Search className="w-5 h-5 text-gray-400" />
           <Input
             value={searchKeyword}
             onChange={(e) => setSearchKeyword(e.target.value)}
-            placeholder="搜索商品名称、编码、成分、针型、色号..."
+            placeholder="搜索商品名称、编码、成分、色号..."
             className="flex-1"
           />
         </div>
-      </div>
+      </BaseCard>
 
       {/* 商品列表 */}
-      <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+      <BaseCard padding="none">
         {loading ? (
           <div className="p-8 text-center text-gray-500">加载中...</div>
         ) : filteredProducts.length === 0 ? (
@@ -460,16 +546,18 @@ function ProductManagement() {
             <p>暂无商品，点击"新建商品"创建第一个商品</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <Table columns={columns} data={filteredProducts} rowKey={(record) => record.id} />
-          </div>
+          <ModernTable
+            columns={columns}
+            data={filteredProducts}
+            rowKey={(record) => record.id}
+          />
         )}
-      </div>
+      </BaseCard>
 
       {/* 新增/编辑商品弹窗 */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+          <BaseCard className="w-full max-w-2xl max-h-[90vh] overflow-y-auto" padding="lg">
             <h2 className="text-xl font-semibold text-gray-900 mb-4">
               {editingProduct ? '编辑商品' : '新建商品'}
             </h2>
@@ -477,7 +565,7 @@ function ProductManagement() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    商品名称 <span className="text-red-500">*</span>
+                    商品名称 <RequiredMark required={requiredFields.includes('name')} />
                   </label>
                   <Input
                     value={formData.name}
@@ -488,7 +576,7 @@ function ProductManagement() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    商品编码 <span className="text-red-500">*</span>
+                    商品编码 <RequiredMark required={requiredFields.includes('code')} />
                   </label>
                   <Input
                     value={formData.code}
@@ -498,7 +586,9 @@ function ProductManagement() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">成分</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    成分 <RequiredMark required={requiredFields.includes('composition')} />
+                  </label>
                   <Input
                     value={formData.composition}
                     onChange={(e) => setFormData({ ...formData, composition: e.target.value })}
@@ -507,7 +597,9 @@ function ProductManagement() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">厂家</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    厂家 <RequiredMark required={requiredFields.includes('manufacturer')} />
+                  </label>
                   <ManufacturerSelect
                     value={formData.manufacturer || ''}
                     onChange={(value) => setFormData({ ...formData, manufacturer: value })}
@@ -515,46 +607,33 @@ function ProductManagement() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">单位</label>
-                  <select
+                  <label className="block text-sm font-medium text-gray-700 mb-2">单位 <RequiredMark required={requiredFields.includes('unit')} /></label>
+                  <SelectWithAdd
                     value={formData.unit}
-                    onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    {units.filter(u => u.isEnabled).map((unit) => (
-                      <option key={unit.id} value={unit.name}>
-                        {unit.name}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={(value) => setFormData({ ...formData, unit: value })}
+                    options={units.filter(u => u.isEnabled).map((unit) => ({
+                      value: unit.name,
+                      label: unit.name,
+                    }))}
+                    onAddNew={async (name) => {
+                      await addUnit({
+                        name,
+                        isEnabled: true,
+                      })
+                      setFormData({ ...formData, unit: name })
+                    }}
+                    placeholder="选择或输入单位名称"
+                    addText="添加新单位"
+                    emptyText="暂无单位，输入名称后按回车添加"
+                  />
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">商品类型</label>
-                  <select
-                    value={formData.type}
-                    onChange={(e) =>
-                      setFormData({ ...formData, type: e.target.value as '纱线' | '面料' })
-                    }
-                    className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="纱线">纱线</option>
-                    <option value="面料">面料</option>
-                  </select>
-                </div>
-                {/* 纱线类型字段 */}
-                {formData.type === '纱线' && (
+                {/* 纱线属性（系统设置-商品类型为纱线时显示） */}
+                {productType === '纱线' && (
                   <>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">针型</label>
-                      <Input
-                        value={formData.needleType}
-                        onChange={(e) => setFormData({ ...formData, needleType: e.target.value })}
-                        placeholder="请输入针型"
-                        className="w-full"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">支数</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        支数 <RequiredMark required={requiredFields.includes('count')} />
+                      </label>
                       <Input
                         value={formData.count}
                         onChange={(e) => setFormData({ ...formData, count: e.target.value })}
@@ -562,24 +641,28 @@ function ProductManagement() {
                         className="w-full"
                       />
                     </div>
-                    <div className="col-span-2">
-                      <label className="flex items-center gap-2">
-                        <input
-                          type="checkbox"
-                          checked={formData.isWhiteYarn}
-                          onChange={(e) => setFormData({ ...formData, isWhiteYarn: e.target.checked })}
-                          className="w-4 h-4"
-                        />
-                        <span className="text-sm font-medium text-gray-700">白坯纱线</span>
-                      </label>
-                    </div>
+                    {systemParams.enableDyeingProcess && (
+                      <div className="col-span-2">
+                        <label className="flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            checked={formData.isWhiteYarn}
+                            onChange={(e) => setFormData({ ...formData, isWhiteYarn: e.target.checked })}
+                            className="w-4 h-4"
+                          />
+                          <span className="text-sm font-medium text-gray-700">白坯纱线</span>
+                        </label>
+                      </div>
+                    )}
                   </>
                 )}
-                {/* 面料类型字段 */}
-                {formData.type === '面料' && (
+                {/* 面料属性（系统设置-商品类型为面料时显示） */}
+                {productType === '面料' && (
                   <>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">幅宽</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        幅宽 <RequiredMark required={requiredFields.includes('width')} />
+                      </label>
                       <Input
                         value={formData.width}
                         onChange={(e) => setFormData({ ...formData, width: e.target.value })}
@@ -588,7 +671,9 @@ function ProductManagement() {
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">克重</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        克重 <RequiredMark required={requiredFields.includes('weight')} />
+                      </label>
                       <Input
                         value={formData.weight}
                         onChange={(e) => setFormData({ ...formData, weight: e.target.value })}
@@ -598,7 +683,7 @@ function ProductManagement() {
                     </div>
                   </>
                 )}
-                <div>
+                <div className="col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-2">色号</label>
                   {editingProduct ? (
                     <>
@@ -621,8 +706,62 @@ function ProductManagement() {
                       )}
                     </>
                   ) : (
-                    <div className="px-3 py-2 border border-gray-200 rounded-xl text-sm bg-gray-100 text-gray-500">
-                      请先保存商品后再选择色号
+                    <div className="space-y-3">
+                      <p className="text-xs text-gray-500">新建时可预先添加色号，保存商品后将一并创建</p>
+                      <div className="flex flex-nowrap gap-2 items-end overflow-x-auto pb-1">
+                        <Input
+                          value={pendingColorForm.code}
+                          onChange={(e) => setPendingColorForm({ ...pendingColorForm, code: e.target.value })}
+                          placeholder="色号编码"
+                          className="w-28 min-w-[7rem] flex-shrink-0 text-sm"
+                        />
+                        <Input
+                          value={pendingColorForm.name}
+                          onChange={(e) => setPendingColorForm({ ...pendingColorForm, name: e.target.value })}
+                          placeholder="色号名称"
+                          className="w-28 min-w-[7rem] flex-shrink-0 text-sm"
+                        />
+                        <div className="w-32 flex-shrink-0">
+                          <ColorPicker
+                            value={pendingColorForm.colorValue || ''}
+                            onChange={(v) => setPendingColorForm({ ...pendingColorForm, colorValue: v })}
+                          />
+                        </div>
+                        <select
+                          value={pendingColorForm.status}
+                          onChange={(e) => setPendingColorForm({ ...pendingColorForm, status: e.target.value as '在售' | '停售' })}
+                          className="h-9 px-2 border border-gray-200 rounded-lg text-sm flex-shrink-0"
+                        >
+                          <option value="在售">在售</option>
+                          <option value="停售">停售</option>
+                        </select>
+                        <Button type="button" size="sm" onClick={handleAddPendingColor} className="bg-purple-600 hover:bg-purple-700 flex-shrink-0">
+                          <Plus className="w-4 h-4 mr-1" />
+                          添加
+                        </Button>
+                      </div>
+                      {pendingColors.length > 0 && (
+                        <ul className="flex flex-wrap gap-2">
+                          {pendingColors.map((pc, idx) => (
+                            <li
+                              key={idx}
+                              className="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg bg-gray-100 text-sm"
+                            >
+                              {pc.colorValue && (
+                                <span className="w-3 h-3 rounded border border-gray-300 shrink-0" style={{ backgroundColor: pc.colorValue }} />
+                              )}
+                              <span>{pc.code} {pc.name}</span>
+                              <button
+                                type="button"
+                                onClick={() => handleRemovePendingColor(idx)}
+                                className="p-0.5 hover:bg-gray-200 rounded"
+                              >
+                                <X className="w-3.5 h-3.5 text-gray-500" />
+                              </button>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
                     </div>
                   )}
                 </div>
@@ -714,14 +853,14 @@ function ProductManagement() {
                 </Button>
               </div>
             </div>
-          </div>
+          </BaseCard>
         </div>
       )}
 
       {/* 色号管理弹窗 */}
       {isColorModalOpen && selectedProduct && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+          <BaseCard className="w-full max-w-4xl max-h-[90vh] overflow-y-auto" padding="lg">
             <div className="flex items-center justify-between mb-4">
               <div>
                 <h2 className="text-xl font-semibold text-gray-900">管理色号</h2>
@@ -737,7 +876,7 @@ function ProductManagement() {
 
             <div className="space-y-4">
               {/* 色号列表 */}
-              <div className="bg-gray-50 rounded-xl p-4">
+              <BaseCard className="bg-gray-50" padding="md">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-lg font-medium text-gray-900">色号列表</h3>
                   <Button
@@ -756,9 +895,10 @@ function ProductManagement() {
                 ) : (
                   <div className="space-y-2">
                     {getColorsByProduct(selectedProduct.id).map((color) => (
-                      <div
+                      <BaseCard
                         key={color.id}
-                        className="bg-white rounded-lg p-4 border border-gray-200 flex items-center justify-between"
+                        padding="md"
+                        className="flex items-center justify-between"
                       >
                         <div className="flex items-center gap-3">
                           {color.colorValue ? (
@@ -776,7 +916,7 @@ function ProductManagement() {
                               {color.code} {color.name}
                             </div>
                             <div className="text-xs text-gray-500 mt-1">
-                              状态：<span className={color.status === '在售' ? 'text-green-600' : 'text-gray-600'}>{color.status}</span>
+                              状态：<StatusBadge status={color.status} />
                             </div>
                           </div>
                         </div>
@@ -798,15 +938,15 @@ function ProductManagement() {
                             <Trash2 className="w-4 h-4 text-red-600" />
                           </Button>
                         </div>
-                      </div>
+                      </BaseCard>
                     ))}
                   </div>
                 )}
-              </div>
+              </BaseCard>
 
               {/* 添加/编辑色号表单 */}
               {isColorFormOpen && (
-                <div className="bg-white rounded-xl p-4 border border-gray-200">
+                <BaseCard padding="md">
                   <h3 className="text-lg font-medium text-gray-900 mb-4">
                     {editingColor ? '编辑色号' : '添加色号'}
                   </h3>
@@ -835,14 +975,16 @@ function ProductManagement() {
                     </div>
                     <div className="col-span-2">
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        颜色值 <span className="text-red-500">*</span>
+                        颜色值
                       </label>
                       <ColorPicker
-                        value={colorFormData.colorValue || '#000000'}
+                        value={colorFormData.colorValue || ''}
                         onChange={(color) => setColorFormData({ ...colorFormData, colorValue: color })}
                       />
                       <div className="text-xs text-gray-500 mt-1">
-                        选择颜色后，色号将显示为：{colorFormData.colorValue || '#000000'} {colorFormData.name || '色号名称'}
+                        {colorFormData.colorValue 
+                          ? `选择颜色后，色号将显示为：${colorFormData.colorValue} ${colorFormData.name || '色号名称'}`
+                          : '可选：点击调色盘选择颜色，或从预设颜色中选择'}
                       </div>
                     </div>
                     <div>
@@ -876,10 +1018,10 @@ function ProductManagement() {
                       保存
                     </Button>
                   </div>
-                </div>
+                </BaseCard>
               )}
             </div>
-          </div>
+          </BaseCard>
         </div>
       )}
     </div>

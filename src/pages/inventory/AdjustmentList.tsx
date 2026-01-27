@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAdjustmentStore } from '@/store/adjustmentStore'
 import Card from '../../components/ui/Card'
@@ -20,7 +20,11 @@ import DateRangePicker from '../../components/ui/DateRangePicker'
 
 function AdjustmentList() {
   const navigate = useNavigate()
-  const { orders, deleteOrder, completeOrder } = useAdjustmentStore()
+  const { orders, deleteOrder, completeOrder, loadOrders } = useAdjustmentStore()
+
+  useEffect(() => {
+    loadOrders()
+  }, [loadOrders])
 
   const [searchKeyword, setSearchKeyword] = useState('')
   const [statusFilter, setStatusFilter] = useState<'全部状态' | '草稿' | '已完成'>('全部状态')

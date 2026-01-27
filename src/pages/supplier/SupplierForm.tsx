@@ -10,8 +10,6 @@ import { ArrowLeft, Save } from 'lucide-react'
 
 interface SupplierFormData {
     name: string
-    code: string
-    contactPerson?: string
     phone?: string
     address?: string
     type: SupplierType
@@ -48,8 +46,6 @@ function SupplierForm() {
     } = useForm<SupplierFormData>({
         defaultValues: existingSupplier ? {
             name: existingSupplier.name,
-            code: existingSupplier.code,
-            contactPerson: existingSupplier.contactPerson || '',
             phone: existingSupplier.phone || '',
             address: existingSupplier.address || '',
             type: existingSupplier.type,
@@ -58,8 +54,6 @@ function SupplierForm() {
             remark: existingSupplier.remark || '',
         } : {
             name: '',
-            code: '',
-            contactPerson: '',
             phone: '',
             address: '',
             type: '厂家',
@@ -73,8 +67,6 @@ function SupplierForm() {
     useEffect(() => {
         if (isEditMode && existingSupplier) {
             setValue('name', existingSupplier.name)
-            setValue('code', existingSupplier.code)
-            setValue('contactPerson', existingSupplier.contactPerson || '')
             setValue('phone', existingSupplier.phone || '')
             setValue('address', existingSupplier.address || '')
             setValue('type', existingSupplier.type)
@@ -88,8 +80,6 @@ function SupplierForm() {
         try {
             const supplierData = {
                 name: data.name,
-                code: data.code,
-                contactPerson: data.contactPerson,
                 phone: data.phone,
                 address: data.address,
                 type: data.type,
@@ -160,15 +150,6 @@ function SupplierForm() {
                             label="供应商名称 *"
                             {...register('name', { required: '供应商名称不能为空' })}
                             error={errors.name?.message}
-                        />
-                        <Input
-                            label="供应商编码 *"
-                            {...register('code', { required: '供应商编码不能为空' })}
-                            error={errors.code?.message}
-                        />
-                        <Input
-                            label="联系人"
-                            {...register('contactPerson')}
                         />
                         <Input
                             label="联系电话"

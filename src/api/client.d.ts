@@ -8,7 +8,7 @@ export interface ApiClient {
 }
 
 export interface ProductApi {
-    getAll: () => Promise<any[]>
+    getAll: (params?: any) => Promise<any[]>
     getById: (id: string) => Promise<any>
     create: (data: any) => Promise<any>
     update: (id: string, data: any) => Promise<any>
@@ -21,6 +21,20 @@ export interface ProductApi {
     createBatch: (colorId: string, data: any) => Promise<any>
     updateBatch: (id: string, data: any) => Promise<any>
     deleteBatch: (id: string) => Promise<void>
+}
+
+export interface PublicProductApi {
+    getById: (id: string) => Promise<any>
+    getColors: (productId: string) => Promise<any[]>
+    getBatches: (colorId: string) => Promise<any[]>
+}
+
+export interface ProductShareApi {
+    generateShareCode: (id: string) => Promise<{ shareCode?: string } | any>
+}
+
+export interface PublicProductShareApi {
+    getByCode: (code: string) => Promise<any>
 }
 
 export interface AuthApi {
@@ -160,6 +174,9 @@ export interface InventoryApi {
 
 export const api: ApiClient
 export const productApi: ProductApi
+export const publicProductApi: PublicProductApi
+export const productShareApi: ProductShareApi
+export const publicProductShareApi: PublicProductShareApi
 export const authApi: AuthApi
 export const contactApi: ContactApi
 export const settingsApi: SettingsApi

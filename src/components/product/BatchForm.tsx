@@ -1,8 +1,9 @@
-import { useForm } from 'react-hook-form'
+import { useForm, Controller } from 'react-hook-form'
 import { BatchFormData } from '@/types/product'
 import Input from '../ui/Input'
 import Textarea from '../ui/Textarea'
 import Button from '../ui/Button'
+import DateInput from '../ui/DateInput'
 
 interface BatchFormProps {
   initialData?: Partial<BatchFormData>
@@ -14,6 +15,7 @@ function BatchForm({ initialData, onSubmit, onCancel }: BatchFormProps) {
   const {
     register,
     handleSubmit,
+    control,
     formState: { errors },
   } = useForm<BatchFormData>({
     defaultValues: initialData || {
@@ -35,11 +37,18 @@ function BatchForm({ initialData, onSubmit, onCancel }: BatchFormProps) {
           {...register('code', { required: '缸号编码不能为空' })}
           error={errors.code?.message}
         />
-        <Input
-          label="生产日期 *"
-          type="date"
-          {...register('productionDate', { required: '生产日期不能为空' })}
-          error={errors.productionDate?.message}
+        <Controller
+          name="productionDate"
+          control={control}
+          rules={{ required: '生产日期不能为空' }}
+          render={({ field }) => (
+            <DateInput
+              label="生产日期"
+              value={field.value}
+              onChange={field.onChange}
+              error={errors.productionDate?.message}
+            />
+          )}
         />
         <Input
           label="供应商ID"

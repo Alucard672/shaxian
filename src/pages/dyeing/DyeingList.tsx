@@ -1,12 +1,14 @@
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, type ReactNode } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useDyeingStore } from '@/store/dyeingStore'
+import { useSettingsStore } from '@/store/settingsStore'
 import { DyeingOrder, DyeingOrderStatus } from '@/types/dyeing'
 import Card from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
 import Badge from '../../components/ui/Badge'
 import Pagination from '../../components/ui/Pagination'
 import DyeingDetail from '../../components/dyeing/DyeingDetail'
+import VisibleColumnsConfigModal from '../../components/ui/VisibleColumnsConfigModal'
 import {
   Plus,
   Edit,
@@ -18,14 +20,31 @@ import {
   Search,
   Filter,
   ChevronDown,
+  LayoutList,
 } from 'lucide-react'
 import { cn } from '@/utils/cn'
 import { parseISO, startOfDay, endOfDay } from 'date-fns'
 import DateRangePicker from '../../components/ui/DateRangePicker'
 
+const DYEING_DOC_KEY = 'dyeing-list'
+const DYEING_COLUMN_OPTIONS = [
+  { id: 'orderNumber', label: '加工单号' },
+  { id: 'productName', label: '商品名称' },
+  { id: 'greyBatchCode', label: '白坯缸号' },
+  { id: 'targetColor', label: '目标色号' },
+  { id: 'quantity', label: '加工数量' },
+  { id: 'factoryName', label: '加工厂' },
+  { id: 'shipmentDate', label: '发货日期' },
+  { id: 'expectedCompletionDate', label: '预计完成' },
+  { id: 'status', label: '状态' },
+]
+const DYEING_DEFAULT_VISIBLE = DYEING_COLUMN_OPTIONS.map((c) => c.id)
+
 function DyeingList() {
   const navigate = useNavigate()
   const { orders, loading, error, loadOrders, deleteOrder } = useDyeingStore()
+  const { getDocumentVisibleColumns } = useSettingsStore()
+  const [showColumnsModal, setShowColumnsModal] = useState(false)
   
   // 加载数据
   useEffect(() => {
@@ -122,6 +141,63 @@ function DyeingList() {
     setIsDetailModalOpen(true)
   }
 
+  const visibleColumnKeys = getDocumentVisibleColumns(DYEING_DOC_KEY, DYEING_DEFAULT_VISIBLE)
+  const allDyeingColumns: { key: string; title: string; width?: string; render: (order: DyeingOrder) => ReactNode }[] = [
+    { key: 'orderNumber', title: '加工单号', width: '169px', render: (order) => (
+      <div className="flex items-center gap-2 cursor-pointer hover:text-blue-600 transition-colors" onClick={() => handleViewOrder(order)}>
+        <FileText className="w-4 h-4 text-gray-400" />
+        <span className="font-medium text-blue-600">{order.orderNumber}</span>
+      </div>
+    )},
+    { key: 'productName', title: '商品名称', width: '100px', render: (order) => <span className="text-gray-900">{order.productName}</span> },
+    { key: 'greyBatchCode', title: '白坯缸号', width: '172px', render: (order) => <span className="text-gray-600">{order.greyBatchCode}</span> },
+    { key: 'targetColor', title: '目标色号', width: '100px', render: (order) => {
+      const firstItem = order.items[0]
+      return firstItem ? (
+        <div className="flex items-center gap-2">
+          <div className="w-3 h-4 rounded border border-gray-300" style={{ backgroundColor: firstItem.targetColorValue || '#E5E7EB' }} />
+          <span className="text-gray-700">{firstItem.targetColorName}</span>
+        </div>
+      ) : null
+    }},
+    { key: 'quantity', title: '加工数量', width: '91px', render: (order) => (
+      <span className="text-gray-900">{order.items.reduce((sum, item) => sum + item.quantity, 0)} kg</span>
+    )},
+    { key: 'factoryName', title: '加工厂', width: '94px', render: (order) => <span className="text-gray-600">{order.factoryName}</span> },
+    { key: 'shipmentDate', title: '发货日期', width: '109px', render: (order) => <span className="text-gray-600">{order.shipmentDate}</span> },
+    { key: 'expectedCompletionDate', title: '预计完成', width: '110px', render: (order) => <span className="text-gray-600">{order.expectedCompletionDate}</span> },
+    { key: 'status', title: '状态', width: '117px', render: (order) => (
+      <div className="flex items-center gap-2">
+        {order.status === '已完成' && <CheckCircle className="w-4 h-4 text-green-600" />}
+        {order.status === '加工中' && <Loader className="w-4 h-4 text-blue-600 animate-spin" />}
+        {order.status === '待发货' && <Clock className="w-4 h-4 text-gray-600" />}
+        <Badge variant={order.status === '已完成' ? 'success' : 'gray'} className={cn({
+          'bg-green-100 text-green-700': order.status === '已完成',
+          'bg-blue-100 text-blue-700': order.status === '加工中',
+          'bg-gray-100 text-gray-700': order.status === '待发货',
+        })}>{order.status}</Badge>
+      </div>
+    )},
+    { key: 'actions', title: '操作', width: '136px', render: (order) => (
+      <div className="flex items-center gap-2">
+        <Button variant="ghost" size="sm" onClick={() => handleViewOrder(order)} className="p-1.5 hover:bg-gray-100 rounded-xl" title="查看">
+          <FileText className="w-4 h-4 text-gray-600" />
+        </Button>
+        {order.status === '待发货' && (
+          <>
+            <Button variant="ghost" size="sm" onClick={() => navigate(`/dyeing/${order.id}/edit`)} className="p-1.5 hover:bg-gray-100 rounded-xl" title="编辑">
+              <Edit className="w-4 h-4 text-gray-600" />
+            </Button>
+            <Button variant="ghost" size="sm" onClick={() => handleDelete(order.id)} className="p-1.5 hover:bg-red-100 rounded-xl" title="删除">
+              <Trash2 className="w-4 h-4 text-red-600" />
+            </Button>
+          </>
+        )}
+      </div>
+    )},
+  ]
+  const dyeingColumns = allDyeingColumns.filter((c) => c.key === 'actions' || visibleColumnKeys.includes(c.key))
+
   // 统计卡片
   const statCards = [
     {
@@ -192,10 +268,19 @@ function DyeingList() {
         })}
       </div>
 
+      <VisibleColumnsConfigModal
+        open={showColumnsModal}
+        onClose={() => setShowColumnsModal(false)}
+        docKey={DYEING_DOC_KEY}
+        title="加工单列表"
+        columns={DYEING_COLUMN_OPTIONS}
+        defaultVisible={DYEING_DEFAULT_VISIBLE}
+      />
+
       {/* 操作栏 */}
       <Card className="p-4 rounded-xl border-gray-200">
         <div className="space-y-4">
-          {/* 第一行：日期筛选、搜索框、状态、新建 */}
+          {/* 第一行：日期筛选、搜索框、状态、列显示、新建 */}
           <div className="flex items-center gap-4 flex-wrap">
             {/* 日期范围选择器 */}
             <DateRangePicker
@@ -244,6 +329,13 @@ function DyeingList() {
               </select>
               <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
             </div>
+            <button
+              onClick={() => setShowColumnsModal(true)}
+              className="p-2 hover:bg-gray-100 rounded-lg text-gray-500 transition-colors"
+              title="自定义列显示"
+            >
+              <LayoutList className="w-5 h-5" />
+            </button>
             {/* 新建加工单按钮 */}
             <Link to="/dyeing/create">
               <Button className="h-9 rounded-xl bg-blue-600 hover:bg-blue-700">
@@ -269,110 +361,23 @@ function DyeingList() {
               <table className="w-full border-collapse">
                 <thead>
                   <tr className="bg-gray-50 border-b border-gray-200">
-                    <th className="px-6 py-4 text-left text-sm font-bold text-gray-700" style={{ width: '169px' }}>加工单号</th>
-                    <th className="px-6 py-4 text-left text-sm font-bold text-gray-700" style={{ width: '100px' }}>商品名称</th>
-                    <th className="px-6 py-4 text-left text-sm font-bold text-gray-700" style={{ width: '172px' }}>白坯缸号</th>
-                    <th className="px-6 py-4 text-left text-sm font-bold text-gray-700" style={{ width: '100px' }}>目标色号</th>
-                    <th className="px-6 py-4 text-left text-sm font-bold text-gray-700" style={{ width: '91px' }}>加工数量</th>
-                    <th className="px-6 py-4 text-left text-sm font-bold text-gray-700" style={{ width: '94px' }}>加工厂</th>
-                    <th className="px-6 py-4 text-left text-sm font-bold text-gray-700" style={{ width: '109px' }}>发货日期</th>
-                    <th className="px-6 py-4 text-left text-sm font-bold text-gray-700" style={{ width: '110px' }}>预计完成</th>
-                    <th className="px-6 py-4 text-left text-sm font-bold text-gray-700" style={{ width: '117px' }}>状态</th>
-                    <th className="px-6 py-4 text-left text-sm font-bold text-gray-700" style={{ width: '136px' }}>操作</th>
+                    {dyeingColumns.map((col) => (
+                      <th key={col.key} className="px-6 py-4 text-left text-sm font-bold text-gray-700" style={col.width ? { width: col.width } : undefined}>
+                        {col.title}
+                      </th>
+                    ))}
                   </tr>
                 </thead>
                 <tbody>
-                  {paginatedOrders.map((order) => {
-                    // 获取第一个目标色号用于显示
-                    const firstItem = order.items[0]
-                    // 计算总加工数量
-                    const totalQuantity = order.items.reduce((sum, item) => sum + item.quantity, 0)
-                    
-                    return (
-                      <tr key={order.id} className="border-b border-gray-200 hover:bg-gray-50 transition-colors">
-                        <td className="px-6 py-5 text-sm">
-                          <div
-                            className="flex items-center gap-2 cursor-pointer hover:text-blue-600 transition-colors"
-                            onClick={() => handleViewOrder(order)}
-                          >
-                            <FileText className="w-4 h-4 text-gray-400" />
-                            <span className="font-medium text-blue-600">{order.orderNumber}</span>
-                          </div>
+                  {paginatedOrders.map((order) => (
+                    <tr key={order.id} className="border-b border-gray-200 hover:bg-gray-50 transition-colors">
+                      {dyeingColumns.map((col) => (
+                        <td key={col.key} className="px-6 py-5 text-sm">
+                          {col.render(order)}
                         </td>
-                        <td className="px-6 py-5 text-sm text-gray-900">{order.productName}</td>
-                        <td className="px-6 py-5 text-sm text-gray-600">{order.greyBatchCode}</td>
-                        <td className="px-6 py-5 text-sm">
-                          {firstItem && (
-                            <div className="flex items-center gap-2">
-                              <div
-                                className="w-3 h-4 rounded border border-gray-300"
-                                style={{ backgroundColor: firstItem.targetColorValue || '#E5E7EB' }}
-                              />
-                              <span className="text-gray-700">{firstItem.targetColorName}</span>
-                            </div>
-                          )}
-                        </td>
-                        <td className="px-6 py-5 text-sm text-gray-900">{totalQuantity} kg</td>
-                        <td className="px-6 py-5 text-sm text-gray-600">{order.factoryName}</td>
-                        <td className="px-6 py-5 text-sm text-gray-600">{order.shipmentDate}</td>
-                        <td className="px-6 py-5 text-sm text-gray-600">{order.expectedCompletionDate}</td>
-                        <td className="px-6 py-5 text-sm">
-                          <div className="flex items-center gap-2">
-                            {order.status === '已完成' && <CheckCircle className="w-4 h-4 text-green-600" />}
-                            {order.status === '加工中' && <Loader className="w-4 h-4 text-blue-600 animate-spin" />}
-                            {order.status === '待发货' && <Clock className="w-4 h-4 text-gray-600" />}
-                            <Badge
-                              variant={order.status === '已完成' ? 'success' : 'gray'}
-                              className={cn({
-                                'bg-green-100 text-green-700': order.status === '已完成',
-                                'bg-blue-100 text-blue-700': order.status === '加工中',
-                                'bg-gray-100 text-gray-700': order.status === '待发货',
-                              })}
-                            >
-                              {order.status}
-                            </Badge>
-                          </div>
-                        </td>
-                        <td className="px-6 py-5 text-sm">
-                          <div className="flex items-center gap-2">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleViewOrder(order)}
-                              className="p-1.5 hover:bg-gray-100 rounded-xl"
-                              title="查看"
-                            >
-                              <FileText className="w-4 h-4 text-gray-600" />
-                            </Button>
-                            {order.status === '待发货' && (
-                              <>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => {
-                                    navigate(`/dyeing/${order.id}/edit`)
-                                  }}
-                                  className="p-1.5 hover:bg-gray-100 rounded-xl"
-                                  title="编辑"
-                                >
-                                  <Edit className="w-4 h-4 text-gray-600" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => handleDelete(order.id)}
-                                  className="p-1.5 hover:bg-red-100 rounded-xl"
-                                  title="删除"
-                                >
-                                  <Trash2 className="w-4 h-4 text-red-600" />
-                                </Button>
-                              </>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                    )
-                  })}
+                      ))}
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>

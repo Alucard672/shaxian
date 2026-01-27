@@ -4,6 +4,7 @@ import { PaymentMethod } from '@/types/account'
 import Button from '../ui/Button'
 import Input from '../ui/Input'
 import Textarea from '../ui/Textarea'
+import DateInput from '../ui/DateInput'
 import { X, Save, Wallet } from 'lucide-react'
 import { format } from 'date-fns'
 
@@ -173,12 +174,11 @@ function PaymentModal({
               </select>
             </div>
 
-            <Input
-              label={`${isReceivable ? '收款' : '付款'}日期 *`}
-              type="date"
+            <DateInput
+              label={`${isReceivable ? '收款' : '付款'}日期`}
               value={formData.paymentDate}
-              onChange={(e) => {
-                setFormData({ ...formData, paymentDate: e.target.value })
+              onChange={(value) => {
+                setFormData({ ...formData, paymentDate: value })
                 if (errors.paymentDate) setErrors({ ...errors, paymentDate: '' })
               }}
               error={errors.paymentDate}
