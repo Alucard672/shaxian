@@ -1,13 +1,44 @@
-import { InputHTMLAttributes, forwardRef } from 'react'
+import { InputHTMLAttributes, forwardRef, useState, useCallback } from 'react'
 import { cn } from '@/utils/cn'
 
 interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   label?: string
   error?: string
+  /** 聚焦时若当前为 0 则清空，便于直接输入；失焦或输入后恢复显示 */
+  clearZeroOnFocus?: boolean
 }
 
 const Input = forwardRef<HTMLInputElement, InputProps>(
-  ({ label, error, className, ...props }, ref) => {
+  ({ label, error, className, clearZeroOnFocus, onFocus, onBlur, onChange, value, type, disabled, readOnly, ...props }, ref) => {
+    const [clearedZero, setClearedZero] = useState(false)
+    const isNum = type === 'number'
+    const useClearZero = clearZeroOnFocus ?? (isNum ? true : false)
+    const shouldClear = Boolean(!disabled && !readOnly && useClearZero && isNum && (Number(value) === 0 || value === ''))
+    const displayValue = clearedZero && shouldClear ? '' : value
+
+    const handleFocus = useCallback(
+      (e: React.FocusEvent<HTMLInputElement>) => {
+        if (!disabled && !readOnly && useClearZero && type === 'number' && (Number(value) === 0 || value === ''))
+          setClearedZero(true)
+        onFocus?.(e)
+      },
+      [disabled, readOnly, useClearZero, type, value, onFocus]
+    )
+    const handleBlur = useCallback(
+      (e: React.FocusEvent<HTMLInputElement>) => {
+        setClearedZero(false)
+        onBlur?.(e)
+      },
+      [onBlur]
+    )
+    const handleChange = useCallback(
+      (e: React.ChangeEvent<HTMLInputElement>) => {
+        setClearedZero(false)
+        onChange?.(e)
+      },
+      [onChange]
+    )
+
     return (
       <div className="w-full">
         {label && (
@@ -17,13 +48,16 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
         )}
         <input
           ref={ref}
+          type={type}
+          value={displayValue}
+          disabled={disabled}
+          readOnly={readOnly}
+          onFocus={handleFocus}
+          onBlur={handleBlur}
+          onChange={handleChange}
           className={cn(
-            'w-full px-3 py-2 h-[38px] border rounded-lg text-sm',
-            'focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500',
-            'disabled:bg-gray-50 disabled:text-gray-400 disabled:cursor-not-allowed',
-            error
-              ? 'border-danger-500 focus:ring-danger-500 focus:border-danger-500'
-              : 'border-gray-200',
+            'input-underline w-full px-0 py-2 h-[38px] text-sm',
+            error && 'input-underline-error',
             className
           )}
           {...props}

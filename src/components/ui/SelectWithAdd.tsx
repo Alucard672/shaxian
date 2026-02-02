@@ -21,6 +21,7 @@ interface SelectWithAddProps {
   className?: string
   searchable?: boolean
   allowAdd?: boolean
+  clearable?: boolean
   emptyText?: string
   addText?: string
 }
@@ -37,6 +38,7 @@ export default function SelectWithAdd({
   className,
   searchable = true,
   allowAdd = true,
+  clearable = true,
   emptyText = '暂无选项',
   addText,
 }: SelectWithAddProps) {
@@ -49,20 +51,23 @@ export default function SelectWithAdd({
   const dropdownRef = useRef<HTMLDivElement>(null)
   const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0, width: 0 })
 
-  // 获取当前选中项的标签
-  const selectedOption = options.find((opt) => opt.value === value)
-  const displayValue = selectedOption ? selectedOption.label : value
+  // 获取当前选中项的标签（统一转字符串匹配，避免 number/string 不一致显示 ID）
+  const selectedOption = options.find((opt) => String(opt.value) === String(value))
+  const displayValue = selectedOption ? String(selectedOption.label ?? '') : String(value ?? '')
 
-  // 过滤选项
+  // 过滤选项（防御 opt.label/opt.value 非字符串）
   const filteredOptions = searchable && searchKeyword
-    ? options.filter((opt) =>
-        opt.label.toLowerCase().includes(searchKeyword.toLowerCase()) ||
-        opt.value.toLowerCase().includes(searchKeyword.toLowerCase())
-      )
+    ? options.filter((opt) => {
+        const kw = String(searchKeyword ?? '').toLowerCase()
+        return (
+          String(opt.label ?? '').toLowerCase().includes(kw) ||
+          String(opt.value ?? '').toLowerCase().includes(kw)
+        )
+      })
     : options
 
   // 检查当前值是否是新项（不在选项中）
-  const isNewValue = value && !options.find((opt) => opt.value === value)
+  const isNewValue = value && !options.find((opt) => String(opt.value) === String(value))
 
   // 处理选择
   const handleSelect = (optionValue: string) => {
@@ -263,21 +268,18 @@ export default function SelectWithAdd({
           disabled={disabled || isAdding}
           title={!isOpen && displayValue ? String(displayValue) : undefined}
           className={cn(
-            'w-full py-2 border rounded-lg text-sm appearance-none bg-white',
-            'focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500',
-            'disabled:bg-gray-50 disabled:text-gray-400 disabled:cursor-not-allowed',
-            error
-              ? 'border-danger-500 focus:ring-danger-500 focus:border-danger-500'
-              : 'border-gray-200',
+            'input-underline w-full py-2 text-sm appearance-none',
+            error && 'input-underline-error',
+            isOpen && 'input-underline-open',
             searchable && 'pl-10 pr-10',
-            !searchable && 'px-3',
-            isOpen && 'border-primary-500'
+            !searchable && 'px-0',
+            'disabled:bg-transparent disabled:opacity-60 disabled:cursor-not-allowed'
           )}
           style={{
-            paddingRight: value && !disabled && !isAdding ? '1.75rem' : '0.75rem'
+            paddingRight: clearable && value && !disabled && !isAdding ? '1.75rem' : '0.75rem'
           }}
         />
-        {value && !disabled && !isAdding && (
+        {clearable && value && !disabled && !isAdding && (
           <button
             type="button"
             onClick={handleClear}

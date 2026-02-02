@@ -19,12 +19,13 @@ import {
   Settings,
   Eye,
   LayoutList,
+  MapPin,
 } from 'lucide-react'
 import { format } from 'date-fns'
 import InventoryDetail from '../../components/inventory/InventoryDetail'
 
 const INVENTORY_DOC_KEY = 'inventory-list'
-const INVENTORY_COLUMN_OPTIONS = [
+const INVENTORY_COLUMN_OPTIONS_BASE = [
   { id: 'product', label: '商品信息' },
   { id: 'color', label: '色号' },
   { id: 'batch', label: '缸号' },
@@ -34,13 +35,14 @@ const INVENTORY_COLUMN_OPTIONS = [
   { id: 'location', label: '仓位' },
   { id: 'updateTime', label: '更新时间' },
 ]
-const INVENTORY_DEFAULT_VISIBLE = INVENTORY_COLUMN_OPTIONS.map((c) => c.id)
 
 function Inventory() {
   const navigate = useNavigate()
   const { getInventoryDetails } = useInventoryStore()
   const { products, colors, batches } = useProductStore()
-  const { getDocumentVisibleColumns } = useSettingsStore()
+  const { getDocumentVisibleColumns, systemParams } = useSettingsStore()
+  const enableBatch = !!systemParams?.enableBatch
+  const enableStockLocation = !!systemParams?.enableStockLocation
   const [showColumnsModal, setShowColumnsModal] = useState(false)
 
   const [searchKeyword, setSearchKeyword] = useState('')
@@ -102,10 +104,10 @@ function Inventory() {
       const keyword = searchKeyword.toLowerCase()
       result = result.filter(
         (item) =>
-          item.productName.toLowerCase().includes(keyword) ||
-          item.colorName.toLowerCase().includes(keyword) ||
-          item.colorCode.toLowerCase().includes(keyword) ||
-          item.batch.code.toLowerCase().includes(keyword)
+          String(item.productName ?? '').toLowerCase().includes(keyword) ||
+          String(item.colorName ?? '').toLowerCase().includes(keyword) ||
+          String(item.colorCode ?? '').toLowerCase().includes(keyword) ||
+          String(item.batch?.code ?? '').toLowerCase().includes(keyword)
       )
     }
 
@@ -165,8 +167,23 @@ function Inventory() {
     },
   ]
 
-  const visibleColumnKeys = getDocumentVisibleColumns(INVENTORY_DOC_KEY, INVENTORY_DEFAULT_VISIBLE)
-  const allInventoryColumns = [
+  const inventoryColumnOptions = useMemo(() => {
+    let opts = INVENTORY_COLUMN_OPTIONS_BASE
+    if (!enableStockLocation) opts = opts.filter((c) => c.id !== 'location')
+    if (!enableBatch) opts = opts.filter((c) => c.id !== 'batch')
+    return opts
+  }, [enableStockLocation, enableBatch])
+  const inventoryDefaultVisible = useMemo(
+    () => inventoryColumnOptions.map((c) => c.id),
+    [inventoryColumnOptions]
+  )
+  const visibleColumnKeys = useMemo(() => {
+    let keys = getDocumentVisibleColumns(INVENTORY_DOC_KEY, inventoryDefaultVisible)
+    if (!enableStockLocation) keys = keys.filter((k) => k !== 'location')
+    if (!enableBatch) keys = keys.filter((k) => k !== 'batch')
+    return keys
+  }, [enableStockLocation, enableBatch, inventoryDefaultVisible, getDocumentVisibleColumns])
+  const allInventoryColumnsBase = useMemo(() => [
     {
       key: 'product',
       title: '商品信息',
@@ -302,8 +319,8 @@ function Inventory() {
         </div>
       ),
     },
-  ]
-  const inventoryColumns = allInventoryColumns.filter(
+  ], [products])
+  const inventoryColumns = allInventoryColumnsBase.filter(
     (c) => c.key === 'actions' || visibleColumnKeys.includes(c.key)
   )
 
@@ -314,8 +331,8 @@ function Inventory() {
         onClose={() => setShowColumnsModal(false)}
         docKey={INVENTORY_DOC_KEY}
         title="库存列表"
-        columns={INVENTORY_COLUMN_OPTIONS}
-        defaultVisible={INVENTORY_DEFAULT_VISIBLE}
+        columns={inventoryColumnOptions}
+        defaultVisible={inventoryDefaultVisible}
       />
       {/* 页面标题 */}
       <div className="flex items-center justify-between">
@@ -408,6 +425,16 @@ function Inventory() {
               <Settings className="w-4 h-4 mr-2" />
               库存盘点
             </Button>
+            {enableStockLocation && (
+              <Button
+                onClick={() => navigate('/inventory/locations')}
+                variant="outline"
+                className="h-[38px] rounded-lg border-gray-300"
+              >
+                <MapPin className="w-4 h-4 mr-2" />
+                仓位设置
+              </Button>
+            )}
           </div>
 
           {/* 第二行：状态标签页 */}

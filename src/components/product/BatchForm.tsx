@@ -4,6 +4,8 @@ import Input from '../ui/Input'
 import Textarea from '../ui/Textarea'
 import Button from '../ui/Button'
 import DateInput from '../ui/DateInput'
+import SelectWithAdd from '../ui/SelectWithAdd'
+import { useSettingsStore } from '@/store/settingsStore'
 
 interface BatchFormProps {
   initialData?: Partial<BatchFormData>
@@ -12,6 +14,11 @@ interface BatchFormProps {
 }
 
 function BatchForm({ initialData, onSubmit, onCancel }: BatchFormProps) {
+  const { systemParams } = useSettingsStore()
+  const enableStockLocation = !!systemParams?.enableStockLocation
+  const defaultStockLocation = systemParams?.defaultStockLocation ?? '默认仓位'
+  const stockLocations = systemParams?.stockLocations ?? [defaultStockLocation]
+
   const {
     register,
     handleSubmit,
@@ -24,13 +31,20 @@ function BatchForm({ initialData, onSubmit, onCancel }: BatchFormProps) {
       supplierId: '',
       purchasePrice: 0,
       initialQuantity: 0,
-      stockLocation: '',
+      stockLocation: enableStockLocation ? defaultStockLocation : '',
       remark: '',
     },
   })
 
+  const onFormSubmit = (data: BatchFormData) => {
+    onSubmit({
+      ...data,
+      stockLocation: enableStockLocation ? (data.stockLocation || defaultStockLocation) : defaultStockLocation,
+    })
+  }
+
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+    <form onSubmit={handleSubmit(onFormSubmit)} className="space-y-4">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Input
           label="缸号编码 *"
@@ -71,10 +85,23 @@ function BatchForm({ initialData, onSubmit, onCancel }: BatchFormProps) {
           })}
           error={errors.initialQuantity?.message}
         />
-        <Input
-          label="库存位置"
-          {...register('stockLocation')}
-        />
+        {enableStockLocation && (
+          <Controller
+            name="stockLocation"
+            control={control}
+            render={({ field }) => (
+              <SelectWithAdd
+                label="仓位"
+                value={field.value || defaultStockLocation}
+                onChange={(v) => field.onChange(v || defaultStockLocation)}
+                options={stockLocations.map((s) => ({ value: s, label: s }))}
+                searchable={false}
+                allowAdd={false}
+                clearable={false}
+              />
+            )}
+          />
+        )}
         <div className="md:col-span-2">
           <Textarea
             label="备注"

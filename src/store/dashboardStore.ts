@@ -49,15 +49,15 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
   getStats: () => {
     const today = format(new Date(), 'yyyy-MM-dd')
     
-    // 今日销售额
-    const salesOrders = useSalesStore.getState().orders
+    // 今日销售额（防御：接口返回 null 时按空数组处理）
+    const salesOrders = useSalesStore.getState().orders ?? []
     const todaySalesOrders = salesOrders.filter(
       (order) => order.salesDate === today && order.status === '已审核'
     )
     const todaySales = todaySalesOrders.reduce((sum, order) => sum + order.totalAmount, 0)
     
     // 今日进货额
-    const purchaseOrders = usePurchaseStore.getState().orders
+    const purchaseOrders = usePurchaseStore.getState().orders ?? []
     const todayPurchaseOrders = purchaseOrders.filter(
       (order) => order.purchaseDate === today && order.status === '已审核'
     )
@@ -65,14 +65,16 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
     
     // 库存总值（简化计算：使用缸号的采购单价 * 库存数量）
     const { batches } = useProductStore.getState()
-    const totalInventoryValue = batches.reduce(
+    const batchList = batches ?? []
+    const totalInventoryValue = batchList.reduce(
       (sum, batch) => sum + (batch.purchasePrice || 0) * batch.stockQuantity,
       0
     )
     
     // 待收账款
     const { receivables } = useAccountStore.getState()
-    const accountsReceivable = receivables
+    const recv = receivables ?? []
+    const accountsReceivable = recv
       .filter((r) => r.status === '未结清')
       .reduce((sum, r) => sum + r.unpaidAmount, 0)
     
@@ -102,12 +104,12 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
   },
 
   getRecentOrders: () => {
-    const salesOrders = useSalesStore.getState().orders
-    const purchaseOrders = usePurchaseStore.getState().orders
+    const salesOrders = useSalesStore.getState().orders ?? []
+    const purchaseOrders = usePurchaseStore.getState().orders ?? []
     const { customers } = useContactStore.getState()
     const { suppliers } = useContactStore.getState()
     
-    // 合并销售单和进货单
+    // 合并销售单和进货单（防御 null）
     const allOrders = [
       ...salesOrders.slice(0, 10).map((order) => ({
         orderNumber: order.orderNumber,
@@ -142,12 +144,14 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
       icon: string
     }> = []
     
-    // 库存预警
-    const lowStockBatches = useInventoryStore.getState().getLowStockAlerts(200)
+    // 库存预警（防御 null）
+    const lowStockBatches = useInventoryStore.getState().getLowStockAlerts(200) ?? []
     lowStockBatches.slice(0, 1).forEach((batch) => {
       const { colors, products } = useProductStore.getState()
-      const color = colors.find((c) => c.id === batch.colorId)
-      const product = color ? products.find((p) => p.id === color.productId) : null
+      const colorList = colors ?? []
+      const productList = products ?? []
+      const color = colorList.find((c) => c.id === batch.colorId)
+      const product = color ? productList.find((p) => p.id === color.productId) : null
       
       if (product && color) {
         alerts.push({
@@ -160,7 +164,8 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
     
     // 账款逾期提醒
     const { receivables } = useAccountStore.getState()
-    const overdueReceivables = receivables.filter((r) => {
+    const recv = receivables ?? []
+    const overdueReceivables = recv.filter((r) => {
       if (r.status === '已结清') return false
       const daysDiff = Math.floor(
         (new Date().getTime() - new Date(r.accountDate).getTime()) / (1000 * 60 * 60 * 24)
@@ -178,7 +183,8 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
     
     // 缸号过期提醒
     const { batches } = useProductStore.getState()
-    const expiringBatches = batches.filter((batch) => {
+    const batchList = batches ?? []
+    const expiringBatches = batchList.filter((batch) => {
       if (!batch.productionDate) return false
       const daysDiff = Math.floor(
         (new Date(batch.productionDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)

@@ -60,12 +60,13 @@ function DyeingList() {
   const [viewingOrder, setViewingOrder] = useState<DyeingOrder | null>(null)
   const pageSize = 10
 
-  // 统计数据
+  // 统计数据（防御：接口返回 null 时按空数组处理）
   const stats = useMemo(() => {
-    const allCount = orders.length
-    const pendingShipment = orders.filter((o) => o.status === '待发货').length
-    const inProgress = orders.filter((o) => o.status === '加工中').length
-    const completed = orders.filter((o) => o.status === '已完成').length
+    const list = orders ?? []
+    const allCount = list.length
+    const pendingShipment = list.filter((o) => o.status === '待发货').length
+    const inProgress = list.filter((o) => o.status === '加工中').length
+    const completed = list.filter((o) => o.status === '已完成').length
 
     return {
       allCount,
@@ -77,7 +78,7 @@ function DyeingList() {
 
   // 筛选订单
   const filteredOrders = useMemo(() => {
-    let result = orders
+    let result = orders ?? []
 
     // 状态筛选
     if (statusFilter !== '全部状态') {
@@ -110,10 +111,10 @@ function DyeingList() {
       const keyword = searchKeyword.toLowerCase()
       result = result.filter(
         (o) =>
-          o.orderNumber.toLowerCase().includes(keyword) ||
-          o.productName.toLowerCase().includes(keyword) ||
-          o.greyBatchCode.toLowerCase().includes(keyword) ||
-          o.factoryName.toLowerCase().includes(keyword)
+          String(o.orderNumber ?? '').toLowerCase().includes(keyword) ||
+          String(o.productName ?? '').toLowerCase().includes(keyword) ||
+          String(o.greyBatchCode ?? '').toLowerCase().includes(keyword) ||
+          String(o.factoryName ?? '').toLowerCase().includes(keyword)
       )
     }
 

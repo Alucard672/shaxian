@@ -48,12 +48,13 @@ function PurchaseList() {
     useContactStore.getState().loadAll()
   }, [loadOrders])
 
-  // 统计数据
+  // 统计数据（防御：接口返回 null 时按空数组处理）
   const stats = useMemo(() => {
-    const allCount = orders.length
-    const draft = orders.filter((o) => o.status === '草稿').length
-    const pending = orders.filter((o) => o.status === '待审核').length
-    const completed = orders.filter((o) => o.status === '已入库').length
+    const list = orders ?? []
+    const allCount = list.length
+    const draft = list.filter((o) => o.status === '草稿').length
+    const pending = list.filter((o) => o.status === '待审核').length
+    const completed = list.filter((o) => o.status === '已入库').length
 
     return {
       allCount,
@@ -65,7 +66,7 @@ function PurchaseList() {
 
   // 筛选订单
   const filteredOrders = useMemo(() => {
-    let result = orders
+    let result = orders ?? []
 
     // 状态筛选
     if (statusFilter !== '全部状态') {
@@ -98,9 +99,9 @@ function PurchaseList() {
       const keyword = searchKeyword.toLowerCase()
       result = result.filter(
         (o) =>
-          o.orderNumber.toLowerCase().includes(keyword) ||
-          o.supplierName.toLowerCase().includes(keyword) ||
-          o.operator.toLowerCase().includes(keyword)
+          String(o.orderNumber ?? '').toLowerCase().includes(keyword) ||
+          String(o.supplierName ?? '').toLowerCase().includes(keyword) ||
+          String(o.operator ?? '').toLowerCase().includes(keyword)
       )
     }
 

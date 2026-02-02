@@ -1,6 +1,9 @@
 import { useMemo } from 'react'
 import { SalesOrder } from '@/types/sales'
 import { useContactStore } from '@/store/contactStore'
+import { useSalesStore } from '@/store/salesStore'
+import { useSettingsStore } from '@/store/settingsStore'
+import { getCustomerOrderNumber } from '@/utils/customerOrderNumber'
 import Badge from '../ui/Badge'
 import Button from '../ui/Button'
 import { printOrder } from '@/utils/printDocument'
@@ -15,6 +18,12 @@ interface SalesDetailProps {
 
 function SalesDetail({ order, onEdit, onPrint, onClose }: SalesDetailProps) {
   const { getCustomer } = useContactStore()
+  const orders = useSalesStore((s) => s.orders)
+  const enableBatch = !!useSettingsStore((s) => s.systemParams?.enableBatch)
+  const customerOrderNumber = useMemo(
+    () => getCustomerOrderNumber(orders, order),
+    [orders, order]
+  )
   const receivedAmount = order.receivedAmount ?? order.paidAmount
 
   // 获取客户信息
@@ -49,7 +58,12 @@ function SalesDetail({ order, onEdit, onPrint, onClose }: SalesDetailProps) {
           </div>
           <div>
             <h2 className="text-2xl font-semibold text-gray-900">销售单详情</h2>
-            <p className="text-sm text-gray-600 mt-1">单号：{order.orderNumber}</p>
+            <p className="text-sm text-gray-600 mt-1">
+              系统单号：{order.orderNumber}
+              {customerOrderNumber > 0 && (
+                <span className="ml-3">客户单号：{customerOrderNumber}</span>
+              )}
+            </p>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -189,7 +203,9 @@ function SalesDetail({ order, onEdit, onPrint, onClose }: SalesDetailProps) {
                   <th className="px-4 py-3 text-left text-sm font-bold text-gray-700">序号</th>
                   <th className="px-4 py-3 text-left text-sm font-bold text-gray-700">商品名称</th>
                   <th className="px-4 py-3 text-left text-sm font-bold text-gray-700">色号</th>
-                  <th className="px-4 py-3 text-left text-sm font-bold text-gray-700">缸号</th>
+                  {enableBatch && (
+                    <th className="px-4 py-3 text-left text-sm font-bold text-gray-700">缸号</th>
+                  )}
                   <th className="px-4 py-3 text-right text-sm font-bold text-gray-700">数量</th>
                   <th className="px-4 py-3 text-right text-sm font-bold text-gray-700">单价</th>
                   <th className="px-4 py-3 text-right text-sm font-bold text-gray-700">金额</th>
@@ -209,11 +225,13 @@ function SalesDetail({ order, onEdit, onPrint, onClose }: SalesDetailProps) {
                         <div className="text-gray-600 text-xs">{item.colorName}</div>
                       </div>
                     </td>
-                    <td className="px-4 py-5">
-                      <div className="inline-block px-2 py-1 bg-gray-50 rounded text-sm text-gray-900">
-                        {item.batchCode}
-                      </div>
-                    </td>
+                    {enableBatch && (
+                      <td className="px-4 py-5">
+                        <div className="inline-block px-2 py-1 bg-gray-50 rounded text-sm text-gray-900">
+                          {item.batchCode}
+                        </div>
+                      </td>
+                    )}
                     <td className="px-4 py-5 text-right text-base text-red-600">
                       {item.quantity.toLocaleString()} {item.unit}
                     </td>

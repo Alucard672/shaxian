@@ -80,32 +80,36 @@ function AccountManagement() {
   }>>([])
   const pageSize = 10
 
-  // 统计数据
+  // 统计数据（防御：接口返回 null 时按空数组处理）
   const stats = useMemo(() => {
-    const totalReceivable = receivables
-      .filter((r) => r.status === '未结清')
-      .reduce((sum, r) => sum + r.unpaidAmount, 0)
+    const r = receivables ?? []
+    const p = payables ?? []
+    const rpts = receipts ?? []
+    const pmts = payments ?? []
+    const totalReceivable = r
+      .filter((x) => x.status === '未结清')
+      .reduce((sum, x) => sum + x.unpaidAmount, 0)
     
-    const totalPayable = payables
-      .filter((p) => p.status === '未结清')
-      .reduce((sum, p) => sum + p.unpaidAmount, 0)
+    const totalPayable = p
+      .filter((x) => x.status === '未结清')
+      .reduce((sum, x) => sum + x.unpaidAmount, 0)
     
     const today = new Date()
-    const overdueReceivables = receivables.filter((r) => {
-      if (r.status === '已结清') return false
-      const daysDiff = differenceInDays(today, new Date(r.accountDate))
+    const overdueReceivables = r.filter((x) => {
+      if (x.status === '已结清') return false
+      const daysDiff = differenceInDays(today, new Date(x.accountDate))
       return daysDiff > 15
     })
-    const overduePayables = payables.filter((p) => {
-      if (p.status === '已结清') return false
-      const daysDiff = differenceInDays(today, new Date(p.accountDate))
+    const overduePayables = p.filter((x) => {
+      if (x.status === '已结清') return false
+      const daysDiff = differenceInDays(today, new Date(x.accountDate))
       return daysDiff > 15
     })
-    const totalOverdue = overdueReceivables.reduce((sum, r) => sum + r.unpaidAmount, 0) +
-      overduePayables.reduce((sum, p) => sum + p.unpaidAmount, 0)
+    const totalOverdue = overdueReceivables.reduce((sum, x) => sum + x.unpaidAmount, 0) +
+      overduePayables.reduce((sum, x) => sum + x.unpaidAmount, 0)
     
-    const thisMonthReceipts = receipts.reduce((sum, r) => sum + r.amount, 0)
-    const thisMonthPayments = payments.reduce((sum, p) => sum + p.amount, 0)
+    const thisMonthReceipts = rpts.reduce((sum, x) => sum + x.amount, 0)
+    const thisMonthPayments = pmts.reduce((sum, x) => sum + x.amount, 0)
     const thisMonthTotal = thisMonthReceipts + thisMonthPayments
     
     return {
@@ -117,51 +121,56 @@ function AccountManagement() {
     }
   }, [receivables, payables, receipts, payments])
 
-  // 流水视图：合并应收和应付账款数据
+  // 流水视图：合并应收和应付账款数据（防御 null）
   const allAccounts = useMemo(() => {
-    const receivableAccounts = receivables.map((r) => ({
-      id: r.id,
+    const r = receivables ?? []
+    const p = payables ?? []
+    const receivableAccounts = r.map((x) => ({
+      id: x.id,
       type: '应收' as const,
-      counterpartyId: r.customerId,
-      counterpartyName: r.customerName,
-      relatedDocument: r.salesOrderNumber,
-      documentDate: r.accountDate,
-      totalAmount: r.receivableAmount,
-      paidAmount: r.receivedAmount,
-      unpaidAmount: r.unpaidAmount,
-      dueDate: r.accountDate,
-      status: r.status,
-      account: r,
+      counterpartyId: x.customerId,
+      counterpartyName: x.customerName,
+      relatedDocument: x.salesOrderNumber,
+      documentDate: x.accountDate,
+      totalAmount: x.receivableAmount,
+      paidAmount: x.receivedAmount,
+      unpaidAmount: x.unpaidAmount,
+      dueDate: x.accountDate,
+      status: x.status,
+      account: x,
     }))
     
-    const payableAccounts = payables.map((p) => ({
-      id: p.id,
+    const payableAccounts = p.map((x) => ({
+      id: x.id,
       type: '应付' as const,
-      counterpartyId: p.supplierId,
-      counterpartyName: p.supplierName,
-      relatedDocument: p.purchaseOrderNumber,
-      documentDate: p.accountDate,
-      totalAmount: p.payableAmount,
-      paidAmount: p.paidAmount,
-      unpaidAmount: p.unpaidAmount,
-      dueDate: p.accountDate,
-      status: p.status,
-      account: p,
+      counterpartyId: x.supplierId,
+      counterpartyName: x.supplierName,
+      relatedDocument: x.purchaseOrderNumber,
+      documentDate: x.accountDate,
+      totalAmount: x.payableAmount,
+      paidAmount: x.paidAmount,
+      unpaidAmount: x.unpaidAmount,
+      dueDate: x.accountDate,
+      status: x.status,
+      account: x,
     }))
     
     return [...receivableAccounts, ...payableAccounts]
   }, [receivables, payables])
 
-  // 汇总视图：按单位汇总
+  // 汇总视图：按单位汇总（防御 null）
   const summaryData = useMemo(() => {
+    const cust = customers ?? []
+    const r = receivables ?? []
+    const p = payables ?? []
     // 客户汇总
-    const customerSummary = customers.map((customer) => {
-      const customerReceivables = receivables.filter((r) => r.customerId === customer.id)
-      const totalAmount = customerReceivables.reduce((sum, r) => sum + r.receivableAmount, 0)
-      const paidAmount = customerReceivables.reduce((sum, r) => sum + r.receivedAmount, 0)
-      const unpaidAmount = customerReceivables.reduce((sum, r) => sum + r.unpaidAmount, 0)
+    const customerSummary = cust.map((customer) => {
+      const customerReceivables = r.filter((x) => x.customerId === customer.id)
+      const totalAmount = customerReceivables.reduce((sum, x) => sum + x.receivableAmount, 0)
+      const paidAmount = customerReceivables.reduce((sum, x) => sum + x.receivedAmount, 0)
+      const unpaidAmount = customerReceivables.reduce((sum, x) => sum + x.unpaidAmount, 0)
       const orderCount = customerReceivables.length
-      const unpaidCount = customerReceivables.filter((r) => r.status === '未结清').length
+      const unpaidCount = customerReceivables.filter((x) => x.status === '未结清').length
 
       return {
         id: customer.id,
@@ -180,13 +189,13 @@ function AccountManagement() {
     }).filter((c) => c.totalAmount > 0)
 
     // 供应商汇总
-    const supplierSummary = suppliers.map((supplier) => {
-      const supplierPayables = payables.filter((p) => p.supplierId === supplier.id)
-      const totalAmount = supplierPayables.reduce((sum, p) => sum + p.payableAmount, 0)
-      const paidAmount = supplierPayables.reduce((sum, p) => sum + p.paidAmount, 0)
-      const unpaidAmount = supplierPayables.reduce((sum, p) => sum + p.unpaidAmount, 0)
+    const supplierSummary = (suppliers ?? []).map((supplier) => {
+      const supplierPayables = p.filter((x) => x.supplierId === supplier.id)
+      const totalAmount = supplierPayables.reduce((sum, x) => sum + x.payableAmount, 0)
+      const paidAmount = supplierPayables.reduce((sum, x) => sum + x.paidAmount, 0)
+      const unpaidAmount = supplierPayables.reduce((sum, x) => sum + x.unpaidAmount, 0)
       const orderCount = supplierPayables.length
-      const unpaidCount = supplierPayables.filter((p) => p.status === '未结清').length
+      const unpaidCount = supplierPayables.filter((x) => x.status === '未结清').length
 
       return {
         id: supplier.id,
@@ -238,8 +247,8 @@ function AccountManagement() {
       const keyword = searchKeyword.toLowerCase()
       result = result.filter(
         (a) =>
-          a.counterpartyName.toLowerCase().includes(keyword) ||
-          a.relatedDocument.toLowerCase().includes(keyword)
+          String(a.counterpartyName ?? '').toLowerCase().includes(keyword) ||
+          String(a.relatedDocument ?? '').toLowerCase().includes(keyword)
       )
     }
 
@@ -264,8 +273,8 @@ function AccountManagement() {
       const keyword = searchKeyword.toLowerCase()
       result = result.filter(
         (s) =>
-          s.name.toLowerCase().includes(keyword) ||
-          (s.code ?? '').toLowerCase().includes(keyword)
+          String(s.name ?? '').toLowerCase().includes(keyword) ||
+          String(s.code ?? '').toLowerCase().includes(keyword)
       )
     }
 

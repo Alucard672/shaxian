@@ -1,8 +1,10 @@
 import { useState } from 'react'
 import { DyeingOrder } from '@/types/dyeing'
 import { useDyeingStore } from '@/store/dyeingStore'
+import { useSettingsStore } from '@/store/settingsStore'
 import Badge from '../ui/Badge'
 import Button from '../ui/Button'
+import SelectWithAdd from '../ui/SelectWithAdd'
 import { FileText, X, CheckCircle, Package } from 'lucide-react'
 import { format } from 'date-fns'
 
@@ -13,10 +15,13 @@ interface DyeingDetailProps {
 
 function DyeingDetail({ order, onClose }: DyeingDetailProps) {
   const { updateStatus, stockIn } = useDyeingStore()
-  const [stockLocation, setStockLocation] = useState('')
+  const { systemParams } = useSettingsStore()
+  const enableStockLocation = !!systemParams?.enableStockLocation
+  const defaultStockLocation = systemParams?.defaultStockLocation ?? '默认仓位'
+  const stockLocations = systemParams?.stockLocations ?? [defaultStockLocation]
+  const [stockLocation, setStockLocation] = useState(defaultStockLocation)
   const [showStockInForm, setShowStockInForm] = useState(false)
 
-  // 计算总加工数量
   const totalQuantity = order.items.reduce((sum, item) => sum + item.quantity, 0)
 
   const handleMarkAsCompleted = () => {
@@ -27,14 +32,21 @@ function DyeingDetail({ order, onClose }: DyeingDetailProps) {
   }
 
   const handleStockIn = () => {
-    if (!stockLocation.trim()) {
-      alert('请输入仓库位置')
-      return
-    }
-    if (confirm(`确定要将此加工单入库到 ${stockLocation} 吗？入库后将创建对应的批次。`)) {
-      stockIn(order.id, stockLocation.trim())
+    const loc = enableStockLocation ? (stockLocation || defaultStockLocation) : defaultStockLocation
+    const msg = enableStockLocation
+      ? `确定要将此加工单入库到 ${loc} 吗？入库后将创建对应的批次。`
+      : '确定要将此加工单入库吗？将使用默认仓位。'
+    if (confirm(msg)) {
+      stockIn(order.id, loc)
       setShowStockInForm(false)
-      setStockLocation('')
+      setStockLocation(defaultStockLocation)
+      onClose()
+    }
+  }
+
+  const handleStockInDirect = () => {
+    if (confirm('确定要将此加工单入库吗？将使用默认仓位。')) {
+      stockIn(order.id, defaultStockLocation)
       onClose()
     }
   }
@@ -179,28 +191,28 @@ function DyeingDetail({ order, onClose }: DyeingDetailProps) {
           </div>
         )}
 
-        {/* 入库表单 */}
+        {/* 入库表单（仅启用仓位时显示仓位选择） */}
         {order.status === '已完成' && showStockInForm && (
           <div className="space-y-4 bg-blue-50 border border-blue-200 rounded-xl p-4">
             <h3 className="text-lg font-semibold text-gray-900 border-b border-blue-200 pb-3">入库信息</h3>
             <div className="space-y-3">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  仓库位置 <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={stockLocation}
-                  onChange={(e) => setStockLocation(e.target.value)}
-                  placeholder="例如：A区-01-01 或 1号仓库-A区-01"
-                  className="w-full px-3 py-2 h-9 border border-gray-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                />
-                <p className="text-xs text-gray-500 mt-1">请输入仓库位置，例如：A区-01-01</p>
-              </div>
+              {enableStockLocation && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">仓位 <span className="text-red-500">*</span></label>
+                  <SelectWithAdd
+                    value={stockLocation || defaultStockLocation}
+                    onChange={(v) => setStockLocation(v || defaultStockLocation)}
+                    options={stockLocations.map((s) => ({ value: s, label: s }))}
+                    searchable={false}
+                    allowAdd={false}
+                    clearable={false}
+                    className="text-sm"
+                  />
+                </div>
+              )}
               <div className="flex gap-2">
                 <Button
                   onClick={handleStockIn}
-                  disabled={!stockLocation.trim()}
                   className="h-9 rounded-xl bg-blue-600 hover:bg-blue-700"
                 >
                   <Package className="w-4 h-4 mr-2" />
@@ -210,7 +222,7 @@ function DyeingDetail({ order, onClose }: DyeingDetailProps) {
                   variant="outline"
                   onClick={() => {
                     setShowStockInForm(false)
-                    setStockLocation('')
+                    setStockLocation(defaultStockLocation)
                   }}
                   className="h-9 border-gray-300 rounded-xl"
                 >
@@ -233,13 +245,23 @@ function DyeingDetail({ order, onClose }: DyeingDetailProps) {
           </Button>
         )}
         {order.status === '已完成' && !showStockInForm && (
-          <Button
-            onClick={() => setShowStockInForm(true)}
-            className="h-9 rounded-xl bg-green-600 hover:bg-green-700"
-          >
-            <Package className="w-4 h-4 mr-2" />
-            入库
-          </Button>
+          enableStockLocation ? (
+            <Button
+              onClick={() => setShowStockInForm(true)}
+              className="h-9 rounded-xl bg-green-600 hover:bg-green-700"
+            >
+              <Package className="w-4 h-4 mr-2" />
+              入库
+            </Button>
+          ) : (
+            <Button
+              onClick={handleStockInDirect}
+              className="h-9 rounded-xl bg-green-600 hover:bg-green-700"
+            >
+              <Package className="w-4 h-4 mr-2" />
+              入库
+            </Button>
+          )
         )}
         <Button
           variant="outline"

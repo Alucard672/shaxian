@@ -64,6 +64,14 @@ export interface SystemParams {
   productRequiredFields?: string[]
   /** 商品类型：纱线 / 面料，决定商品表单显示哪些属性 */
   productType?: '纱线' | '面料'
+  /** 是否启用缸号：关闭时销售/进货等不显示缸号，自动使用色号下首个缸号；默认不开启 */
+  enableBatch?: boolean
+  /** 是否启用仓位：关闭时库存统一入默认仓位且页面不显示仓位 */
+  enableStockLocation?: boolean
+  /** 默认仓位名称，关闭仓位功能时统一入库到此仓位 */
+  defaultStockLocation?: string
+  /** 仓位列表（启用时使用），须包含默认仓位 */
+  stockLocations?: string[]
 }
 
 /** 页面级必填项配置：pageKey -> 必填字段 id 列表 */

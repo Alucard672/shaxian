@@ -69,9 +69,9 @@ function InventoryCheckList() {
       const keyword = searchKeyword.toLowerCase()
       result = result.filter(
         (order) =>
-          order.orderNumber.toLowerCase().includes(keyword) ||
-          order.name.toLowerCase().includes(keyword) ||
-          order.warehouse.toLowerCase().includes(keyword)
+          String(order.orderNumber ?? '').toLowerCase().includes(keyword) ||
+          String(order.name ?? '').toLowerCase().includes(keyword) ||
+          String(order.warehouse ?? '').toLowerCase().includes(keyword)
       )
     }
 

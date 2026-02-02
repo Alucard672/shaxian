@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { useInventoryStore } from '@/store/inventoryStore'
 import { useProductStore } from '@/store/productStore'
+import { useSettingsStore } from '@/store/settingsStore'
 import Card from '../ui/Card'
 import Badge from '../ui/Badge'
 import Button from '../ui/Button'
@@ -35,6 +36,8 @@ interface InventoryDetailProps {
 function InventoryDetail({ inventoryItem, onClose }: InventoryDetailProps) {
   const { products, colors } = useProductStore()
   const { getInventoryByProductId } = useInventoryStore()
+  const { systemParams } = useSettingsStore()
+  const enableStockLocation = !!systemParams?.enableStockLocation
 
   const product = products.find(p => p.id === inventoryItem.productId)
   const color = colors.find(c => c.id === inventoryItem.colorId)
@@ -241,13 +244,15 @@ function InventoryDetail({ inventoryItem, onClose }: InventoryDetailProps) {
                   {inventoryItem.batch.supplierName || '-'}
                 </div>
               </div>
-              <div className="col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-2">库存位置</label>
-                <div className="w-full px-3 py-2 h-9 border border-gray-200 rounded-xl text-sm text-gray-600 flex items-center gap-2">
-                  <MapPin className="w-4 h-4 text-gray-400" />
-                  {inventoryItem.batch.stockLocation || '-'}
+              {enableStockLocation && (
+                <div className="col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">库存位置</label>
+                  <div className="w-full px-3 py-2 h-9 border border-gray-200 rounded-xl text-sm text-gray-600 flex items-center gap-2">
+                    <MapPin className="w-4 h-4 text-gray-400" />
+                    {inventoryItem.batch.stockLocation || '-'}
+                  </div>
                 </div>
-              </div>
+              )}
               {inventoryItem.batch.remark && (
                 <div className="col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-2">备注</label>

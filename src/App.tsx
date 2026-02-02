@@ -37,6 +37,7 @@ import AdjustmentList from './pages/inventory/AdjustmentList'
 import AdjustmentCreate from './pages/inventory/AdjustmentCreate'
 import InventoryCheckList from './pages/inventory/InventoryCheckList'
 import InventoryCheckCreate from './pages/inventory/InventoryCheckCreate'
+import InventoryLocationSettings from './pages/inventory/InventoryLocationSettings'
 
 // 账款管理
 import AccountManagement from './pages/account/AccountManagement'
@@ -116,7 +117,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 function DyeingRoute({ children }: { children: React.ReactNode }) {
   const { systemParams } = useSettingsStore()
   
-  if (!systemParams.enableDyeingProcess) {
+  if (!systemParams?.enableDyeingProcess) {
     return <Navigate to="/" replace />
   }
   
@@ -401,6 +402,14 @@ function App() {
           element={
             <ProtectedRoute>
               <InventoryCheckCreate />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/inventory/locations"
+          element={
+            <ProtectedRoute>
+              <InventoryLocationSettings />
             </ProtectedRoute>
           }
         />

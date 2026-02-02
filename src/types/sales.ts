@@ -27,6 +27,8 @@ export interface SalesOrderItem {
 export interface SalesOrder {
   id: string
   orderNumber: string // 销售单号，如"XS20231128001"
+  /** 客户单号：该客户下按开单顺序的 1-based 序号，与 orderNumber 不冲突；可前端推导或后端存储 */
+  customerOrderNumber?: number
   customerId: string
   customerName: string
   salesDate: string // 销售日期

@@ -55,7 +55,7 @@ function ProductManagement() {
   } = useProductStore()
   
   const { units, loadUnits, addUnit, systemParams, getPageRequiredFields, getDocumentVisibleColumns } = useSettingsStore()
-  const defaultRequired = systemParams.productRequiredFields || ['name', 'code']
+  const defaultRequired = systemParams?.productRequiredFields || ['name', 'code']
   const requiredFields = getPageRequiredFields(PRODUCT_PAGE_KEY, defaultRequired)
   const [showRequiredModal, setShowRequiredModal] = useState(false)
   const [showColumnsModal, setShowColumnsModal] = useState(false)
@@ -97,7 +97,7 @@ function ProductManagement() {
     colorCode: '',
     images: [] as string[],
   })
-  const productType = systemParams.productType || '纱线'
+  const productType = systemParams?.productType || '纱线'
 
   useEffect(() => {
     loadProducts()
@@ -361,10 +361,10 @@ function ProductManagement() {
   const filteredProducts = products.filter((product) => {
     const keyword = searchKeyword.toLowerCase()
     return (
-      product.name.toLowerCase().includes(keyword) ||
-      product.code.toLowerCase().includes(keyword) ||
-      (product.composition && product.composition.toLowerCase().includes(keyword)) ||
-      (product.colorCode && product.colorCode.toLowerCase().includes(keyword))
+      String(product.name ?? '').toLowerCase().includes(keyword) ||
+      String(product.code ?? '').toLowerCase().includes(keyword) ||
+      (product.composition && String(product.composition).toLowerCase().includes(keyword)) ||
+      (product.colorCode && String(product.colorCode).toLowerCase().includes(keyword))
     )
   })
 
@@ -641,7 +641,7 @@ function ProductManagement() {
                         className="w-full"
                       />
                     </div>
-                    {systemParams.enableDyeingProcess && (
+                    {systemParams?.enableDyeingProcess && (
                       <div className="col-span-2">
                         <label className="flex items-center gap-2">
                           <input

@@ -1,6 +1,8 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useReportStore } from '@/store/reportStore'
+import { useSalesStore } from '@/store/salesStore'
+import { usePurchaseStore } from '@/store/purchaseStore'
 import Card from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
 import DateRangePicker from '../../components/ui/DateRangePicker'
@@ -42,13 +44,22 @@ function ReportManagement() {
     getProductSalesRanking,
     getCustomerSalesRanking,
   } = useReportStore()
+  const salesOrders = useSalesStore((s) => s.orders)
+  const purchaseOrders = usePurchaseStore((s) => s.orders)
+  const loadSalesOrders = useSalesStore((s) => s.loadOrders)
+  const loadPurchaseOrders = usePurchaseStore((s) => s.loadOrders)
 
   const [dateRange, setDateRange] = useState<DateRange>('本月')
   const [customStartDate, setCustomStartDate] = useState<string>('')
   const [customEndDate, setCustomEndDate] = useState<string>('')
   const [chartType, setChartType] = useState<'line' | 'bar'>('line')
 
-  // 统计数据
+  useEffect(() => {
+    loadSalesOrders()
+    loadPurchaseOrders()
+  }, [loadSalesOrders, loadPurchaseOrders])
+
+  // 统计数据（依赖订单列表，加载完成后重算）
   const stats = useMemo(() => {
     const sales = getThisMonthSales()
     const purchases = getThisMonthPurchases()
@@ -61,22 +72,22 @@ function ReportManagement() {
       profit,
       profitRate,
     }
-  }, [])
+  }, [salesOrders, purchaseOrders, getThisMonthSales, getThisMonthPurchases, getGrossProfit, getProfitRate])
 
   // 销售趋势数据
   const salesTrendData = useMemo(() => {
     return getSalesTrend(30)
-  }, [])
+  }, [salesOrders, getSalesTrend])
 
   // 商品销售排行
   const productRanking = useMemo(() => {
     return getProductSalesRanking(5)
-  }, [])
+  }, [salesOrders, getProductSalesRanking])
 
   // 客户销售排行
   const customerRanking = useMemo(() => {
     return getCustomerSalesRanking(5)
-  }, [])
+  }, [salesOrders, getCustomerSalesRanking])
 
   // 统计卡片 - 变化指标基于实际数据，数据为空时不显示变化
   const statCards = [

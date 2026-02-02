@@ -35,6 +35,7 @@ const routeTitleMap: Record<string, string> = {
   '/inventory/adjustment/create': '新建调整单',
   '/inventory/check': '库存盘点',
   '/inventory/check/create': '新建盘点单',
+  '/inventory/locations': '仓位设置',
   '/account': '账款管理',
   '/account/receivable': '应收账款',
   '/account/payable': '应付账款',
@@ -70,6 +71,13 @@ export function getRouteTitle(path: string): string {
   if (path.includes('/print/template/')) {
     return '模板编辑'
   }
+  // 编辑销售单/进货单：避免显示 ID
+  if (/^\/sales\/edit\/\d+$/.test(path) || /^\/shaxian\/sales\/edit\/\d+$/.test(path)) {
+    return '编辑销售单'
+  }
+  if (/^\/purchase\/edit\/\d+$/.test(path) || /^\/shaxian\/purchase\/edit\/\d+$/.test(path)) {
+    return '编辑进货单'
+  }
   
   // 直接匹配
   if (routeTitleMap[path]) {
@@ -92,6 +100,11 @@ export function getRouteTitle(path: string): string {
       const parentPath = '/' + segments.slice(0, -1).join('/')
       const parentTitle = routeTitleMap[parentPath] || segments[0]
       return parentTitle + titleMap[lastSegment]
+    }
+    // 最后一段为数字时（常见为 id），不直接显示，用父级标题
+    if (/^\d+$/.test(lastSegment) && segments.length >= 2) {
+      const parentPath = '/' + segments.slice(0, -1).join('/')
+      return routeTitleMap[parentPath] || parentPath.replace(/^\//, '').replace(/\//g, ' - ')
     }
   }
   

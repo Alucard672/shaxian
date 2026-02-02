@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useContactStore } from '@/store/contactStore'
 import { useSalesStore } from '@/store/salesStore'
 import { useAccountStore } from '@/store/accountStore'
@@ -21,8 +21,12 @@ import {
 function CustomerReport() {
   const navigate = useNavigate()
   const { customers } = useContactStore()
-  const { orders: salesOrders } = useSalesStore()
+  const { orders: salesOrders, loadOrders } = useSalesStore()
   const { receivables } = useAccountStore()
+
+  useEffect(() => {
+    loadOrders()
+  }, [loadOrders])
 
   const [currentPage, setCurrentPage] = useState(1)
   const pageSize = 10

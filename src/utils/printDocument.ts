@@ -1,9 +1,11 @@
 import { templateApi } from '@/api/client'
 import { useContactStore } from '@/store/contactStore'
 import { usePrintStore } from '@/store/printStore'
+import { useSalesStore } from '@/store/salesStore'
 import { PurchaseOrder } from '@/types/purchase'
 import { SalesOrder } from '@/types/sales'
 import { PrintTemplate } from '@/types/template'
+import { getCustomerOrderNumber } from '@/utils/customerOrderNumber'
 import { generatePrintContent, openPrintDialog } from '@/utils/printService'
 
 type DocumentType = '销售单' | '进货单'
@@ -121,6 +123,12 @@ export function printOrder(documentType: DocumentType, order: Order) {
       const supplier =
         documentType === '进货单' ? contactStore.getSupplier((order as PurchaseOrder).supplierId) : undefined
 
+      let customerOrderNumber: number | undefined
+      if (documentType === '销售单') {
+        const orders = useSalesStore.getState().orders
+        customerOrderNumber = getCustomerOrderNumber(orders, order as SalesOrder) || undefined
+      }
+
       // 3) 生成并打开打印页
       const html = generatePrintContent({
         template,
@@ -128,6 +136,7 @@ export function printOrder(documentType: DocumentType, order: Order) {
         documentType,
         customer,
         supplier,
+        customerOrderNumber,
       })
       openPrintDialog(html)
 

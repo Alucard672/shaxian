@@ -59,3 +59,39 @@ input[type="number"] {
   -moz-appearance: textfield;
 }
 
+/* 下划线输入框样式：仅底部边框、无圆角、透明背景、Focus 时下划线高亮 */
+.input-underline {
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  border-bottom: 1px solid #e5e7eb;
+  outline: none;
+  transition: border-color 0.15s, border-width 0.15s;
+}
+.input-underline:focus {
+  border-bottom-width: 2px;
+  border-bottom-color: #3b82f6;
+}
+.input-underline::placeholder {
+  color: #9ca3af;
+}
+.input-underline:disabled,
+.input-underline:read-only {
+  background: transparent;
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.input-underline:read-only {
+  cursor: default;
+}
+.input-underline.input-underline-error {
+  border-bottom-color: #ef4444;
+}
+.input-underline.input-underline-error:focus {
+  border-bottom-color: #ef4444;
+}
+.input-underline.input-underline-open {
+  border-bottom-width: 2px;
+  border-bottom-color: #3b82f6;
+}
+

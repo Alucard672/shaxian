@@ -58,15 +58,15 @@ export default function MultiSelectWithAdd({
   // 过滤选项
   const filteredOptions = searchable && searchKeyword
     ? options.filter((opt) =>
-        opt.label.toLowerCase().includes(searchKeyword.toLowerCase()) ||
-        opt.value.toLowerCase().includes(searchKeyword.toLowerCase())
+        String(opt.label ?? '').toLowerCase().includes(String(searchKeyword ?? '').toLowerCase()) ||
+        String(opt.value ?? '').toLowerCase().includes(String(searchKeyword ?? '').toLowerCase())
       )
     : options
 
   // 检查当前搜索值是否是新项（不在选项中）
   const isNewValue = searchKeyword && !options.find((opt) => 
-    opt.label.toLowerCase() === searchKeyword.toLowerCase() ||
-    opt.value.toLowerCase() === searchKeyword.toLowerCase()
+    String(opt.label ?? '').toLowerCase() === String(searchKeyword ?? '').toLowerCase() ||
+    String(opt.value ?? '').toLowerCase() === String(searchKeyword ?? '').toLowerCase()
   )
 
   // 处理选择/取消选择
@@ -286,16 +286,13 @@ export default function MultiSelectWithAdd({
             placeholder={selectedOptions.length > 0 ? '' : placeholder}
             disabled={disabled || isAdding}
             className={cn(
-              'w-full py-2 border rounded-lg text-sm appearance-none bg-white',
-              'focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500',
-              'disabled:bg-gray-50 disabled:text-gray-400 disabled:cursor-not-allowed',
-              error
-                ? 'border-danger-500 focus:ring-danger-500 focus:border-danger-500'
-                : 'border-gray-200',
+              'input-underline w-full py-2 text-sm appearance-none',
+              error && 'input-underline-error',
+              isOpen && 'input-underline-open',
               searchable && 'pl-10 pr-16',
-              !searchable && 'px-3',
-              isOpen && 'border-primary-500',
-              selectedOptions.length > 0 && 'pl-2'
+              !searchable && 'px-0',
+              selectedOptions.length > 0 && 'pl-2',
+              'disabled:bg-transparent disabled:opacity-60 disabled:cursor-not-allowed'
             )}
             style={{
               paddingLeft: selectedOptions.length > 0 

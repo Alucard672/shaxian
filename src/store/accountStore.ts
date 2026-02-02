@@ -79,10 +79,11 @@ export const useAccountStore = create<AccountState>((set, get) => ({
   loading: false,
   error: null,
 
-  // 加载所有应收账款
+  // 加载所有应收账款（接口返回 HTML/404 等时为 null，按空数组处理）
   loadReceivables: async () => {
     try {
-      const receivables = await accountApi.getAllReceivables()
+      const raw = await accountApi.getAllReceivables()
+      const receivables = Array.isArray(raw) ? raw : []
       set((state) => ({ ...state, receivables }))
     } catch (error: any) {
       console.error('Failed to load receivables:', error)
@@ -90,10 +91,11 @@ export const useAccountStore = create<AccountState>((set, get) => ({
     }
   },
 
-  // 加载所有应付账款
+  // 加载所有应付账款（接口返回 HTML/404 等时为 null，按空数组处理）
   loadPayables: async () => {
     try {
-      const payables = await accountApi.getAllPayables()
+      const raw = await accountApi.getAllPayables()
+      const payables = Array.isArray(raw) ? raw : []
       set((state) => ({ ...state, payables }))
     } catch (error: any) {
       console.error('Failed to load payables:', error)
@@ -101,10 +103,11 @@ export const useAccountStore = create<AccountState>((set, get) => ({
     }
   },
 
-  // 加载所有收款记录
+  // 加载所有收款记录（接口返回 HTML/404 等时为 null，按空数组处理）
   loadReceipts: async () => {
     try {
-      const receipts = await accountApi.getAllReceipts()
+      const raw = await accountApi.getAllReceipts()
+      const receipts = Array.isArray(raw) ? raw : []
       set((state) => ({ ...state, receipts }))
     } catch (error: any) {
       console.error('Failed to load receipts:', error)
@@ -112,10 +115,11 @@ export const useAccountStore = create<AccountState>((set, get) => ({
     }
   },
 
-  // 加载所有付款记录
+  // 加载所有付款记录（接口返回 HTML/404 等时为 null，按空数组处理）
   loadPayments: async () => {
     try {
-      const payments = await accountApi.getAllPayments()
+      const raw = await accountApi.getAllPayments()
+      const payments = Array.isArray(raw) ? raw : []
       set((state) => ({ ...state, payments }))
     } catch (error: any) {
       console.error('Failed to load payments:', error)

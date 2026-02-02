@@ -368,6 +368,7 @@ function TemplateEdit() {
       order: mockOrder,
       documentType: formData.documentType,
       customer: mockCustomer,
+      ...(formData.documentType === '销售单' ? { customerOrderNumber: 1 } : {}),
     }
 
     // 生成 HTML 内容

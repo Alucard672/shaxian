@@ -121,7 +121,11 @@ const defaultSystemParams: SystemParams = {
   enableDyeingProcess: false,
   allowNegativeStock: false,
   productRequiredFields: ['name', 'code'],
-  productType: '纱线', // 商品类型：纱线 | 面料，决定表单显示纱线属性（支数）或面料属性（幅宽、克重）
+  productType: '纱线',
+  enableBatch: false,
+  enableStockLocation: false,
+  defaultStockLocation: '默认仓位',
+  stockLocations: ['默认仓位'],
 }
 
 export const useSettingsStore = create<SettingsState>((set, get) => ({
@@ -150,30 +154,33 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
     }
   },
 
-  // 加载员工
+  // 加载员工（接口返回 HTML/404 等时为 null，按空数组处理）
   loadEmployees: async () => {
     try {
-      const employees = await settingsApi.getAllEmployees()
+      const raw = await settingsApi.getAllEmployees()
+      const employees = Array.isArray(raw) ? raw : []
       set({ employees })
     } catch (error: any) {
       console.error('Failed to load employees:', error)
     }
   },
 
-  // 加载角色
+  // 加载角色（接口返回 HTML/404 等时为 null，按空数组处理）
   loadRoles: async () => {
     try {
-      const roles = await settingsApi.getAllRoles()
+      const raw = await settingsApi.getAllRoles()
+      const roles = Array.isArray(raw) ? raw : []
       set({ roles })
     } catch (error: any) {
       console.error('Failed to load roles:', error)
     }
   },
 
-  // 加载自定义查询
+  // 加载自定义查询（接口返回 HTML/404 等时为 null，按空数组处理）
   loadCustomQueries: async () => {
     try {
-      const customQueries = await settingsApi.getAllQueries()
+      const raw = await settingsApi.getAllQueries()
+      const customQueries = Array.isArray(raw) ? raw : []
       set({ customQueries })
     } catch (error: any) {
       console.error('Failed to load custom queries:', error)
@@ -190,11 +197,19 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
     }
   },
 
-  // 加载系统参数
+  // 加载系统参数（接口返回 HTML/404 等时 getParams 为 null，不覆盖默认值）
   loadSystemParams: async () => {
     try {
-      const systemParams = await settingsApi.getParams()
-      set({ systemParams })
+      const raw = await settingsApi.getParams()
+      if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
+        set({
+          systemParams: {
+            ...defaultSystemParams,
+            ...raw,
+          },
+        })
+      }
+      // null、非对象或报错时保留默认，不 set
     } catch (error: any) {
       console.error('Failed to load system params:', error)
     }
@@ -366,11 +381,12 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
     return get().customQueries.find((q) => q.id === id)
   },
   
-  // 系统参数设置
+  // 系统参数设置（合并返回值，避免部分更新时丢失其他参数）
   updateSystemParams: async (params) => {
     try {
       const updated = await settingsApi.updateParams(params)
-      set({ systemParams: updated })
+      const merged = { ...defaultSystemParams, ...get().systemParams, ...(updated && typeof updated === 'object' ? updated : {}) }
+      set({ systemParams: merged })
     } catch (error: any) {
       console.error('Failed to update system params:', error)
       throw error
@@ -393,8 +409,13 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   getDocumentVisibleColumns: (docKey, allColumnKeys) => {
     const map = get().documentVisibleColumns
     const saved = map[docKey]
-    if (saved && Array.isArray(saved) && saved.length > 0) return saved
-    return allColumnKeys
+    if (!saved || !Array.isArray(saved) || saved.length === 0) return allColumnKeys
+    // 合并新增列：已保存配置中未包含的列默认显示
+    const merged = [...saved]
+    for (const k of allColumnKeys) {
+      if (!merged.includes(k)) merged.push(k)
+    }
+    return merged
   },
   setDocumentVisibleColumns: (docKey, keys) => {
     const next = { ...get().documentVisibleColumns, [docKey]: keys }

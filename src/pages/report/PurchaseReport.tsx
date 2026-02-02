@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { usePurchaseStore } from '@/store/purchaseStore'
 import { useProductStore } from '@/store/productStore'
 import Card from '../../components/ui/Card'
@@ -26,8 +26,12 @@ type DateRange = '今日' | '本周' | '本月' | '本季度' | '本年' | '自�
 
 function PurchaseReport() {
   const navigate = useNavigate()
-  const { orders } = usePurchaseStore()
+  const { orders, loadOrders } = usePurchaseStore()
   const { products } = useProductStore()
+
+  useEffect(() => {
+    loadOrders()
+  }, [loadOrders])
 
   const [dateRange, setDateRange] = useState<DateRange>('本月')
   const [customStartDate, setCustomStartDate] = useState<string>('')

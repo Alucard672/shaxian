@@ -148,7 +148,7 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
 
   getLowStockAlerts: (threshold = 0) => {
     const { batches } = useProductStore.getState()
-    return batches.filter((b) => b.stockQuantity <= threshold)
+    return (batches ?? []).filter((b) => b.stockQuantity <= threshold)
   },
 }))
 

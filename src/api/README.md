@@ -9,10 +9,23 @@
 在 `.env` 文件中设置 API 基础 URL：
 
 ```env
+# 当前默认（新接口）
+VITE_API_BASE_URL=http://t.jiyizhiyun.com/api
+```
+
+如果不设置，默认使用 `http://t.jiyizhiyun.com/api`。登录、注册及所有业务接口均使用该 base。
+
+**临时访问旧数据**：若昨天及此前的数据在 `/biz/api`，可改为：
+
+```env
 VITE_API_BASE_URL=http://t.jiyizhiyun.com/biz/api
 ```
 
-如果不设置，默认使用内置的线上地址（当前为 `http://t.jiyizhiyun.com/biz/api`）。
+保存后重新执行 `npm run dev` 或 `npm run build` 使配置生效。
+
+**切换 API 后请重新登录**：`/api` 与 `/biz/api` 的登录态互不通用。修改 `VITE_API_BASE_URL` 后，请先退出登录再重新登录，否则可能出现「接口未返回有效数据」等异常。
+
+**运行时切换**：登录页在收到 500 等服务器错误时，会显示「尝试使用 /api 登录」或「尝试使用 /biz/api 登录」按钮。点击后即切换接口并自动重试登录，无需重新构建。切换结果保存在 `localStorage.apiBaseOverride`，后续所有请求均使用该地址，直至清除或覆盖。
 
 ## 使用示例
 
@@ -76,7 +89,7 @@ try {
 
 ## 认证接口（与业务接口同 base）
 
-**基准 URL**：`http://t.jiyizhiyun.com/biz/api`（即 `VITE_API_BASE_URL`）。登录、登出、注册均使用该 base。
+**基准 URL**：`http://t.jiyizhiyun.com/api`（即 `VITE_API_BASE_URL`）。登录、登出、注册及所有业务接口均使用该 base。
 
 | 接口 | 方法 | 路径 | 说明 |
 |------|------|------|------|

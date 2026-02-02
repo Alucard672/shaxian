@@ -8,6 +8,7 @@ import {
 import { purchaseApi } from '@/api/client'
 import { useProductStore } from './productStore'
 import { useAccountStore } from './accountStore'
+import { mapPurchaseStatusToApi, mapPurchaseApiToZh } from '@/utils/orderStatusMap'
 
 interface PurchaseState {
   orders: PurchaseOrder[]
@@ -31,11 +32,16 @@ export const usePurchaseStore = create<PurchaseState>((set, get) => ({
   loading: false,
   error: null,
 
-  // 加载所有进货单
+  // 加载所有进货单（接口返回 HTML/404 等时为 null，按空数组处理；status 统一为中文）
   loadOrders: async () => {
     set({ loading: true, error: null })
     try {
-      const orders = await purchaseApi.getAll()
+      const raw = await purchaseApi.getAll()
+      const list = Array.isArray(raw) ? raw : []
+      const orders = list.map((o: any) => ({
+        ...o,
+        status: mapPurchaseApiToZh(o.status ?? ''),
+      }))
       set({ orders, loading: false })
     } catch (error: any) {
       set({ error: error.message || 'Failed to load purchase orders', loading: false })
@@ -58,15 +64,19 @@ export const usePurchaseStore = create<PurchaseState>((set, get) => ({
       const { addBatch } = useProductStore.getState()
       const { addAccountPayable } = useAccountStore.getState()
       
-      // 准备提交数据
+      // 准备提交数据（后端使用英文枚举 DRAFT/RECEIVED 等）
       const orderData = {
         ...data,
         operator: '当前用户', // TODO: 从用户状态获取
-        status: status,
+        status: mapPurchaseStatusToApi(status),
       }
       
-      const newOrder = await purchaseApi.create(orderData)
-      
+      const created = await purchaseApi.create(orderData)
+      const newOrder = {
+        ...created,
+        status: mapPurchaseApiToZh((created as any).status ?? '') || status,
+      }
+
       // 如果不是草稿状态，自动执行入库操作
       if (status !== '草稿') {
         // 为每个明细创建缸号
@@ -120,9 +130,16 @@ export const usePurchaseStore = create<PurchaseState>((set, get) => ({
 
   updateOrder: async (id, data) => {
     try {
-      const updated = await purchaseApi.update(id, data)
+      const payload = data.status != null
+        ? { ...data, status: mapPurchaseStatusToApi(data.status) }
+        : data
+      const updated = await purchaseApi.update(id, payload)
+      const normalized = {
+        ...updated,
+        status: mapPurchaseApiToZh((updated as any).status ?? '') ?? (updated as any).status,
+      }
       set((state) => ({
-        orders: state.orders.map((o) => o.id === id ? updated : o)
+        orders: state.orders.map((o) => (o.id === id ? normalized : o))
       }))
     } catch (error: any) {
       console.error('Failed to update purchase order:', error)
@@ -148,7 +165,7 @@ export const usePurchaseStore = create<PurchaseState>((set, get) => ({
 
   cancelOrder: async (id) => {
     try {
-      await purchaseApi.update(id, { status: '已作废' })
+      await purchaseApi.update(id, { status: mapPurchaseStatusToApi('已作废') })
       set((state) => ({
         orders: state.orders.map((o) =>
           o.id === id ? { ...o, status: '已作废' } : o

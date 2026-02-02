@@ -68,9 +68,9 @@ function AdjustmentList() {
       const keyword = searchKeyword.toLowerCase()
       result = result.filter(
         (order) =>
-          order.orderNumber.toLowerCase().includes(keyword) ||
-          order.operator.toLowerCase().includes(keyword) ||
-          order.remark?.toLowerCase().includes(keyword)
+          String(order.orderNumber ?? '').toLowerCase().includes(keyword) ||
+          String(order.operator ?? '').toLowerCase().includes(keyword) ||
+          (order.remark && String(order.remark).toLowerCase().includes(keyword))
       )
     }
 

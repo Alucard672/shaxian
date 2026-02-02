@@ -32,11 +32,12 @@ export const useInventoryCheckStore = create<InventoryCheckState>((set, get) => 
   loading: false,
   error: null,
 
-  // 加载所有盘点单
+  // 加载所有盘点单（接口返回 HTML/404 等时为 null，按空数组处理）
   loadOrders: async () => {
     set({ loading: true, error: null })
     try {
-      const orders = await inventoryApi.getAllChecks()
+      const raw = await inventoryApi.getAllChecks()
+      const orders = Array.isArray(raw) ? raw : []
       set({ orders, loading: false })
     } catch (error: any) {
       set({ error: error.message || 'Failed to load inventory check orders', loading: false })

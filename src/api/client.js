@@ -1,7 +1,5 @@
-// API基础配置（登录与业务接口均使用 /biz/api，以线上 API 文档为准）
-const DEFAULT_API_BASE_URL = 'http://t.jiyizhiyun.com/biz/api'
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || DEFAULT_API_BASE_URL
+// API 基础配置（支持运行时 localStorage apiBaseOverride 切换 /api 与 /biz/api）
+import { getApiBaseUrl } from './apiBase'
 
 // 公开的API请求函数（用于商品详情页等公开访问的场景，401时不跳转登录）
 async function publicApiRequest(endpoint, options = {}) {
@@ -42,7 +40,7 @@ async function publicApiRequest(endpoint, options = {}) {
   }
 
   // 构建带sessionId和tenantId的URL
-  let url = `${API_BASE_URL}${endpoint}`
+  let url = `${getApiBaseUrl()}${endpoint}`
   const queryParams = []
   if (sessionId) {
     queryParams.push(`sessionId=${sessionId}`)
@@ -121,13 +119,18 @@ async function publicApiRequest(endpoint, options = {}) {
         return null
       }
       
+      const ct = (response.headers.get('content-type') || '').toLowerCase()
+      if (ct && !ct.includes('application/json') && (ct.includes('text/html') || ct.includes('text/plain'))) {
+        return null
+      }
+      const t = text.trim()
+      if (t.toLowerCase().startsWith('<!doctype') || t.startsWith('<')) {
+        return null
+      }
+      
       result = JSON.parse(text)
     } catch (error) {
-      if (error instanceof SyntaxError && error.message.includes('JSON')) {
-        if (options.method === 'DELETE') {
-          return null
-        }
-        console.warn('Failed to parse response as JSON, returning null:', error.message)
+      if (error instanceof SyntaxError) {
         return null
       }
       throw error
@@ -144,15 +147,15 @@ async function publicApiRequest(endpoint, options = {}) {
     if (message.includes('Failed to fetch')) {
       if (typeof window !== 'undefined') {
         const pageProtocol = window.location?.protocol
-        if (pageProtocol === 'https:' && API_BASE_URL.startsWith('http://')) {
+        if (pageProtocol === 'https:' && getApiBaseUrl().startsWith('http://')) {
           throw new Error(
-            `当前页面是 HTTPS，但接口地址是 HTTP（${API_BASE_URL}）。浏览器会拦截请求，导致无法登录/请求失败。` +
+            `当前页面是 HTTPS，但接口地址是 HTTP（${getApiBaseUrl()}）。浏览器会拦截请求，导致无法登录/请求失败。` +
               `请将页面部署到 HTTP，或给后端接口配置 HTTPS，或通过同源反向代理转发接口。`
           )
         }
       }
 
-      throw new Error(`请求失败（网络异常或被浏览器拦截）。请检查接口地址是否可访问：${API_BASE_URL}`)
+      throw new Error(`请求失败（网络异常或被浏览器拦截）。请检查接口地址是否可访问：${getApiBaseUrl()}`)
     }
     throw error
   }
@@ -190,7 +193,7 @@ async function apiRequest(endpoint, options = {}) {
   }
 
   // 构建带sessionId和tenantId的URL
-  let url = `${API_BASE_URL}${endpoint}`
+  let url = `${getApiBaseUrl()}${endpoint}`
   const queryParams = []
   if (sessionId) {
     queryParams.push(`sessionId=${sessionId}`)
@@ -329,25 +332,24 @@ async function apiRequest(endpoint, options = {}) {
     try {
       const text = await response.text()
       
-      // 如果响应体为空
       if (!text || text.trim() === '') {
         return null
       }
       
-      // 尝试解析为 JSON
-      result = JSON.parse(text)
-    } catch (error) {
-      // 如果解析失败，检查是否是 JSON 格式错误
-      if (error instanceof SyntaxError && error.message.includes('JSON')) {
-        // 对于 DELETE 操作，空响应体是正常的
-        if (options.method === 'DELETE') {
-          return null
-        }
-        // 其他情况，尝试返回原始文本或抛出错误
-        console.warn('Failed to parse response as JSON, returning null:', error.message)
+      const ct = (response.headers.get('content-type') || '').toLowerCase()
+      if (ct && !ct.includes('application/json') && (ct.includes('text/html') || ct.includes('text/plain'))) {
         return null
       }
-      // 其他错误继续抛出
+      const t = text.trim()
+      if (t.toLowerCase().startsWith('<!doctype') || t.startsWith('<')) {
+        return null
+      }
+      
+      result = JSON.parse(text)
+    } catch (error) {
+      if (error instanceof SyntaxError) {
+        return null
+      }
       throw error
     }
 
@@ -366,18 +368,32 @@ async function apiRequest(endpoint, options = {}) {
       if (typeof window !== 'undefined') {
         const pageProtocol = window.location?.protocol
         // https 页面请求 http 接口会被浏览器拦截（Mixed Content）
-        if (pageProtocol === 'https:' && API_BASE_URL.startsWith('http://')) {
+        if (pageProtocol === 'https:' && getApiBaseUrl().startsWith('http://')) {
           throw new Error(
-            `当前页面是 HTTPS，但接口地址是 HTTP（${API_BASE_URL}）。浏览器会拦截请求，导致无法登录/请求失败。` +
+            `当前页面是 HTTPS，但接口地址是 HTTP（${getApiBaseUrl()}）。浏览器会拦截请求，导致无法登录/请求失败。` +
               `请将页面部署到 HTTP，或给后端接口配置 HTTPS，或通过同源反向代理转发接口。`
           )
         }
       }
 
-      throw new Error(`请求失败（网络异常或被浏览器拦截）。请检查接口地址是否可访问：${API_BASE_URL}`)
+      throw new Error(`请求失败（网络异常或被浏览器拦截）。请检查接口地址是否可访问：${getApiBaseUrl()}`)
     }
     throw error
   }
+}
+
+// 从响应体解析错误信息（支持 message / error / detail / msg）
+function parseAuthError(res, text) {
+  const ct = res.headers.get('content-type') || ''
+  if (!text || !ct.includes('application/json')) return null
+  try {
+    const j = JSON.parse(text)
+    if (j && typeof j === 'object') {
+      const m = j.message ?? j.error ?? j.detail ?? j.msg
+      if (typeof m === 'string' && m.trim()) return m.trim()
+    }
+  } catch (_) {}
+  return null
 }
 
 // 认证API
@@ -385,22 +401,37 @@ export const authApi = {
   // 登录仅校验手机号+密码，不传租户；注册表有对应用户即可登录
   login: async (data) => {
     const { phone, password } = data
-    const res = await fetch(`${API_BASE_URL}/auth/login`, {
+    const url = `${getApiBaseUrl()}/auth/login`
+    const res = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ phone, password }),
     })
-    const ct = res.headers.get('content-type') || ''
-    let msg = `HTTP ${res.status}`
-    let dataResp = null
-    try {
-      const text = await res.text()
-      if (text && ct.includes('application/json')) {
-        dataResp = JSON.parse(text)
-        if (dataResp && typeof dataResp.message === 'string') msg = dataResp.message
+    const text = await res.text()
+    const dataResp = (() => {
+      try {
+        return text && (res.headers.get('content-type') || '').includes('application/json')
+          ? JSON.parse(text)
+          : null
+      } catch (_) {
+        return null
       }
-    } catch (_) {}
-    if (!res.ok) throw new Error(msg)
+    })()
+
+    if (!res.ok) {
+      const detail = parseAuthError(res, text)
+      let msg = detail || `请求失败（${res.status}）`
+      if (res.status >= 500) {
+        msg = detail
+          ? `服务器错误：${detail}`
+          : '服务器暂时异常（500），请稍后重试。可点击下方切换接口重试，或联系管理员。'
+        if (import.meta.env.DEV) console.error('[login]', res.status, url, text?.slice(0, 500))
+      } else if (res.status === 405) {
+        msg = detail || '该接口返回 405（方法不允许），可能路径或配置有误。可点击下方切换接口重试。'
+      }
+      throw new Error(msg)
+    }
+
     if (dataResp && typeof dataResp === 'object' && 'data' in dataResp) return dataResp.data
     return dataResp
   },
@@ -410,10 +441,28 @@ export const authApi = {
     })
   },
   register: async (data) => {
-    return apiRequest('/auth/register', {
+    const url = `${getApiBaseUrl()}/auth/register`
+    const res = await fetch(url, {
       method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
     })
+    const text = await res.text()
+    const dataResp = (() => {
+      try {
+        return text && (res.headers.get('content-type') || '').includes('application/json')
+          ? JSON.parse(text)
+          : null
+      } catch (_) {
+        return null
+      }
+    })()
+
+    if (!res.ok) {
+      const detail = parseAuthError(res, text)
+      throw new Error(detail || `注册失败（${res.status}）`)
+    }
+    return dataResp
   },
 }
 
@@ -710,6 +759,13 @@ export const salesApi = {
       body: JSON.stringify(data),
     })
   },
+  /** 仅更新收款信息（已出库等非草稿订单适用；后端仅支持 PUT，若仍限制草稿则提示通过账款管理收款） */
+  updatePayment: async (id, data) => {
+    return apiRequest(`/sales/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    })
+  },
   delete: async (id) => {
     return apiRequest(`/sales/${id}`, {
       method: 'DELETE',
@@ -928,7 +984,7 @@ export const productShareApi = {
     }
     
     // 构建 URL，使用 session 参数名（按 Swagger 文档要求）
-    let url = `${API_BASE_URL}/products/${id}/share-code`
+    let url = `${getApiBaseUrl()}/products/${id}/share-code`
     const queryParams = []
     if (sessionId) {
       queryParams.push(`session=${sessionId}`) // 注意：使用 session 而不是 sessionId

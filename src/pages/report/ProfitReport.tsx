@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useSalesStore } from '@/store/salesStore'
 import { usePurchaseStore } from '@/store/purchaseStore'
 import Card from '../../components/ui/Card'
@@ -23,8 +23,13 @@ type DateRange = '今日' | '本周' | '本月' | '本季度' | '本年'
 
 function ProfitReport() {
   const navigate = useNavigate()
-  const { orders: salesOrders } = useSalesStore()
-  const { orders: purchaseOrders } = usePurchaseStore()
+  const { orders: salesOrders, loadOrders: loadSalesOrders } = useSalesStore()
+  const { orders: purchaseOrders, loadOrders: loadPurchaseOrders } = usePurchaseStore()
+
+  useEffect(() => {
+    loadSalesOrders()
+    loadPurchaseOrders()
+  }, [loadSalesOrders, loadPurchaseOrders])
 
   const [dateRange, setDateRange] = useState<DateRange>('本月')
 

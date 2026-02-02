@@ -54,13 +54,13 @@ export const useContactStore = create<ContactState>((set, get) => ({
   loading: false,
   error: null,
 
-  // 加载所有客户
+  // 加载所有客户（接口返回 HTML/404 等时 get 为 null，按空数组处理）
   loadCustomers: async () => {
     set({ loading: true, error: null })
     try {
-      const customers = await contactApi.getAllCustomers()
-      // 映射后端枚举值到前端显示值
-      const mappedCustomers = customers.map((c: any) => ({
+      const raw = await contactApi.getAllCustomers()
+      const list = Array.isArray(raw) ? raw : []
+      const mappedCustomers = list.map((c: any) => ({
         ...c,
         id: String(c.id),
         type: get().mapCustomerTypeFromApi(c.type || 'DIRECT'),
@@ -73,12 +73,12 @@ export const useContactStore = create<ContactState>((set, get) => ({
     }
   },
 
-  // 加载所有供应商
+  // 加载所有供应商（接口返回 HTML/404 等时 get 为 null，按空数组处理）
   loadSuppliers: async () => {
     try {
-      const suppliers = await contactApi.getAllSuppliers()
-      // 映射后端枚举值到前端显示值
-      const mappedSuppliers = suppliers.map((s: any) => ({
+      const raw = await contactApi.getAllSuppliers()
+      const list = Array.isArray(raw) ? raw : []
+      const mappedSuppliers = list.map((s: any) => ({
         ...s,
         id: String(s.id),
         type: get().mapSupplierTypeFromApi(s.type || 'MANUFACTURER'),

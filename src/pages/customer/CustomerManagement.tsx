@@ -49,12 +49,13 @@ function CustomerManagement() {
     const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null)
     const pageSize = 10
 
-    // 统计数据
+    // 统计数据（防御：接口返回 null 时按空数组处理）
     const stats = useMemo(() => {
-        const totalCustomers = customers.length
-        const activeCustomers = customers.filter((c) => c.status === '正常').length
-        const inactiveCustomers = customers.filter((c) => c.status === '停用').length
-        const thisMonthNew = customers.filter((c) => {
+        const list = customers ?? []
+        const totalCustomers = list.length
+        const activeCustomers = list.filter((c) => c.status === '正常').length
+        const inactiveCustomers = list.filter((c) => c.status === '停用').length
+        const thisMonthNew = list.filter((c) => {
             const createdDate = new Date(c.createdAt)
             const now = new Date()
             return createdDate.getMonth() === now.getMonth() && createdDate.getFullYear() === now.getFullYear()
@@ -70,7 +71,7 @@ function CustomerManagement() {
 
     // 筛选客户
     const filteredCustomers = useMemo(() => {
-        let result = customers
+        let result = customers ?? []
 
         // 按状态筛选
         if (statusFilter !== '全部') {
@@ -97,10 +98,12 @@ function CustomerManagement() {
         return filteredCustomers.slice(start, end)
     }, [filteredCustomers, currentPage])
 
-    // 获取客户交易统计
+    // 获取客户交易统计（防御 null）
     const getCustomerStats = (customerId: string) => {
-        const customerOrders = salesOrders.filter((o) => o.customerId === customerId)
-        const customerReceivables = receivables.filter((r) => r.customerId === customerId)
+        const orders = salesOrders ?? []
+        const recv = receivables ?? []
+        const customerOrders = orders.filter((o) => o.customerId === customerId)
+        const customerReceivables = recv.filter((r) => r.customerId === customerId)
         const totalAmount = customerOrders.reduce((sum, o) => sum + o.totalAmount, 0)
         const unpaidAmount = customerReceivables
             .filter((r) => r.status === '未结清')
@@ -295,7 +298,7 @@ function CustomerManagement() {
     ]
 
     // 显示加载状态
-    if (loading && customers.length === 0) {
+    if (loading && (customers ?? []).length === 0) {
         return (
             <div className="flex items-center justify-center h-64">
                 <div className="text-gray-500">加载中...</div>
@@ -304,7 +307,7 @@ function CustomerManagement() {
     }
 
     // 显示错误
-    if (error && customers.length === 0) {
+    if (error && (customers ?? []).length === 0) {
         return (
             <div className="flex items-center justify-center h-64 flex-col gap-4">
                 <div className="text-red-500">加载失败: {error}</div>

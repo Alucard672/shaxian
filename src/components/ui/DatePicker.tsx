@@ -128,10 +128,10 @@ function DatePicker({
       <div
         onClick={() => !disabled && setIsOpen(!isOpen)}
         className={`
-          relative flex items-center w-full px-3 py-2 h-9 border rounded-xl text-sm
-          ${disabled ? 'bg-gray-100 cursor-not-allowed' : 'bg-white cursor-pointer'}
-          ${error ? 'border-red-500' : 'border-gray-200'}
-          ${!disabled && 'hover:border-primary-500 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20'}
+          input-underline relative flex items-center w-full px-0 py-2 h-9 text-sm outline-none
+          ${disabled ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'}
+          ${error ? 'input-underline-error' : ''}
+          ${!disabled && isOpen ? 'input-underline-open' : ''}
         `}
       >
         <Calendar className="w-4 h-4 text-gray-400 mr-2 flex-shrink-0" />

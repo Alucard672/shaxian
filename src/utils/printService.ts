@@ -10,13 +10,15 @@ export interface PrintData {
   documentType: '销售单' | '进货单'
   customer?: Customer
   supplier?: Supplier
+  /** 客户单号（仅销售单）：该客户下按开单顺序的序号 */
+  customerOrderNumber?: number
 }
 
 /**
  * 生成打印内容
  */
 export function generatePrintContent(data: PrintData): string {
-  const { template, order, documentType, customer, supplier } = data
+  const { template, order, documentType, customer, supplier, customerOrderNumber } = data
 
   // 单位转换：英寸转毫米（用于CSS）
   const unit = template.pageSettings.unit || 'mm'
@@ -244,6 +246,9 @@ export function generatePrintContent(data: PrintData): string {
 
   if (template.basicInfoFields.documentNumber) {
     html += `<div class="info-item"><strong>NO：</strong>${order.orderNumber}</div>`
+    if (documentType === '销售单' && customerOrderNumber != null) {
+      html += `<div class="info-item"><strong>客户单号：</strong>${customerOrderNumber}</div>`
+    }
   }
 
   html += '</div>'

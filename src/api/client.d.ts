@@ -147,6 +147,7 @@ export interface SalesApi {
     getById: (id: string) => Promise<any>
     create: (data: any) => Promise<any>
     update: (id: string, data: any) => Promise<any>
+    updatePayment: (id: string, data: { receivedAmount?: number; paidAmount?: number; totalAmount?: number; unpaidAmount?: number; remark?: string }) => Promise<any>
     delete: (id: string) => Promise<void>
     checkStock: (batchId: string, quantity: number) => Promise<any>
 }

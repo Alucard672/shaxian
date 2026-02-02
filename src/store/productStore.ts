@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { Product, Color, Batch } from '@/types/product'
 import { productApi } from '@/api/client'
+import { useSettingsStore } from './settingsStore'
 
 type BatchCreateData = Omit<
   Batch,
@@ -83,11 +84,12 @@ export const useProductStore = create<ProductState>((set, get) => ({
   loading: false,
   error: null,
 
-  // 加载所有商品
+  // 加载所有商品（接口返回 HTML/404 等时为 null，按空数组处理）
   loadProducts: async () => {
     set({ loading: true, error: null })
     try {
-      const products = await productApi.getAll()
+      const raw = await productApi.getAll()
+      const products = Array.isArray(raw) ? raw : []
       const frontendFields = getFrontendFields()
       
       // 转换商品类型为前端显示值，并保留前端特有的字段
@@ -125,7 +127,8 @@ export const useProductStore = create<ProductState>((set, get) => ({
   loadColors: async (productId?: string) => {
     try {
       if (productId) {
-        const colors = await productApi.getColors(productId)
+        const raw = await productApi.getColors(productId)
+        const colors = Array.isArray(raw) ? raw : []
         // 转换后端返回的状态值为前端显示值
         const mappedColors = colors.map((c: any) => ({
           ...c,
@@ -214,11 +217,19 @@ export const useProductStore = create<ProductState>((set, get) => ({
   loadBatches: async (colorId?: string) => {
     try {
       if (colorId) {
-        const batches = await productApi.getBatches(colorId)
+        const raw = await productApi.getBatches(colorId)
+        const batches = Array.isArray(raw) ? raw : []
+        const mappedBatches = batches.map((b: any) => ({
+          ...b,
+          id: String(b.id),
+          colorId: String(b.colorId || colorId),
+          stockQuantity: Number(b.stockQuantity ?? 0),
+          initialQuantity: Number(b.initialQuantity ?? 0),
+        }))
         set((state) => ({
           batches: [
             ...state.batches.filter((b) => b.colorId !== colorId),
-            ...batches,
+            ...mappedBatches,
           ],
         }))
       } else {
@@ -243,7 +254,13 @@ export const useProductStore = create<ProductState>((set, get) => ({
             const batches = await productApi.getBatches(colorId)
             
             if (Array.isArray(batches)) {
-              return batches
+              return batches.map((b: any) => ({
+                ...b,
+                id: String(b.id),
+                colorId: String(b.colorId || colorId),
+                stockQuantity: Number(b.stockQuantity ?? 0),
+                initialQuantity: Number(b.initialQuantity ?? 0),
+              }))
             }
             return []
           } catch (error: any) {
@@ -361,6 +378,9 @@ export const useProductStore = create<ProductState>((set, get) => ({
       if (data.description) apiData.description = data.description
       
       const newProduct = await productApi.create(apiData)
+      if (!newProduct || typeof newProduct !== 'object' || newProduct.id == null) {
+        throw new Error('接口未返回有效数据，请检查网络或稍后重试；若已切换 API 地址，请重新登录后再操作。')
+      }
       // 转换返回的商品类型为前端显示值，并保留前端特有的字段
       const productId = String(newProduct.id)
       const frontendFields = {
@@ -406,6 +426,9 @@ export const useProductStore = create<ProductState>((set, get) => ({
       if (data.description !== undefined) apiData.description = data.description
       
       const updated = await productApi.update(id, apiData)
+      if (!updated || typeof updated !== 'object' || updated.id == null) {
+        throw new Error('接口未返回有效数据，请检查网络或稍后重试；若已切换 API 地址，请重新登录后再操作。')
+      }
       // 转换返回的商品类型为前端显示值，并保留前端特有的字段
       const currentProduct = get().products.find((p) => p.id === id)
       const frontendFields = {
@@ -473,6 +496,9 @@ export const useProductStore = create<ProductState>((set, get) => ({
       if (data.description) apiData.description = data.description
       
       const newColor = await productApi.createColor(productId, apiData)
+      if (!newColor || typeof newColor !== 'object' || newColor.id == null) {
+        throw new Error('接口未返回有效数据，请检查网络或稍后重试；若已切换 API 地址，请重新登录后再操作。')
+      }
       // 转换返回的状态值为前端显示值
       const mappedColor = {
         ...newColor,
@@ -501,6 +527,9 @@ export const useProductStore = create<ProductState>((set, get) => ({
       if (data.description !== undefined) apiData.description = data.description
       
       const updated = await productApi.updateColor(id, apiData)
+      if (!updated || typeof updated !== 'object' || updated.id == null) {
+        throw new Error('接口未返回有效数据，请检查网络或稍后重试；若已切换 API 地址，请重新登录后再操作。')
+      }
       // 转换返回的状态值为前端显示值
       const mappedColor = {
         ...updated,
@@ -545,10 +574,21 @@ export const useProductStore = create<ProductState>((set, get) => ({
         stockQuantity: data.stockQuantity ?? data.initialQuantity,
       }
       const newBatch = await productApi.createBatch(colorId, payload)
+      if (!newBatch || typeof newBatch !== 'object' || newBatch.id == null) {
+        throw new Error('接口未返回有效数据，请检查网络或稍后重试；若已切换 API 地址，请重新登录后再操作。')
+      }
+      const mappedBatch = {
+        ...newBatch,
+        id: String((newBatch as any).id),
+        colorId: String((newBatch as any).colorId || colorId),
+        code: (newBatch as any).code ?? (newBatch as any).batchCode ?? (data as any).code ?? '',
+        stockQuantity: Number((newBatch as any).stockQuantity ?? 0),
+        initialQuantity: Number((newBatch as any).initialQuantity ?? 0),
+      }
       set((state) => ({
-        batches: [...state.batches, newBatch]
+        batches: [...state.batches, mappedBatch]
       }))
-      return newBatch
+      return mappedBatch
     } catch (error: any) {
       console.error('Failed to add batch:', error)
       throw error
@@ -558,8 +598,18 @@ export const useProductStore = create<ProductState>((set, get) => ({
   updateBatch: async (id, data) => {
     try {
       const updated = await productApi.updateBatch(id, data)
+      if (!updated || typeof updated !== 'object' || updated.id == null) {
+        throw new Error('接口未返回有效数据，请检查网络或稍后重试；若已切换 API 地址，请重新登录后再操作。')
+      }
+      const mapped = {
+        ...updated,
+        id: String((updated as any).id),
+        colorId: String((updated as any).colorId || ''),
+        stockQuantity: Number((updated as any).stockQuantity ?? 0),
+        initialQuantity: Number((updated as any).initialQuantity ?? 0),
+      }
       set((state) => ({
-        batches: state.batches.map((b) => b.id === id ? updated : b)
+        batches: state.batches.map((b) => b.id === String(id) ? mapped : b)
       }))
     } catch (error: any) {
       console.error('Failed to update batch:', error)
@@ -571,7 +621,7 @@ export const useProductStore = create<ProductState>((set, get) => ({
     try {
       await productApi.deleteBatch(id)
       set((state) => ({
-        batches: state.batches.filter((b) => b.id !== id)
+        batches: state.batches.filter((b) => b.id !== String(id))
       }))
     } catch (error: any) {
       console.error('Failed to delete batch:', error)
@@ -580,19 +630,20 @@ export const useProductStore = create<ProductState>((set, get) => ({
   },
 
   getBatch: (id) => {
-    return get().batches.find((b) => b.id === id)
+    return get().batches.find((b) => b.id === String(id))
   },
 
-  // 更新缸号库存
+  // 更新缸号库存（尊重系统参数 allowNegativeStock：启用时允许负库存）
   updateBatchStock: async (batchId, quantityChange) => {
     try {
-      const batch = get().batches.find((b) => b.id === batchId)
+      const batch = get().batches.find((b) => b.id === String(batchId))
       if (!batch) {
         throw new Error('Batch not found')
       }
       
       const newStockQuantity = Number(batch.stockQuantity) + quantityChange
-      if (newStockQuantity < 0) {
+      const allowNegativeStock = !!useSettingsStore.getState().systemParams?.allowNegativeStock
+      if (newStockQuantity < 0 && !allowNegativeStock) {
         throw new Error('库存不足')
       }
       
@@ -602,7 +653,7 @@ export const useProductStore = create<ProductState>((set, get) => ({
       
       set((state) => ({
         batches: state.batches.map((b) =>
-          b.id === batchId
+          b.id === String(batchId)
             ? { ...b, stockQuantity: newStockQuantity }
             : b
         ),

@@ -11,13 +11,15 @@ import DateRangePicker from '@/components/ui/DateRangePicker'
 import VisibleColumnsConfigModal from '@/components/ui/VisibleColumnsConfigModal'
 import { templateApi } from '@/api/client'
 import { generatePrintContent, openPrintDialog } from '@/utils/printService'
-import { Plus, Edit, Trash2, Eye, Search, ShoppingCart, Printer, LayoutList } from 'lucide-react'
+import { Plus, Edit, Trash2, Eye, Search, ShoppingCart, Printer, LayoutList, Undo2 } from 'lucide-react'
 import { formatAmount } from '@/utils/formatNumber'
+import { getCustomerOrderNumberMap } from '@/utils/customerOrderNumber'
 import { parseISO, startOfDay, endOfDay } from 'date-fns'
 
 const SALES_DOC_KEY = 'sales-list'
 const SALES_COLUMN_OPTIONS = [
   { id: 'orderNumber', label: '销售单号' },
+  { id: 'customerOrderNumber', label: '客户单号' },
   { id: 'customerName', label: '客户' },
   { id: 'salesDate', label: '销售日期' },
   { id: 'totalAmount', label: '总金额' },
@@ -30,7 +32,7 @@ const SALES_DEFAULT_VISIBLE = SALES_COLUMN_OPTIONS.map((c) => c.id)
 
 function SalesList() {
   const navigate = useNavigate()
-  const { orders, loading, loadOrders, deleteOrder } = useSalesStore()
+  const { orders, loading, loadOrders, deleteOrder, revertOutbound } = useSalesStore()
   const { customers } = useContactStore()
   const { addPrintRecord } = usePrintStore()
   const { getDocumentVisibleColumns } = useSettingsStore()
@@ -48,12 +50,13 @@ function SalesList() {
     useContactStore.getState().loadAll()
   }, [loadOrders])
 
-  // 统计数据
+  // 统计数据（防御：接口返回 null 时按空数组处理）
   const stats = useMemo(() => {
-    const allCount = orders.length
-    const draft = orders.filter((o) => o.status === '草稿').length
-    const pending = orders.filter((o) => o.status === '待审核').length
-    const completed = orders.filter((o) => o.status === '已出库').length
+    const list = orders ?? []
+    const allCount = list.length
+    const draft = list.filter((o) => o.status === '草稿').length
+    const pending = list.filter((o) => o.status === '待审核').length
+    const completed = list.filter((o) => o.status === '已出库').length
 
     return {
       allCount,
@@ -63,9 +66,14 @@ function SalesList() {
     }
   }, [orders])
 
+  const customerOrderNumberMap = useMemo(
+    () => getCustomerOrderNumberMap(orders ?? []),
+    [orders]
+  )
+
   // 筛选订单
   const filteredOrders = useMemo(() => {
-    let result = orders
+    let result = orders ?? []
 
     // 状态筛选
     if (statusFilter !== '全部状态') {
@@ -93,21 +101,24 @@ function SalesList() {
       })
     }
 
-    // 关键词搜索
+    // 关键词搜索（含客户单号）
     if (searchKeyword) {
       const keyword = searchKeyword.toLowerCase()
-      result = result.filter(
-        (o) =>
-          o.orderNumber.toLowerCase().includes(keyword) ||
-          o.customerName.toLowerCase().includes(keyword) ||
-          o.operator.toLowerCase().includes(keyword)
-      )
+      result = result.filter((o) => {
+        const custNo = customerOrderNumberMap.get(o.id)
+        return (
+          String(o.orderNumber ?? '').toLowerCase().includes(keyword) ||
+          String(o.customerName ?? '').toLowerCase().includes(keyword) ||
+          String(o.operator ?? '').toLowerCase().includes(keyword) ||
+          (custNo != null && String(custNo).includes(keyword))
+        )
+      })
     }
 
     return result.sort(
       (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     )
-  }, [orders, statusFilter, searchKeyword, startDate, endDate])
+  }, [orders, statusFilter, searchKeyword, startDate, endDate, customerOrderNumberMap])
 
   // 分页数据
   const paginatedOrders = useMemo(() => {
@@ -144,6 +155,18 @@ function SalesList() {
       alert('销售单已删除')
     } catch (error: any) {
       alert('删除失败：' + (error.message || '未知错误'))
+    }
+  }
+
+  const handleRevertOutbound = async (id: string) => {
+    if (!confirm('确定要撤销出库吗？将恢复库存并改为草稿状态，可重新编辑明细后再出库。')) {
+      return
+    }
+    try {
+      await revertOutbound(id)
+      alert('已撤销出库，可点击编辑修改明细后重新保存并出库')
+    } catch (error: any) {
+      alert('撤销出库失败：' + (error.message || '未知错误'))
     }
   }
 
@@ -196,6 +219,7 @@ function SalesList() {
         order: order,
         documentType: '销售单',
         customer: customer,
+        customerOrderNumber: customerOrderNumberMap.get(order.id),
       }
 
       const htmlContent = generatePrintContent(printData as any)
@@ -222,6 +246,14 @@ function SalesList() {
           <span className="text-sm font-medium text-gray-900">{record.orderNumber}</span>
         </div>
       ),
+    },
+    {
+      key: 'customerOrderNumber',
+      title: '客户单号',
+      render: (_: any, record: SalesOrder) => {
+        const n = customerOrderNumberMap.get(record.id)
+        return <span className="text-sm text-gray-600">{n != null ? n : '-'}</span>
+      },
     },
     {
       key: 'customerName',
@@ -301,14 +333,27 @@ function SalesList() {
             size="sm"
             onClick={() => navigate(`/sales/edit/${record.id}`)}
             className="p-1.5 hover:bg-gray-100 rounded-xl"
+            title="编辑"
           >
             <Edit className="w-4 h-4 text-gray-600" />
           </Button>
+          {(record.status === '已出库' || record.status === '已审核') && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => handleRevertOutbound(record.id)}
+              className="p-1.5 hover:bg-amber-50 rounded-xl"
+              title="撤销出库"
+            >
+              <Undo2 className="w-4 h-4 text-amber-600" />
+            </Button>
+          )}
           <Button
             variant="ghost"
             size="sm"
             onClick={() => handleDelete(record.id)}
             className="p-1.5 hover:bg-red-50 rounded-xl"
+            title="删除"
           >
             <Trash2 className="w-4 h-4 text-red-600" />
           </Button>
@@ -385,7 +430,7 @@ function SalesList() {
                   setSearchKeyword(e.target.value)
                   setCurrentPage(1)
                 }}
-                placeholder="搜索销售单号、客户、经办人..."
+                placeholder="搜索销售单号、客户单号、客户、经办人..."
                 className="flex-1 px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>

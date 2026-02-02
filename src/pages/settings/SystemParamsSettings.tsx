@@ -2,12 +2,16 @@ import { useSettingsStore } from '@/store/settingsStore'
 import Card from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
 import Tooltip from '../../components/ui/Tooltip'
-import { Settings, Palette, Save, Info, Package } from 'lucide-react'
-import { useState } from 'react'
+import { Settings, Palette, Save, Package, MapPin, Layers } from 'lucide-react'
+import { useState, useEffect } from 'react'
 
 function SystemParamsSettings() {
   const { systemParams, updateSystemParams } = useSettingsStore()
   const [localParams, setLocalParams] = useState<typeof systemParams>(systemParams)
+
+  useEffect(() => {
+    setLocalParams(systemParams)
+  }, [systemParams])
   const [isSaving, setIsSaving] = useState(false)
 
   const handleSave = () => {
@@ -128,88 +132,105 @@ function SystemParamsSettings() {
             </div>
           </div>
 
-          {/* 商品必填项配置 */}
+          {/* 缸号管理 */}
           <div className="border-b border-gray-200 pb-6 last:border-b-0 last:pb-0">
             <div className="flex items-start gap-4">
-              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center flex-shrink-0">
-                <Package className="w-6 h-6 text-blue-600" />
+              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center flex-shrink-0">
+                <Layers className="w-6 h-6 text-slate-600" />
               </div>
               <div className="flex-1">
-                <div className="flex items-center gap-2 mb-2">
-                  <h3 className="text-lg font-semibold text-gray-900">
-                    商品必填项配置
-                  </h3>
-                  <Tooltip
-                    content={
-                      <div>
-                        <div className="font-medium mb-1">提示：</div>
-                        <div>
-                          选择商品创建/编辑时必须填写的字段。未选中的字段将变为可选。
-                        </div>
-                      </div>
-                    }
-                  />
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-lg font-semibold text-gray-900">缸号</h3>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={!!localParams.enableBatch}
+                      onChange={(e) =>
+                        setLocalParams({
+                          ...localParams,
+                          enableBatch: e.target.checked,
+                        })
+                      }
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                    <span className="ml-3 text-sm font-medium text-gray-700">
+                      {localParams.enableBatch ? '已启用' : '已禁用'}
+                    </span>
+                  </label>
+                </div>
+                <p className="text-sm text-gray-600">
+                  {localParams.enableBatch
+                    ? '启用后，销售单、进货单、库存等需选择缸号，适用于按缸号精细管理库存的场景。'
+                    : '关闭时，销售/进货不显示缸号，系统自动使用色号下首个缸号；适用于简化流程、大部分人用不到缸号的场景。'}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* 仓位管理 */}
+          <div className="border-b border-gray-200 pb-6 last:border-b-0 last:pb-0">
+            <div className="flex items-start gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-teal-100 to-teal-200 flex items-center justify-center flex-shrink-0">
+                <MapPin className="w-6 h-6 text-teal-600" />
+              </div>
+              <div className="flex-1">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-lg font-semibold text-gray-900">仓位管理</h3>
+                    {!localParams.enableStockLocation && (
+                      <Tooltip
+                        content={
+                          <div>
+                            <div className="font-medium mb-1">提示：</div>
+                            <div>关闭时，库存统一入库到默认仓位，相关页面不显示仓位；启用后可在库存管理中配置仓位列表。</div>
+                          </div>
+                        }
+                      />
+                    )}
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={!!localParams.enableStockLocation}
+                      onChange={(e) => {
+                        const enabled = e.target.checked
+                        setLocalParams({
+                          ...localParams,
+                          enableStockLocation: enabled,
+                          stockLocations: enabled
+                            ? (localParams.stockLocations?.length ? localParams.stockLocations : [localParams.defaultStockLocation || '默认仓位'])
+                            : localParams.stockLocations,
+                        })
+                      }}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                    <span className="ml-3 text-sm font-medium text-gray-700">
+                      {localParams.enableStockLocation ? '已启用' : '已禁用'}
+                    </span>
+                  </label>
                 </div>
                 <p className="text-sm text-gray-600 mb-3">
-                  配置商品管理中的必填字段，控制数据完整性：
+                  {localParams.enableStockLocation
+                    ? '启用后，进货、批次、染色入库等需选择仓位；仓位列表在「库存管理 → 仓位设置」中维护。'
+                    : '关闭时，库存统一入库到默认仓位，页面不显示仓位。'}
                 </p>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                  {[
-                    { key: 'name', label: '商品名称' },
-                    { key: 'code', label: '商品编码' },
-                    { key: 'specification', label: '规格' },
-                    { key: 'composition', label: '成分' },
-                    { key: 'count', label: '支数' },
-                    { key: 'unit', label: '单位' },
-                    { key: 'manufacturer', label: '厂家' },
-                    { key: 'width', label: '幅宽' },
-                    { key: 'weight', label: '克重' },
-                  ].map((field) => (
-                    <label
-                      key={field.key}
-                      className="flex items-center gap-2 p-2 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={localParams.productRequiredFields?.includes(field.key) || false}
-                        onChange={(e) => {
-                          const currentFields = localParams.productRequiredFields || []
-                          if (e.target.checked) {
-                            setLocalParams({
-                              ...localParams,
-                              productRequiredFields: [...currentFields, field.key],
-                            })
-                          } else {
-                            setLocalParams({
-                              ...localParams,
-                              productRequiredFields: currentFields.filter((f) => f !== field.key),
-                            })
-                          }
-                        }}
-                        className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
-                      />
-                      <span className="text-sm text-gray-700">{field.label}</span>
-                    </label>
-                  ))}
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-700">默认仓位</label>
+                  <input
+                    type="text"
+                    value={localParams.defaultStockLocation ?? '默认仓位'}
+                    onChange={(e) =>
+                      setLocalParams({ ...localParams, defaultStockLocation: e.target.value || '默认仓位' })
+                    }
+                    placeholder="默认仓位"
+                    className="w-full max-w-xs px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <p className="text-xs text-gray-500">
+                    不启用仓位时，所有库存统一入此仓位；启用后仍作为默认选项。
+                  </p>
                 </div>
-                <p className="text-xs text-gray-500 mt-3">
-                  当前必填项：{localParams.productRequiredFields?.length 
-                    ? localParams.productRequiredFields.map(f => {
-                        const labels: Record<string, string> = {
-                          name: '商品名称',
-                          code: '商品编码',
-                          specification: '规格',
-                          composition: '成分',
-                          count: '支数',
-                          unit: '单位',
-                          manufacturer: '厂家',
-                          width: '幅宽',
-                          weight: '克重',
-                        }
-                        return labels[f] || f
-                      }).join('、')
-                    : '无'}
-                </p>
               </div>
             </div>
           </div>

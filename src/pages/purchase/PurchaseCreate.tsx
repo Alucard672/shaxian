@@ -12,10 +12,14 @@ import SelectWithAdd from '@/components/ui/SelectWithAdd'
 import DateInput from '@/components/ui/DateInput'
 import RequiredFieldsConfigModal from '@/components/ui/RequiredFieldsConfigModal'
 import { RequiredMark } from '@/components/ui/RequiredMark'
-import { Plus, Trash2, Save, ArrowLeft, Edit2, Check, X, Settings, Wallet, CreditCard, ScanLine } from 'lucide-react'
+import { Plus, Trash2, Save, ArrowLeft, Edit2, Check, X, Settings } from 'lucide-react'
 import { formatNumber, formatAmount } from '@/utils/formatNumber'
 import { WeChatIcon } from '@/components/ui/WeChatIcon'
 import { AlipayIcon } from '@/components/ui/AlipayIcon'
+import { CashIcon } from '@/components/ui/CashIcon'
+import { BankCardIcon } from '@/components/ui/BankCardIcon'
+import { ScanPayIcon } from '@/components/ui/ScanPayIcon'
+import { parseColorCodeAndName } from '@/utils/parseColorInput'
 
 const PURCHASE_PAGE_KEY = 'purchase'
 const PURCHASE_FIELDS = [
@@ -27,14 +31,44 @@ const PURCHASE_FIELDS = [
 ] as const
 const PURCHASE_DEFAULT_REQUIRED = ['supplierId']
 
+type PaymentLine = {
+  id: string
+  method: '现金' | '微信' | '支付宝' | '银行卡' | '扫码付'
+  amount: number
+}
+
+const PAYMENT_METHODS = ['现金', '微信', '支付宝', '银行卡', '扫码付'] as const
+const PAYMENT_ICONS: Record<(typeof PAYMENT_METHODS)[number], React.ComponentType<{ className?: string }>> = {
+  现金: CashIcon,
+  微信: WeChatIcon,
+  支付宝: AlipayIcon,
+  银行卡: BankCardIcon,
+  扫码付: ScanPayIcon,
+}
+
+function makeId(prefix = 'pay') {
+  return `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}`
+}
+
+function mergeRemarkLine(remark: string, prefix: string, line: string | null): string {
+  const lines = String(remark || '').split('\n')
+  const next = lines.filter((l) => !l.trim().startsWith(prefix))
+  if (line) next.push(line)
+  return next.join('\n').trim()
+}
+
 function PurchaseCreate() {
   const navigate = useNavigate()
   const { id } = useParams<{ id?: string }>()
   const isEdit = id !== undefined
   const { orders, addOrder, loadOrders } = usePurchaseStore()
-  const { products, colors, batches, loadAll, getColorsByProduct, addColor } = useProductStore()
+  const { products, colors, batches, loadAll, loadColors, getColorsByProduct, addColor } = useProductStore()
   const { suppliers, loadSuppliers, addSupplier } = useContactStore()
-  const { getPageRequiredFields } = useSettingsStore()
+  const { getPageRequiredFields, systemParams } = useSettingsStore()
+  const enableBatch = !!systemParams?.enableBatch
+  const enableStockLocation = !!systemParams?.enableStockLocation
+  const defaultStockLocation = systemParams?.defaultStockLocation ?? '默认仓位'
+  const stockLocations = systemParams?.stockLocations ?? [defaultStockLocation]
   const [showRequiredModal, setShowRequiredModal] = useState(false)
   const requiredFields = getPageRequiredFields(PURCHASE_PAGE_KEY, PURCHASE_DEFAULT_REQUIRED)
 
@@ -67,6 +101,14 @@ function PurchaseCreate() {
     remark: '',
   })
 
+  const [paymentLines, setPaymentLines] = useState<PaymentLine[]>([
+    { id: makeId(), method: '现金', amount: 0 },
+  ])
+
+  const debugQuickAdd =
+    typeof window !== 'undefined' &&
+    (import.meta.env.DEV || localStorage.getItem('debugQuickAdd') === '1')
+
   useEffect(() => {
     loadAll()
     loadSuppliers()
@@ -81,14 +123,23 @@ function PurchaseCreate() {
       const order = orders.find((o) => o.id === id)
       if (order) {
         setFormData({
-          supplierId: order.supplierId || '',
-          supplierName: order.supplierName,
+          supplierId: String(order.supplierId ?? ''),
+          supplierName: order.supplierName ?? '',
           purchaseDate: order.purchaseDate,
           expectedDate: order.expectedDate || '',
           paidAmount: order.paidAmount || 0,
           paymentMethod: (order as any).paymentMethod || '现金',
           remark: order.remark || '',
         })
+        setPaymentLines([
+          {
+            id: makeId(),
+            method: (PAYMENT_METHODS.includes(String((order as any).paymentMethod || '') as any)
+              ? (order as any).paymentMethod
+              : '现金') as PaymentLine['method'],
+            amount: Number(order.paidAmount || 0),
+          },
+        ])
         setItems(order.items.map((item) => ({
           productId: item.productId,
           productName: item.productName,
@@ -110,6 +161,16 @@ function PurchaseCreate() {
     }
   }, [isEdit, id, orders])
 
+  // 多笔付款合计 -> 回填已付金额；并保留一个兼容的 paymentMethod（取第一笔）
+  useEffect(() => {
+    const total = paymentLines.reduce((sum, p) => sum + (Number(p.amount) || 0), 0)
+    const first = paymentLines[0]?.method || '现金'
+    setFormData((prev) => {
+      if (prev.paidAmount === total && prev.paymentMethod === first) return prev
+      return { ...prev, paidAmount: total, paymentMethod: first }
+    })
+  }, [paymentLines])
+
   // 获取当前选中商品的色号
   const colorOptions = useMemo(() => {
     const productId = editingIndex !== null ? items[editingIndex]?.productId : itemForm.productId
@@ -122,7 +183,7 @@ function PurchaseCreate() {
         label: `${c.code || ''} - ${c.name || ''}`.replace(/^ - | - $|^$/, '') || c.id,
         color: c,
       }))
-  }, [itemForm.productId, editingIndex, items, getColorsByProduct])
+  }, [itemForm.productId, editingIndex, items, colors, getColorsByProduct])
 
   // 获取当前选中商品信息
   const selectedProduct = useMemo(() => {
@@ -153,14 +214,14 @@ function PurchaseCreate() {
       colorId: itemForm.colorId,
       colorName: itemForm.colorName,
       colorCode: itemForm.colorCode,
-      batchCode: itemForm.batchCode,
+      batchCode: enableBatch ? itemForm.batchCode : '默认',
       quantity: itemForm.quantity,
       pieceCount: itemForm.pieceCount,
       unitWeight: itemForm.unitWeight,
       unit: itemForm.unit,
       price: itemForm.price,
       productionDate: itemForm.productionDate,
-      stockLocation: itemForm.stockLocation,
+      stockLocation: enableStockLocation ? (itemForm.stockLocation || defaultStockLocation) : defaultStockLocation,
       remark: itemForm.remark,
     }
 
@@ -178,7 +239,7 @@ function PurchaseCreate() {
       unit: 'kg',
       price: 0,
       productionDate: new Date().toISOString().split('T')[0],
-      stockLocation: '',
+      stockLocation: enableStockLocation ? defaultStockLocation : '',
       remark: '',
     })
   }
@@ -218,14 +279,14 @@ function PurchaseCreate() {
       colorId: itemForm.colorId,
       colorName: itemForm.colorName,
       colorCode: itemForm.colorCode,
-      batchCode: itemForm.batchCode,
+      batchCode: enableBatch ? itemForm.batchCode : '默认',
       quantity: itemForm.quantity,
       pieceCount: itemForm.pieceCount,
       unitWeight: itemForm.unitWeight,
       unit: itemForm.unit,
       price: itemForm.price,
       productionDate: itemForm.productionDate,
-      stockLocation: itemForm.stockLocation,
+      stockLocation: enableStockLocation ? (itemForm.stockLocation || defaultStockLocation) : defaultStockLocation,
       remark: itemForm.remark,
     }
     setItems(updatedItems)
@@ -243,7 +304,7 @@ function PurchaseCreate() {
       unit: 'kg',
       price: 0,
       productionDate: new Date().toISOString().split('T')[0],
-      stockLocation: '',
+      stockLocation: enableStockLocation ? defaultStockLocation : '',
       remark: '',
     })
   }
@@ -263,7 +324,7 @@ function PurchaseCreate() {
       unit: 'kg',
       price: 0,
       productionDate: new Date().toISOString().split('T')[0],
-      stockLocation: '',
+      stockLocation: enableStockLocation ? defaultStockLocation : '',
       remark: '',
     })
   }
@@ -329,12 +390,25 @@ function PurchaseCreate() {
       return
     }
 
+    const requiredLabels = requiredFields
+      .filter((id) => PURCHASE_FIELDS.some((f) => f.id === id))
+      .map((id) => PURCHASE_FIELDS.find((f) => f.id === id)!.label)
+      .join('、')
+
     try {
+      const parts = paymentLines
+        .filter((p) => Number(p.amount) > 0)
+        .map((p) => `${p.method} ${formatNumber(p.amount)}`)
+      const paymentLine = parts.length ? `付款明细：${parts.join('；')}` : null
+      const mergedRemark = mergeRemarkLine(formData.remark || '', '付款明细：', paymentLine)
+
       const orderData: PurchaseOrderFormData = {
         ...formData,
+        remark: mergedRemark,
         items: items.map((item) => ({
           ...item,
           amount: item.quantity * item.price,
+          ...(!enableStockLocation && { stockLocation: defaultStockLocation }),
         })),
       }
 
@@ -342,7 +416,13 @@ function PurchaseCreate() {
       alert(status === '草稿' ? '采购单已保存为草稿' : '采购单已创建并入库')
       navigate('/purchase')
     } catch (error: any) {
-      alert('保存失败：' + (error.message || '未知错误'))
+      const msg = error?.message || '未知错误'
+      const isRequiredLike = /必填|不能为空/.test(msg)
+      const part = requiredLabels ? `【${requiredLabels}】 以及` : ''
+      const hint = isRequiredLike
+        ? `\n\n未填写的必填项：请检查 ${part}商品明细（至少一项，数量、单价有效）是否已填写完整。`
+        : ''
+      alert('保存失败：' + msg + hint)
     }
   }
 
@@ -395,11 +475,14 @@ function PurchaseCreate() {
       />
 
       <div className="max-w-[95%] mx-auto px-4 py-4">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          {/* 左侧：基本信息 */}
-          <div className="lg:col-span-1 space-y-4">
+        <div className="grid grid-cols-1 lg:grid-cols-10 gap-4">
+          {/* 左侧：基本信息（缩小约 1/5） */}
+          <div className="lg:col-span-3 space-y-4">
             <div className="bg-white rounded-lg border border-gray-200 p-4">
-              <h2 className="text-sm font-semibold text-gray-900 mb-3">基本信息</h2>
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="text-sm font-semibold text-gray-900">基本信息</h2>
+                <span className="text-xs text-amber-600">带 <span className="font-semibold">*</span> 的为必填项</span>
+              </div>
               <div className="space-y-3">
 
                 <div>
@@ -407,12 +490,25 @@ function PurchaseCreate() {
                     供应商 <RequiredMark required={requiredFields.includes('supplierId')} />
                   </label>
                   <SelectWithAdd
-                    value={formData.supplierId}
+                    value={String(formData.supplierId ?? '')}
                     onChange={(value) => handleSupplierChange(value)}
-                    options={suppliers.map((s) => ({
-                      value: s.id,
-                      label: s.name,
-                    }))}
+                    options={(() => {
+                      const base = suppliers.map((s) => ({
+                        value: String(s.id),
+                        label: String(s.name ?? ''),
+                      }))
+                      if (
+                        formData.supplierId &&
+                        formData.supplierName &&
+                        !base.some((o) => String(o.value) === String(formData.supplierId))
+                      ) {
+                        return [
+                          { value: String(formData.supplierId), label: String(formData.supplierName) },
+                          ...base,
+                        ]
+                      }
+                      return base
+                    })()}
                     onAddNew={async (name) => {
                       const supplierCode = `SUPP-${Date.now().toString().slice(-6)}`
                       try {
@@ -459,41 +555,73 @@ function PurchaseCreate() {
                   <Input
                     type="number"
                     value={formData.paidAmount}
-                    onChange={(e) =>
-                      setFormData({ ...formData, paidAmount: parseFloat(e.target.value) || 0 })
-                    }
-                    className="text-sm h-9"
+                    readOnly
+                    className="text-sm h-9 bg-gray-100"
                   />
+                  <div className="mt-1 text-xs text-gray-400">已付金额由下方“付款明细”自动合计</div>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1.5">收款方式</label>
-                  <div className="grid grid-cols-5 gap-2">
-                    {(['现金', '微信', '支付宝', '银行卡', '扫码付'] as const).map((method) => {
-                      const icons: Record<string, React.ComponentType<{ className?: string }>> = {
-                        现金: Wallet,
-                        微信: WeChatIcon,
-                        支付宝: AlipayIcon,
-                        银行卡: CreditCard,
-                        扫码付: ScanLine,
-                      }
-                      const Icon = icons[method]
+                  <label className="block text-xs font-medium text-gray-700 mb-1.5">付款方式</label>
+                  <div className="space-y-2">
+                    {paymentLines.map((p) => {
+                      const method = PAYMENT_METHODS.includes(p.method as any) ? p.method : '现金'
+                      const Icon = PAYMENT_ICONS[method] ?? CashIcon
                       return (
-                        <button
-                          key={method}
-                          type="button"
-                          onClick={() => setFormData({ ...formData, paymentMethod: method })}
-                          className={`flex flex-col items-center justify-center gap-1 p-2 rounded-lg border transition-colors ${
-                            formData.paymentMethod === method
-                              ? 'border-blue-500 bg-blue-50 text-blue-700'
-                              : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
-                          }`}
-                        >
-                          <Icon className="w-4 h-4" />
-                          <span className="text-xs">{method}</span>
-                        </button>
+                        <div key={p.id} className="flex items-center gap-2">
+                          <div className="w-28 flex items-center gap-2">
+                            <Icon className="w-4 h-4 flex-shrink-0" />
+                            <SelectWithAdd
+                              value={method}
+                              onChange={(v) =>
+                                setPaymentLines((prev) =>
+                                  prev.map((x) =>
+                                    x.id === p.id
+                                      ? { ...x, method: (PAYMENT_METHODS.includes(v as any) ? v : '现金') as PaymentLine['method'] }
+                                      : x
+                                  )
+                                )
+                              }
+                              options={PAYMENT_METHODS.map((m) => ({ value: m, label: m }))}
+                              searchable={false}
+                              allowAdd={false}
+                              clearable={false}
+                              className="text-sm"
+                            />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <Input
+                              type="number"
+                              value={p.amount}
+                              onChange={(e) =>
+                                setPaymentLines((prev) =>
+                                  prev.map((x) =>
+                                    x.id === p.id ? { ...x, amount: Number(e.target.value) || 0 } : x
+                                  )
+                                )
+                              }
+                              className="text-sm h-9"
+                              placeholder="金额"
+                            />
+                          </div>
+                        </div>
                       )
                     })}
+                    <div className="flex items-center justify-between pt-1">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setPaymentLines((prev) => [...prev, { id: makeId(), method: '现金', amount: 0 }])
+                        }
+                        className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+                      >
+                        + 添加付款
+                      </button>
+                      <div className="text-sm text-gray-700">
+                        合计：<span className="font-semibold text-red-600">{formatAmount(formData.paidAmount)}</span>
+                      </div>
+                    </div>
+                    <div className="text-xs text-gray-400">支持组合：现金 1000 + 微信 500</div>
                   </div>
                 </div>
 
@@ -512,7 +640,7 @@ function PurchaseCreate() {
           </div>
 
           {/* 右侧：商品明细 */}
-          <div className="lg:col-span-2 space-y-4">
+          <div className="lg:col-span-7 space-y-4 min-w-0">
             <div className="bg-white rounded-lg border border-gray-200">
               <div className="p-4 border-b border-gray-200">
                 <h2 className="text-sm font-semibold text-gray-900">商品明细</h2>
@@ -547,15 +675,36 @@ function PurchaseCreate() {
                           alert('请先选择商品')
                           return
                         }
-                        const colorCode = `COL-${Date.now().toString().slice(-6)}`
                         try {
+                          const parsed = parseColorCodeAndName(value)
+                          if (debugQuickAdd) {
+                            console.log('[quickAddColor][purchase] start', {
+                              input: value,
+                              parsed,
+                              productId: itemForm.productId,
+                            })
+                          }
                           const newColor = await addColor(itemForm.productId, {
-                            code: colorCode,
-                            name: value,
+                            code: parsed.code,
+                            name: parsed.name,
                             status: '在售',
                           })
+                          try { await loadColors(itemForm.productId) } catch (_) { /* 已通过 addColor 写入 store */ }
+                          if (debugQuickAdd) {
+                            console.log('[quickAddColor][purchase] success', {
+                              newColor,
+                              productId: itemForm.productId,
+                            })
+                          }
                           handleColorChange(newColor.id)
                         } catch (error: any) {
+                          if (debugQuickAdd) {
+                            console.error('[quickAddColor][purchase] failed', {
+                              input: value,
+                              productId: itemForm.productId,
+                              error,
+                            })
+                          }
                           alert('添加色号失败：' + (error.message || '未知错误'))
                         }
                       }}
@@ -565,15 +714,17 @@ function PurchaseCreate() {
                       className="text-sm"
                     />
                   </div>
-                  <div className="flex-shrink-0" style={{ width: '110px' }}>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">缸号</label>
-                    <Input
-                      value={itemForm.batchCode}
-                      onChange={(e) => setItemForm({ ...itemForm, batchCode: e.target.value })}
-                      placeholder="缸号"
-                      className="text-sm h-9"
-                    />
-                  </div>
+                  {enableBatch && (
+                    <div className="flex-shrink-0" style={{ width: '110px' }}>
+                      <label className="block text-xs font-medium text-gray-700 mb-1">缸号</label>
+                      <Input
+                        value={itemForm.batchCode}
+                        onChange={(e) => setItemForm({ ...itemForm, batchCode: e.target.value })}
+                        placeholder="缸号"
+                        className="text-sm h-9"
+                      />
+                    </div>
+                  )}
                   {selectedProduct?.enableDualUnit ? (
                     <>
                       <div className="flex-shrink-0" style={{ width: '80px' }}>
@@ -640,14 +791,20 @@ function PurchaseCreate() {
                       className="text-sm"
                     />
                   </div>
-                  <div className="flex-shrink-0" style={{ width: '120px' }}>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">库存位置</label>
-                    <Input
-                      value={itemForm.stockLocation}
-                      onChange={(e) => setItemForm({ ...itemForm, stockLocation: e.target.value })}
-                      className="text-sm h-9"
-                    />
-                  </div>
+                  {enableStockLocation && (
+                    <div className="flex-shrink-0" style={{ width: '120px' }}>
+                      <label className="block text-xs font-medium text-gray-700 mb-1">仓位</label>
+                      <SelectWithAdd
+                        value={itemForm.stockLocation || defaultStockLocation}
+                        onChange={(v) => setItemForm({ ...itemForm, stockLocation: v || defaultStockLocation })}
+                        options={stockLocations.map((s) => ({ value: s, label: s }))}
+                        searchable={false}
+                        allowAdd={false}
+                        clearable={false}
+                        className="text-sm h-9"
+                      />
+                    </div>
+                  )}
                   <div className="flex-shrink-0" style={{ width: '140px' }}>
                     <label className="block text-xs font-medium text-gray-700 mb-1">备注</label>
                     <Input
@@ -690,24 +847,27 @@ function PurchaseCreate() {
                 </div>
               </div>
 
-              {/* 明细表格（在表单下方） */}
+              {/* 明细表格（在表单下方，含备注列） */}
               <div className="overflow-x-auto scrollbar-hide">
                 <table className="w-full">
                   <thead className="bg-gray-50">
                     <tr>
                       <th className="px-3 py-2 text-left text-xs font-medium text-gray-700">商品</th>
                       <th className="px-3 py-2 text-left text-xs font-medium text-gray-700">色号</th>
-                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-700">缸号</th>
+                      {enableBatch && (
+                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-700">缸号</th>
+                      )}
                       <th className="px-3 py-2 text-right text-xs font-medium text-gray-700">数量</th>
                       <th className="px-3 py-2 text-right text-xs font-medium text-gray-700">单价</th>
                       <th className="px-3 py-2 text-right text-xs font-medium text-gray-700">小计</th>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-700">备注</th>
                       <th className="px-3 py-2 text-center text-xs font-medium text-gray-700 w-20">操作</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
                     {items.length === 0 ? (
                       <tr>
-                        <td colSpan={7} className="px-3 py-8 text-center text-sm text-gray-500">
+                        <td colSpan={enableBatch ? 8 : 7} className="px-3 py-8 text-center text-sm text-gray-500">
                           暂无商品，请在上方添加
                         </td>
                       </tr>
@@ -716,7 +876,9 @@ function PurchaseCreate() {
                         <tr key={index} className="hover:bg-gray-50">
                           <td className="px-3 py-2 text-sm">{item.productName}</td>
                           <td className="px-3 py-2 text-sm text-gray-600">{item.colorName}</td>
-                          <td className="px-3 py-2 text-sm text-gray-600">{item.batchCode}</td>
+                          {enableBatch && (
+                            <td className="px-3 py-2 text-sm text-gray-600">{item.batchCode}</td>
+                          )}
                           <td className="px-3 py-2 text-sm text-right text-red-600">
                             {formatNumber(item.quantity)} {item.unit}
                           </td>
@@ -724,6 +886,7 @@ function PurchaseCreate() {
                           <td className="px-3 py-2 text-sm font-medium text-right text-red-600">
                             {formatAmount(item.quantity * item.price)}
                           </td>
+                          <td className="px-3 py-2 text-sm text-gray-600 truncate max-w-[120px]" title={item.remark ?? ''}>{item.remark ?? '-'}</td>
                           <td className="px-3 py-2">
                             <div className="flex items-center justify-center gap-1">
                               <button
@@ -755,6 +918,7 @@ function PurchaseCreate() {
                         <td className="px-3 py-2 text-sm font-bold text-red-600">
                           {formatAmount(calculateTotalAmount())}
                         </td>
+                        <td></td>
                         <td></td>
                       </tr>
                     </tfoot>

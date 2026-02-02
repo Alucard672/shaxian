@@ -11,9 +11,7 @@ import {
   Warehouse,
   Receipt,
   BarChart3,
-  Printer,
   Settings,
-  Building2,
   ChevronRight,
 } from 'lucide-react'
 import { cn } from '@/utils/cn'
@@ -24,75 +22,22 @@ interface MenuItem {
   icon: React.ComponentType<{ className?: string }>
   path: string
   children?: MenuItem[]
+  /** 图标与悬浮色 */
+  iconColor: string
+  hoverBg: string
 }
 
 const menuItems: MenuItem[] = [
-  {
-    id: 'dashboard',
-    label: '工作台',
-    icon: LayoutDashboard,
-    path: '/',
-  },
-  {
-    id: 'products',
-    label: '商品管理',
-    icon: Package,
-    path: '/products',
-  },
-  {
-    id: 'contacts',
-    label: '往来单位',
-    icon: Users,
-    path: '/contacts',
-  },
-  {
-    id: 'purchase',
-    label: '进货管理',
-    icon: ShoppingCart,
-    path: '/purchase',
-  },
-  {
-    id: 'sales',
-    label: '销售管理',
-    icon: DollarSign,
-    path: '/sales',
-  },
-  {
-    id: 'dyeing',
-    label: '染色加工',
-    icon: Palette,
-    path: '/dyeing',
-  },
-  {
-    id: 'inventory',
-    label: '库存管理',
-    icon: Warehouse,
-    path: '/inventory',
-  },
-  {
-    id: 'account',
-    label: '账款管理',
-    icon: Receipt,
-    path: '/account',
-  },
-  {
-    id: 'report',
-    label: '统计报表',
-    icon: BarChart3,
-    path: '/report',
-  },
-  // {
-  //   id: 'tenant',
-  //   label: '租户管理',
-  //   icon: Building2,
-  //   path: '/tenant',
-  // },
-  {
-    id: 'settings',
-    label: '系统设置',
-    icon: Settings,
-    path: '/settings',
-  },
+  { id: 'dashboard', label: '工作台', icon: LayoutDashboard, path: '/', iconColor: 'text-amber-500', hoverBg: 'hover:bg-amber-50' },
+  { id: 'products', label: '商品管理', icon: Package, path: '/products', iconColor: 'text-violet-500', hoverBg: 'hover:bg-violet-50' },
+  { id: 'contacts', label: '往来单位', icon: Users, path: '/contacts', iconColor: 'text-emerald-500', hoverBg: 'hover:bg-emerald-50' },
+  { id: 'purchase', label: '进货管理', icon: ShoppingCart, path: '/purchase', iconColor: 'text-sky-500', hoverBg: 'hover:bg-sky-50' },
+  { id: 'sales', label: '销售管理', icon: DollarSign, path: '/sales', iconColor: 'text-blue-500', hoverBg: 'hover:bg-blue-50' },
+  { id: 'dyeing', label: '染色加工', icon: Palette, path: '/dyeing', iconColor: 'text-fuchsia-500', hoverBg: 'hover:bg-fuchsia-50' },
+  { id: 'inventory', label: '库存管理', icon: Warehouse, path: '/inventory', iconColor: 'text-orange-500', hoverBg: 'hover:bg-orange-50' },
+  { id: 'account', label: '账款管理', icon: Receipt, path: '/account', iconColor: 'text-teal-500', hoverBg: 'hover:bg-teal-50' },
+  { id: 'report', label: '统计报表', icon: BarChart3, path: '/report', iconColor: 'text-indigo-500', hoverBg: 'hover:bg-indigo-50' },
+  { id: 'settings', label: '系统设置', icon: Settings, path: '/settings', iconColor: 'text-slate-500', hoverBg: 'hover:bg-slate-100' },
 ]
 
 function Sidebar() {
@@ -129,7 +74,7 @@ function Sidebar() {
   // 根据系统参数过滤菜单项
   const filteredMenuItems = menuItems.filter((item) => {
     // 如果染色加工流程未启用，隐藏染色加工菜单
-    if (item.id === 'dyeing' && !systemParams.enableDyeingProcess) {
+    if (item.id === 'dyeing' && !systemParams?.enableDyeingProcess) {
       return false
     }
     return true
@@ -157,10 +102,15 @@ function Sidebar() {
                     'w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
                     active
                       ? 'bg-blue-50 text-blue-600'
-                      : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
+                      : cn('text-gray-700 hover:text-gray-900', item.hoverBg)
                   )}
                 >
-                  <Icon className="w-5 h-5 flex-shrink-0" />
+                  <Icon
+                    className={cn(
+                      'w-5 h-5 flex-shrink-0',
+                      active ? 'text-blue-600' : item.iconColor
+                    )}
+                  />
                   <span className="flex-1 text-left">{item.label}</span>
                   {hasChildren && (
                     <ChevronRight
@@ -217,10 +167,15 @@ function Sidebar() {
                   'w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
                   active
                     ? 'bg-blue-50 text-blue-600'
-                    : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
+                    : cn('text-gray-700 hover:text-gray-900', item.hoverBg)
                 )}
               >
-                <Icon className="w-5 h-5 flex-shrink-0" />
+                <Icon
+                  className={cn(
+                    'w-5 h-5 flex-shrink-0',
+                    active ? 'text-blue-600' : item.iconColor
+                  )}
+                />
                 <span className="flex-1 text-left">{item.label}</span>
               </button>
             )

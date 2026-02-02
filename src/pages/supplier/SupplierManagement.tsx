@@ -48,12 +48,13 @@ function SupplierManagement() {
     const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(null)
     const pageSize = 10
 
-    // 统计数据
+    // 统计数据（防御：接口返回 null 时按空数组处理）
     const stats = useMemo(() => {
-        const totalSuppliers = suppliers.length
-        const activeSuppliers = suppliers.filter((s) => s.status === '合作中').length
-        const inactiveSuppliers = suppliers.filter((s) => s.status === '已停用').length
-        const thisMonthNew = suppliers.filter((s) => {
+        const list = suppliers ?? []
+        const totalSuppliers = list.length
+        const activeSuppliers = list.filter((s) => s.status === '合作中').length
+        const inactiveSuppliers = list.filter((s) => s.status === '已停用').length
+        const thisMonthNew = list.filter((s) => {
             const createdDate = new Date(s.createdAt)
             const now = new Date()
             return createdDate.getMonth() === now.getMonth() && createdDate.getFullYear() === now.getFullYear()
@@ -69,7 +70,7 @@ function SupplierManagement() {
 
     // 筛选供应商
     const filteredSuppliers = useMemo(() => {
-        let result = suppliers
+        let result = suppliers ?? []
 
         // 按状态筛选
         if (statusFilter !== '全部') {
@@ -96,10 +97,12 @@ function SupplierManagement() {
         return filteredSuppliers.slice(start, end)
     }, [filteredSuppliers, currentPage])
 
-    // 获取供应商交易统计
+    // 获取供应商交易统计（防御 null）
     const getSupplierStats = (supplierId: string) => {
-        const supplierOrders = purchaseOrders.filter((o) => o.supplierId === supplierId)
-        const supplierPayables = payables.filter((p) => p.supplierId === supplierId)
+        const orders = purchaseOrders ?? []
+        const pay = payables ?? []
+        const supplierOrders = orders.filter((o) => o.supplierId === supplierId)
+        const supplierPayables = pay.filter((p) => p.supplierId === supplierId)
         const totalAmount = supplierOrders.reduce((sum, o) => sum + o.totalAmount, 0)
         const unpaidAmount = supplierPayables
             .filter((p) => p.status === '未结清')
@@ -292,7 +295,7 @@ function SupplierManagement() {
     ]
 
     // 显示加载状态
-    if (loading && suppliers.length === 0) {
+    if (loading && (suppliers ?? []).length === 0) {
         return (
             <div className="flex items-center justify-center h-64">
                 <div className="text-gray-500">加载中...</div>
@@ -301,7 +304,7 @@ function SupplierManagement() {
     }
 
     // 显示错误
-    if (error && suppliers.length === 0) {
+    if (error && (suppliers ?? []).length === 0) {
         return (
             <div className="flex items-center justify-center h-64 flex-col gap-4">
                 <div className="text-red-500">加载失败: {error}</div>

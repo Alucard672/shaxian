@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useSalesStore } from '@/store/salesStore'
 import { useProductStore } from '@/store/productStore'
 import { useContactStore } from '@/store/contactStore'
@@ -25,14 +25,19 @@ import {
   Cell,
 } from 'recharts'
 import { format, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfQuarter, endOfQuarter, startOfYear, endOfYear, subDays } from 'date-fns'
+import { getCustomerOrderNumberMap } from '@/utils/customerOrderNumber'
 
 type DateRange = '今日' | '本周' | '本月' | '本季度' | '本年' | '自定义'
 
 function SalesReport() {
   const navigate = useNavigate()
-  const { orders } = useSalesStore()
+  const { orders, loadOrders } = useSalesStore()
   const { products } = useProductStore()
   const { customers } = useContactStore()
+
+  useEffect(() => {
+    loadOrders()
+  }, [loadOrders])
 
   const [dateRange, setDateRange] = useState<DateRange>('本月')
   const [customStartDate, setCustomStartDate] = useState<string>('')
@@ -173,6 +178,8 @@ function SalesReport() {
     return filteredOrders.slice(start, start + pageSize)
   }, [filteredOrders, currentPage])
 
+  const customerOrderNumberMap = useMemo(() => getCustomerOrderNumberMap(orders), [orders])
+
   // 表格列
   const columns = [
     {
@@ -181,6 +188,14 @@ function SalesReport() {
       render: (_: any, record: typeof filteredOrders[0]) => (
         <span className="text-gray-900 font-medium">{record.orderNumber}</span>
       ),
+    },
+    {
+      key: 'customerOrderNumber',
+      title: '客户单号',
+      render: (_: any, record: typeof filteredOrders[0]) => {
+        const n = customerOrderNumberMap.get(record.id)
+        return <span className="text-gray-600">{n != null ? n : '-'}</span>
+      },
     },
     {
       key: 'customerName',

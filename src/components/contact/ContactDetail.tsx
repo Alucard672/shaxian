@@ -23,11 +23,15 @@ function ContactDetail({ contact, type, onEdit, onClose }: ContactDetailProps) {
   const customer = isCustomer ? (contact as Customer) : null
   const supplier = !isCustomer ? (contact as Supplier) : null
 
-  // 获取交易统计
+  // 获取交易统计（防御 null）
   const transactionStats = useMemo(() => {
+    const so = salesOrders ?? []
+    const po = purchaseOrders ?? []
+    const recv = receivables ?? []
+    const pay = payables ?? []
     if (isCustomer) {
-      const customerOrders = salesOrders.filter((o) => o.customerId === contact.id)
-      const customerReceivables = receivables.filter((r) => r.customerId === contact.id)
+      const customerOrders = so.filter((o) => o.customerId === contact.id)
+      const customerReceivables = recv.filter((r) => r.customerId === contact.id)
       const totalAmount = customerOrders.reduce((sum, o) => sum + o.totalAmount, 0)
       const unpaidAmount = customerReceivables
         .filter((r) => r.status === '未结清')
@@ -40,8 +44,8 @@ function ContactDetail({ contact, type, onEdit, onClose }: ContactDetailProps) {
         creditLimit: customer?.creditLimit || 0,
       }
     } else {
-      const supplierOrders = purchaseOrders.filter((o) => o.supplierId === contact.id)
-      const supplierPayables = payables.filter((p) => p.supplierId === contact.id)
+      const supplierOrders = po.filter((o) => o.supplierId === contact.id)
+      const supplierPayables = pay.filter((p) => p.supplierId === contact.id)
       const totalAmount = supplierOrders.reduce((sum, o) => sum + o.totalAmount, 0)
       const unpaidAmount = supplierPayables
         .filter((p) => p.status === '未结清')
