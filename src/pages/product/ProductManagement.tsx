@@ -544,7 +544,7 @@ function ProductManagement() {
               loadProducts()
               loadColors()
             }}
-            className="h-10 px-6 rounded-lg border-blue-200 bg-blue-50 text-blue-600 font-medium"
+            className="h-10 px-6 rounded-lg border-blue-200 bg-blue-50 text-blue-600 font-medium whitespace-nowrap"
           >
             查询
           </Button>
