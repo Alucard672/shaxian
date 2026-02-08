@@ -376,13 +376,16 @@ function ProductManagement() {
       key: 'name',
       title: '商品名称',
       render: (_: any, record: Product) => (
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
             <Package className="w-4 h-4 text-blue-600" />
           </div>
-          <div>
-            <span className="text-sm font-medium text-gray-900">{record.name}</span>
-            <div className="text-xs text-gray-500">{record.code}</div>
+          <div className="flex flex-col gap-0.5">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium text-gray-900">{record.name}</span>
+              <span className="text-xs text-gray-400">|</span>
+              <span className="text-sm text-gray-600">{record.code}</span>
+            </div>
           </div>
         </div>
       ),
@@ -528,7 +531,7 @@ function ProductManagement() {
 
       {/* 搜索栏 */}
       <BaseCard padding="md">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           <Search className="w-5 h-5 text-gray-400" />
           <Input
             value={searchKeyword}
@@ -537,13 +540,11 @@ function ProductManagement() {
             className="flex-1"
           />
           <Button
-            variant="outline"
-            size="sm"
             onClick={() => {
               loadProducts()
               loadColors()
             }}
-            className="h-8 rounded-lg border-blue-200 bg-blue-50 text-blue-600 text-xs"
+            className="h-10 px-6 rounded-lg border-blue-200 bg-blue-50 text-blue-600 font-medium"
           >
             查询
           </Button>
