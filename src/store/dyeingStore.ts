@@ -17,8 +17,8 @@ interface DyeingState {
   loadOrders: () => Promise<void>
   
   // 加工单操作
-  addOrder: (data: DyeingOrderFormData) => Promise<DyeingOrder>
-  updateOrder: (id: string, data: Partial<DyeingOrderFormData>) => Promise<void>
+  addOrder: (data: DyeingOrderFormData, status?: DyeingOrderStatus) => Promise<DyeingOrder>
+  updateOrder: (id: string, data: Partial<DyeingOrderFormData & { status?: DyeingOrderStatus }>) => Promise<void>
   deleteOrder: (id: string) => Promise<void>
   getOrder: (id: string) => DyeingOrder | undefined
   updateStatus: (id: string, status: DyeingOrderStatus) => Promise<void>
@@ -53,12 +53,12 @@ export const useDyeingStore = create<DyeingState>((set, get) => ({
     return `JG${dateStr}000`
   },
 
-  addOrder: async (data) => {
+  addOrder: async (data, status = '待发货') => {
     try {
       const orderData = {
         ...data,
         operator: '当前用户', // TODO: 从用户状态获取
-        status: '待发货',
+        status,
       }
       
       const newOrder = await dyeingApi.create(orderData)

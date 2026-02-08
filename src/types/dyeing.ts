@@ -1,5 +1,5 @@
 // 染色加工单状态枚举
-export type DyeingOrderStatus = '待发货' | '加工中' | '已完成' | '已入库' | '已取消'
+export type DyeingOrderStatus = '草稿' | '待发货' | '加工中' | '已完成' | '已入库' | '已取消'
 
 // 染色加工单目标色号项目
 export interface DyeingOrderItem {

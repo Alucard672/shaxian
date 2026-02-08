@@ -1,8 +1,9 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, useLocation } from 'react-router-dom'
 import { useSalesStore } from '@/store/salesStore'
 import { useProductStore } from '@/store/productStore'
 import { useContactStore } from '@/store/contactStore'
+import { useAccountStore } from '@/store/accountStore'
 import { useSettingsStore } from '@/store/settingsStore'
 import { SalesOrderItem, SalesOrderFormData } from '@/types/sales'
 import Button from '@/components/ui/Button'
@@ -62,16 +63,25 @@ function mergeRemarkLine(remark: string, prefix: string, line: string | null): s
 
 function SalesCreate() {
   const navigate = useNavigate()
+  const location = useLocation()
   const { id } = useParams<{ id?: string }>()
-  const isEdit = id !== undefined
+  const isEditPath = location.pathname.includes('/edit/')
+  const isEdit = id !== undefined && isEditPath
+  const isView = id !== undefined && !isEditPath
   const { orders, addOrder, updateOrder, loadOrders } = useSalesStore()
   const { products, colors, batches, loadAll, loadColors, loadBatches, getColorsByProduct, addProduct, addColor, addBatch } = useProductStore()
   const { customers, loadCustomers, addCustomer } = useContactStore()
+  const { receivables, loadReceivables } = useAccountStore()
   const { systemParams, getPageRequiredFields } = useSettingsStore()
   const enableBatch = !!systemParams?.enableBatch
   const allowNegativeStock = !!systemParams?.allowNegativeStock
   const [showRequiredModal, setShowRequiredModal] = useState(false)
   const requiredFields = getPageRequiredFields(SALES_PAGE_KEY, SALES_DEFAULT_REQUIRED)
+  const currentOrder = useMemo(() => {
+    if (!id) return null
+    return orders.find((o) => String(o.id) === String(id)) ?? null
+  }, [id, orders])
+  const itemsLocked = isView
 
   const [formData, setFormData] = useState<Omit<SalesOrderFormData, 'items'>>({
     customerId: '',
@@ -105,9 +115,12 @@ function SalesCreate() {
     remark: '',
   })
 
-  const [paymentLines, setPaymentLines] = useState<PaymentLine[]>([
-    { id: makeId(), method: '现金', amount: 0 },
-  ])
+  const [paymentLines, setPaymentLines] = useState<PaymentLine[]>(
+    PAYMENT_METHODS.map((method) => ({ id: makeId('pay'), method, amount: 0 }))
+  )
+  const [selectedPayMethod, setSelectedPayMethod] = useState<(typeof PAYMENT_METHODS)[number]>('现金')
+  const [autoFillPayment, setAutoFillPayment] = useState(true)
+  const isCopyMode = !!(location.state as any)?.copyFromId
 
   const debugQuickAdd =
     typeof window !== 'undefined' &&
@@ -116,14 +129,66 @@ function SalesCreate() {
   useEffect(() => {
     loadAll()
     loadCustomers()
-    if (isEdit) {
+    if (id) {
       loadOrders()
     }
-  }, [loadAll, loadCustomers, isEdit, loadOrders])
+    loadReceivables()
+  }, [loadAll, loadCustomers, id, loadOrders, loadReceivables])
 
-  // 如果是编辑模式，加载订单数据
+  const customerUnpaid = useMemo(() => {
+    if (!formData.customerId) return 0
+    return receivables
+      .filter((r) => String(r.customerId) === String(formData.customerId))
+      .reduce((sum, r) => sum + Number(r.unpaidAmount || 0), 0)
+  }, [receivables, formData.customerId])
+
+  // 复制单据
   useEffect(() => {
-    if (isEdit && id && orders.length > 0) {
+    const state: any = location.state
+    if (!state || state.copyFromId == null) return
+    const source = orders.find((o) => String(o.id) === String(state.copyFromId))
+    if (!source) {
+      loadOrders()
+      return
+    }
+    setFormData({
+      customerId: String(source.customerId ?? ''),
+      customerName: source.customerName ?? '',
+      salesDate: source.salesDate,
+      deliveryDate: source.deliveryDate || '',
+      deliveryAddress: source.deliveryAddress || '',
+      contactPerson: source.contactPerson || '',
+      contactPhone: source.contactPhone || '',
+      paidAmount: 0,
+      paymentMethod: '现金',
+      remark: source.remark || '',
+    })
+    setPaymentLines(PAYMENT_METHODS.map((method) => ({ id: makeId('pay'), method, amount: 0 })))
+    setSelectedPayMethod('现金')
+    setAutoFillPayment(true)
+    setItems(
+      (source.items || []).map((item) => ({
+        productId: item.productId,
+        productName: item.productName,
+        productCode: item.productCode || '',
+        colorId: item.colorId || '',
+        colorName: item.colorName || '',
+        colorCode: item.colorCode || '',
+        batchId: item.batchId || '',
+        batchCode: item.batchCode || '',
+        quantity: item.quantity,
+        pieceCount: item.pieceCount || 0,
+        unitWeight: item.unitWeight || 0,
+        unit: item.unit || 'kg',
+        price: item.price || item.unitPrice || 0,
+        remark: item.remark || '',
+      }))
+    )
+  }, [location.state, orders, loadOrders])
+
+  // 如果是编辑或查看模式（有 id），加载订单数据
+  useEffect(() => {
+    if (id && orders.length > 0) {
       const order = orders.find((o) => String(o.id) === String(id))
       if (order) {
         setFormData({
@@ -138,15 +203,18 @@ function SalesCreate() {
           paymentMethod: (order as any).paymentMethod || '现金',
           remark: order.remark || '',
         })
-        setPaymentLines([
-          {
-            id: makeId(),
-            method: (PAYMENT_METHODS.includes(String((order as any).paymentMethod || '') as any)
-              ? (order as any).paymentMethod
-              : '现金') as PaymentLine['method'],
-            amount: Number(order.paidAmount || 0),
-          },
-        ])
+        const method = (PAYMENT_METHODS.includes(String((order as any).paymentMethod || '') as any)
+          ? (order as any).paymentMethod
+          : '现金') as PaymentLine['method']
+        setSelectedPayMethod(method)
+        setAutoFillPayment(false)
+        setPaymentLines(
+          PAYMENT_METHODS.map((m) => ({
+            id: makeId('pay'),
+            method: m,
+            amount: m === method ? Number(order.paidAmount || 0) : 0,
+          }))
+        )
         setItems(order.items.map((item) => ({
           productId: item.productId,
           productName: item.productName,
@@ -165,17 +233,42 @@ function SalesCreate() {
         })))
       }
     }
-  }, [isEdit, id, orders])
+  }, [id, orders])
 
-  // 多笔收款合计 -> 回填已收金额；并保留一个兼容的 paymentMethod（取第一笔）
+  // 保持收款明细仅由用户输入
+
+  // 自动汇总到收款栏（默认汇总到当前选中方式）
+  const orderTotal = useMemo(() => items.reduce((sum, item) => sum + item.quantity * item.price, 0), [items])
+  useEffect(() => {
+    if (!autoFillPayment) return
+    setPaymentLines((prev) =>
+      prev.map((p) => ({
+        ...p,
+        amount: p.method === selectedPayMethod ? orderTotal : 0,
+      }))
+    )
+  }, [orderTotal, selectedPayMethod, autoFillPayment])
+
+  const switchPayMethod = (method: (typeof PAYMENT_METHODS)[number]) => {
+    setSelectedPayMethod(method)
+    setAutoFillPayment(true)
+    setPaymentLines((prev) =>
+      prev.map((p) => ({
+        ...p,
+        amount: p.method === method ? orderTotal : 0,
+      }))
+    )
+  }
+
+  // 多笔收款合计 -> 回填已收金额；并保留一个兼容的 paymentMethod（取选中方式）
   useEffect(() => {
     const total = paymentLines.reduce((sum, p) => sum + (Number(p.amount) || 0), 0)
-    const first = paymentLines[0]?.method || '现金'
+    const first = selectedPayMethod || paymentLines[0]?.method || '现金'
     setFormData((prev) => {
       if (prev.paidAmount === total && prev.paymentMethod === first) return prev
       return { ...prev, paidAmount: total, paymentMethod: first }
     })
-  }, [paymentLines])
+  }, [paymentLines, selectedPayMethod])
 
   // 获取当前选中商品的色号
   const colorOptions = useMemo(() => {
@@ -332,7 +425,7 @@ function SalesCreate() {
     })
   }
 
-  const handleAddItem = () => {
+  const handleAddItem = async () => {
     if (!newItem.productId || newItem.quantity <= 0) {
       alert('请填写完整的商品信息')
       return
@@ -353,14 +446,30 @@ function SalesCreate() {
                     colors.find((c) => c.id === colorId)
       let batchId = newItem.batchId
       let batchCode = newItem.batchCode
+      let batch: { stockQuantity: number } | undefined
       if (!enableBatch) {
-        const firstBatch = batches.find((b) => String(b.colorId) === String(colorId))
+        let firstBatch = batches.find((b) => String(b.colorId) === String(colorId))
+        if (!firstBatch) {
+          try {
+            const newBatch = await addBatch(colorId, {
+              code: '默认',
+              productionDate: new Date().toISOString().split('T')[0],
+              initialQuantity: 0,
+            })
+            await loadBatches(colorId)
+            firstBatch = newBatch
+          } catch (e: any) {
+            alert(`色号 ${color?.name || color?.code || colorId} 尚未建立库存，自动创建失败：${e?.message || '请先在商品管理中为该色号完善信息'}`)
+            continue
+          }
+        }
         if (firstBatch) {
           batchId = firstBatch.id
           batchCode = firstBatch.code ?? (firstBatch as any).batchCode ?? ''
+          batch = firstBatch
         }
       }
-      const batch = batches.find((b) => b.id === batchId)
+      if (!batch) batch = batches.find((b) => b.id === batchId)
       if (!allowNegativeStock && batch && newItem.quantity > batch.stockQuantity) {
         alert(`色号 ${color?.name || colorId} 的库存不足，当前库存：${batch.stockQuantity} ${newItem.unit}`)
         continue
@@ -370,7 +479,7 @@ function SalesCreate() {
         continue
       }
       if (!batchId && !enableBatch) {
-        alert(`色号 ${color?.name || colorId} 下暂无缸号，请先在商品管理中为该色号添加缸号`)
+        alert(`色号 ${color?.name || colorId} 下暂无库存记录，请先在商品管理中为该色号完善信息`)
         continue
       }
 
@@ -434,7 +543,7 @@ function SalesCreate() {
     setEditingIndex(index)
   }
 
-  const handleUpdateItem = () => {
+  const handleUpdateItem = async () => {
     if (!newItem.productId || !newItem.colorId || newItem.quantity <= 0) {
       alert('请填写完整的商品信息（商品、色号、数量必填）')
       return
@@ -442,14 +551,28 @@ function SalesCreate() {
     let batchId = newItem.batchId
     let batchCode = newItem.batchCode
     if (!enableBatch && !batchId) {
-      const firstBatch = batches.find((b) => String(b.colorId) === String(newItem.colorId))
+      let firstBatch = batches.find((b) => String(b.colorId) === String(newItem.colorId))
+      if (!firstBatch) {
+        try {
+          const newBatch = await addBatch(newItem.colorId, {
+            code: '默认',
+            productionDate: new Date().toISOString().split('T')[0],
+            initialQuantity: 0,
+          })
+          await loadBatches(newItem.colorId)
+          firstBatch = newBatch
+        } catch (e: any) {
+          alert(`色号 ${newItem.colorName} 尚未建立库存，自动创建失败：${e?.message || '请先在商品管理中为该色号完善信息'}`)
+          return
+        }
+      }
       if (firstBatch) {
         batchId = firstBatch.id
         batchCode = firstBatch.code ?? (firstBatch as any).batchCode ?? ''
       }
     }
     if (!batchId) {
-      alert(enableBatch ? '请选择缸号' : `色号 ${newItem.colorName} 下暂无缸号，请先在商品管理中添加`)
+      alert(enableBatch ? '请选择缸号' : `色号 ${newItem.colorName} 下暂无库存记录，请先在商品管理中为该色号完善信息`)
       return
     }
     if (!allowNegativeStock) {
@@ -525,26 +648,56 @@ function SalesCreate() {
     return items.reduce((sum, item) => sum + item.quantity * item.price, 0)
   }
 
-  const handleSave = async (status: '草稿' | '已出库' = '草稿') => {
-    const missing: string[] = []
-    if (requiredFields.includes('customerId') && !formData.customerId) missing.push('客户')
-    if (requiredFields.includes('salesDate') && !formData.salesDate) missing.push('销售日期')
-    if (requiredFields.includes('deliveryDate') && !formData.deliveryDate) missing.push('交货日期')
-    if (requiredFields.includes('contactPhone') && !String(formData.contactPhone || '').trim()) missing.push('联系电话')
-    if (requiredFields.includes('deliveryAddress') && !String(formData.deliveryAddress || '').trim()) missing.push('交货地址')
-    if (requiredFields.includes('paidAmount') && formData.paidAmount == null) missing.push('已收金额')
-    if (requiredFields.includes('remark') && !String(formData.remark || '').trim()) missing.push('备注')
-    if (missing.length) {
-      alert(`请填写必填项：${missing.join('、')}`)
-      return
+  const handleSave = async () => {
+    const selectedCustomer =
+      customers.find((c) => String(c.id) === String(formData.customerId)) || null
+    const normalizedFormData = {
+      ...formData,
+      deliveryDate: formData.deliveryDate || formData.salesDate,
+      contactPerson:
+        formData.contactPerson ||
+        (selectedCustomer as any)?.contactPerson ||
+        formData.customerName ||
+        (selectedCustomer as any)?.name ||
+        '',
+      contactPhone: formData.contactPhone || (selectedCustomer as any)?.phone || '',
+      deliveryAddress: formData.deliveryAddress || (selectedCustomer as any)?.address || '',
     }
 
-    if (items.length === 0) {
-      alert('请至少添加一个商品明细')
-      return
+    {
+      const missing: string[] = []
+      if (requiredFields.includes('customerId') && !normalizedFormData.customerId) missing.push('客户')
+      if (requiredFields.includes('salesDate') && !normalizedFormData.salesDate) missing.push('销售日期')
+      if (requiredFields.includes('deliveryDate') && !normalizedFormData.deliveryDate) missing.push('交货日期')
+      if (requiredFields.includes('contactPhone') && !String(normalizedFormData.contactPhone || '').trim()) missing.push('联系电话')
+      if (requiredFields.includes('deliveryAddress') && !String(normalizedFormData.deliveryAddress || '').trim()) missing.push('交货地址')
+      if (requiredFields.includes('paidAmount') && normalizedFormData.paidAmount == null) missing.push('已收金额')
+      if (requiredFields.includes('remark') && !String(normalizedFormData.remark || '').trim()) missing.push('备注')
+      if (missing.length) {
+        alert(`请填写必填项：${missing.join('、')}`)
+        return
+      }
+
+      if (items.length === 0) {
+        alert('请至少添加一个商品明细')
+        return
+      }
+
+      const invalidIndex = items.findIndex((item) => {
+        const qty = Number(item.quantity) || 0
+        const price = Number(item.price) || 0
+        if (!item.productId || !item.colorId) return true
+        if (enableBatch && !item.batchId) return true
+        if (qty <= 0 || price <= 0) return true
+        return false
+      })
+      if (invalidIndex >= 0) {
+        alert(`商品明细第 ${invalidIndex + 1} 行不完整，请检查商品/色号/数量/单价${enableBatch ? '/缸号' : ''}`)
+        return
+      }
     }
 
-    if (status === '已出库' && !allowNegativeStock) {
+    if (!allowNegativeStock) {
       for (const item of items) {
         const batch = batches.find((b) => String(b.id) === String(item.batchId))
         if (batch && Number(item.quantity) > Number(batch.stockQuantity)) {
@@ -560,36 +713,47 @@ function SalesCreate() {
       .join('、')
 
     try {
+      const computedPaid = paymentLines.reduce((sum, p) => sum + (Number(p.amount) || 0), 0)
+      const computedMethod = selectedPayMethod || PAYMENT_METHODS[0]
       const parts = paymentLines
         .filter((p) => Number(p.amount) > 0)
         .map((p) => `${p.method} ${formatNumber(p.amount)}`)
       const paymentLine = parts.length ? `收款明细：${parts.join('；')}` : null
       const mergedRemark = mergeRemarkLine(formData.remark || '', '收款明细：', paymentLine)
 
-      const orderData: SalesOrderFormData = {
-        ...formData,
+      const orderData: SalesOrderFormData & { status?: string } = {
+        ...normalizedFormData,
+        paidAmount: computedPaid,
+        paymentMethod: computedMethod,
         remark: mergedRemark,
         items: items.map((item) => ({
           ...item,
           amount: item.quantity * item.price,
         })),
+        status: '已完成',
       }
 
       if (isEdit && id) {
         await updateOrder(id, orderData)
-        alert('销售单已更新')
+        alert('销售单已保存')
       } else {
-        await addOrder(orderData, status)
-        alert(status === '草稿' ? '销售单已保存为草稿' : '销售单已创建并出库')
+        await addOrder(orderData, '已完成')
+        alert('销售单已保存')
       }
-      navigate('/sales')
+      // 跳转时带上 fromCreate 避免列表重载覆盖已收金额等本地正确数据
+      navigate('/sales', { state: { fromCreate: true } })
     } catch (error: any) {
-      const msg = error?.message || '未知错误'
+      let msg = error?.message || '未知错误'
       const isRequiredLike = /必填|不能为空/.test(msg)
-      const part = requiredLabels ? `【${requiredLabels}】 以及` : ''
-      const hint = isRequiredLike
+      let part = requiredLabels ? `【${requiredLabels}】 以及` : ''
+      let hint = isRequiredLike
         ? `\n\n未填写的必填项：请检查 ${part}商品明细（至少一项，数量、单价有效）是否已填写完整。`
         : ''
+      if (/库存不足|缸号/i.test(msg) && !hint) {
+        hint = allowNegativeStock
+          ? '\n\n（若需负库存出库，请确认后端已支持；否则请联系管理员）'
+          : '\n\n如需允许负库存出库，请在【系统设置→参数设置】中开启「允许负库存出库」。'
+      }
       alert('保存失败：' + msg + hint)
     }
   }
@@ -609,29 +773,46 @@ function SalesCreate() {
               </button>
               <div>
                 <h1 className="text-lg font-semibold text-gray-900">
-                  {isEdit ? '编辑销售单' : '新建销售单'}
+                  {isView ? '销售单详情' : isEdit ? '编辑销售单' : '新建销售单'}
                 </h1>
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <button
-                onClick={() => setShowRequiredModal(true)}
-                className="p-2 hover:bg-gray-100 rounded-lg text-gray-500 transition-colors"
-                title="必填项设置"
-              >
-                <Settings className="w-5 h-5" />
-              </button>
-              <Button variant="outline" onClick={() => handleSave('草稿')} size="sm">
-                保存草稿
-              </Button>
-              <Button onClick={() => handleSave('已出库')} size="sm" className="bg-blue-600 hover:bg-blue-700">
-                <Save className="w-4 h-4 mr-1.5" />
-                保存并出库
-              </Button>
+              {!isView && (
+                <>
+                  <button
+                    onClick={() => setShowRequiredModal(true)}
+                    className="p-2 hover:bg-gray-100 rounded-lg text-gray-500 transition-colors"
+                    title="必填项设置"
+                  >
+                    <Settings className="w-5 h-5" />
+                  </button>
+                  <Button
+                    onClick={handleSave}
+                    size="sm"
+                    className="bg-green-600 hover:bg-green-700"
+                  >
+                    <Save className="w-4 h-4 mr-1.5" />
+                    保存
+                  </Button>
+                </>
+              )}
+              {isView && (
+                <Button variant="outline" onClick={() => navigate(`/sales/edit/${id}`)} size="sm">
+                  <Edit2 className="w-4 h-4 mr-1.5" />
+                  编辑详情
+                </Button>
+              )}
             </div>
           </div>
         </div>
       </div>
+
+      {isView && (
+        <div className="mx-2 mb-2 px-4 py-2 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-800">
+          此为查看模式，点击【编辑详情】可修改单据。
+        </div>
+      )}
 
       <RequiredFieldsConfigModal
         open={showRequiredModal}
@@ -656,45 +837,52 @@ function SalesCreate() {
                   <label className="block text-xs font-medium text-gray-700 mb-1.5">
                     客户 <RequiredMark required={requiredFields.includes('customerId')} />
                   </label>
-                  <SelectWithAdd
-                    value={String(formData.customerId ?? '')}
-                    onChange={(value) => handleCustomerChange(value)}
-                    options={(() => {
-                      const base = customers.map((c) => ({
-                        value: String(c.id),
-                        label: String(c.name ?? ''),
-                      }))
-                      if (
-                        formData.customerId &&
-                        formData.customerName &&
-                        !base.some((o) => String(o.value) === String(formData.customerId))
-                      ) {
-                        return [
-                          { value: String(formData.customerId), label: String(formData.customerName) },
-                          ...base,
-                        ]
-                      }
-                      return base
-                    })()}
-                    onAddNew={async (name) => {
-                      const customerCode = `CUST-${Date.now().toString().slice(-6)}`
-                      try {
-                        const newCustomer = await addCustomer({
-                          name: name.trim(),
-                          code: customerCode,
-                          type: '直客',
-                          status: '正常',
-                        })
-                        handleCustomerChange(newCustomer.id)
-                      } catch (error: any) {
-                        alert('添加客户失败：' + (error.message || '未知错误'))
-                      }
-                    }}
-                    placeholder="选择客户"
-                    addText="快速添加客户"
-                    searchable={true}
-                    className="text-sm"
-                  />
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1 min-w-0">
+                      <SelectWithAdd
+                        value={String(formData.customerId ?? '')}
+                        onChange={(value) => handleCustomerChange(value)}
+                        options={(() => {
+                          const base = customers.map((c) => ({
+                            value: String(c.id),
+                            label: String(c.name ?? ''),
+                          }))
+                          if (
+                            formData.customerId &&
+                            formData.customerName &&
+                            !base.some((o) => String(o.value) === String(formData.customerId))
+                          ) {
+                            return [
+                              { value: String(formData.customerId), label: String(formData.customerName) },
+                              ...base,
+                            ]
+                          }
+                          return base
+                        })()}
+                        onAddNew={async (name) => {
+                          const customerCode = `CUST-${Date.now().toString().slice(-6)}`
+                          try {
+                            const newCustomer = await addCustomer({
+                              name: name.trim(),
+                              code: customerCode,
+                              type: '直客',
+                              status: '正常',
+                            })
+                            handleCustomerChange(newCustomer.id)
+                          } catch (error: any) {
+                            alert('添加客户失败：' + (error.message || '未知错误'))
+                          }
+                        }}
+                        placeholder="选择客户"
+                        addText="快速添加客户"
+                        searchable={true}
+                        className="text-sm"
+                      />
+                    </div>
+                    <div className="text-xs text-gray-600 whitespace-nowrap">
+                      欠款：<span className="font-semibold text-red-600">{formatAmount(customerUnpaid)}</span>
+                    </div>
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-2">
@@ -748,59 +936,54 @@ function SalesCreate() {
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1.5">收款方式</label>
                   <div className="space-y-2">
-                    {paymentLines.map((p) => {
-                      const method = PAYMENT_METHODS.includes(p.method as any) ? p.method : '现金'
-                      const Icon = PAYMENT_ICONS[method] ?? CashIcon
-                      return (
-                        <div key={p.id} className="flex items-center gap-2">
-                          <div className="w-28 flex items-center gap-2">
-                            <Icon className="w-4 h-4 flex-shrink-0" />
-                            <SelectWithAdd
-                              value={method}
-                              onChange={(v) =>
-                                setPaymentLines((prev) =>
-                                  prev.map((x) =>
-                                    x.id === p.id
-                                      ? { ...x, method: (PAYMENT_METHODS.includes(v as any) ? v : '现金') as PaymentLine['method'] }
-                                      : x
-                                  )
+                    <div className="grid grid-cols-5 gap-2">
+                      {PAYMENT_METHODS.map((method) => {
+                        const line = paymentLines.find((p) => p.method === method)
+                        return (
+                          <Input
+                            key={`pay-amt-${method}`}
+                            type="number"
+                            value={line?.amount ?? 0}
+                            onChange={(e) => {
+                              const next = Number(e.target.value) || 0
+                              setAutoFillPayment(false)
+                              setSelectedPayMethod(method)
+                              setPaymentLines((prev) =>
+                                prev.map((x) =>
+                                  x.method === method ? { ...x, amount: next } : x
                                 )
-                              }
-                              options={PAYMENT_METHODS.map((m) => ({ value: m, label: m }))}
-                              searchable={false}
-                              allowAdd={false}
-                              clearable={false}
-                              className="text-sm"
-                            />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <Input
-                              type="number"
-                              value={p.amount}
-                              onChange={(e) =>
-                                setPaymentLines((prev) =>
-                                  prev.map((x) =>
-                                    x.id === p.id ? { ...x, amount: Number(e.target.value) || 0 } : x
-                                  )
-                                )
-                              }
-                              className="text-sm h-9"
-                              placeholder="金额"
-                            />
-                          </div>
-                        </div>
-                      )
-                    })}
-                    <div className="flex items-center justify-between pt-1">
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setPaymentLines((prev) => [...prev, { id: makeId(), method: '现金', amount: 0 }])
-                        }
-                        className="text-sm text-blue-600 hover:text-blue-700 font-medium"
-                      >
-                        + 添加收款
-                      </button>
+                              )
+                            }}
+                            onFocus={() => setSelectedPayMethod(method)}
+                            onClick={() => setSelectedPayMethod(method)}
+                            className="text-sm h-9"
+                            placeholder="金额"
+                          />
+                        )
+                      })}
+                    </div>
+                    <div className="grid grid-cols-5 gap-2">
+                      {PAYMENT_METHODS.map((method) => {
+                        const Icon = PAYMENT_ICONS[method] ?? CashIcon
+                        const active = selectedPayMethod === method
+                        return (
+                          <button
+                            type="button"
+                            key={`pay-label-${method}`}
+                            onClick={() => switchPayMethod(method)}
+                            className={`flex items-center justify-center gap-1 text-xs px-2 py-1 rounded-lg border ${
+                              active
+                                ? 'border-blue-300 bg-blue-50 text-blue-700'
+                                : 'border-gray-200 text-gray-600 hover:border-blue-200 hover:text-blue-600'
+                            }`}
+                          >
+                            <Icon className="w-3.5 h-3.5" />
+                            <span>{method}</span>
+                          </button>
+                        )
+                      })}
+                    </div>
+                    <div className="flex items-center justify-end pt-1">
                       <div className="text-sm text-gray-700">
                         合计：<span className="font-semibold text-red-600">{formatAmount(formData.paidAmount)}</span>
                       </div>
@@ -830,7 +1013,13 @@ function SalesCreate() {
                 <h2 className="text-sm font-semibold text-gray-900">商品明细</h2>
               </div>
 
-              {/* 添加表单（单行等分占满，无横向滚动） */}
+              {itemsLocked ? (
+                <div className="p-4 bg-yellow-50 border-b border-gray-200 text-sm text-yellow-800">
+                  {currentOrder?.status
+                    ? `当前订单状态为「${currentOrder.status}」，商品明细已锁定。如需修改，请先作废后重建。`
+                    : '商品明细已锁定，无法编辑。'}
+                </div>
+              ) : (
               <div className="p-4 bg-gray-50 border-b border-gray-200">
                 <div className="flex items-end gap-2 w-full flex-nowrap">
                   <div className="flex-1 min-w-0">
@@ -1114,6 +1303,7 @@ function SalesCreate() {
                   </div>
                 </div>
               </div>
+              )}
 
               {/* 明细表格（等分占满一行，含备注列） */}
               <div className="overflow-visible">
@@ -1168,20 +1358,26 @@ function SalesCreate() {
                           <td className="px-2 py-2 text-sm text-gray-600 truncate" title={item.remark ?? ''}>{item.remark ?? '-'}</td>
                           <td className="px-2 py-2">
                             <div className="flex items-center justify-center gap-1">
-                              <button
-                                onClick={() => handleEditItem(index)}
-                                className="p-1.5 hover:bg-blue-50 rounded text-blue-600 transition-colors"
-                                title="编辑"
-                              >
-                                <Edit2 className="w-3.5 h-3.5" />
-                              </button>
-                              <button
-                                onClick={() => handleRemoveItem(index)}
-                                className="p-1.5 hover:bg-red-50 rounded text-red-600 transition-colors"
-                                title="删除"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
+                              {itemsLocked ? (
+                                <span className="text-xs text-gray-400">已锁定</span>
+                              ) : (
+                                <>
+                                  <button
+                                    onClick={() => handleEditItem(index)}
+                                    className="p-1.5 hover:bg-blue-50 rounded text-blue-600 transition-colors"
+                                    title="编辑"
+                                  >
+                                    <Edit2 className="w-3.5 h-3.5" />
+                                  </button>
+                                  <button
+                                    onClick={() => handleRemoveItem(index)}
+                                    className="p-1.5 hover:bg-red-50 rounded text-red-600 transition-colors"
+                                    title="删除"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                </>
+                              )}
                             </div>
                           </td>
                         </tr>

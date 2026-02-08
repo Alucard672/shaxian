@@ -14,13 +14,16 @@ function SystemParamsSettings() {
   }, [systemParams])
   const [isSaving, setIsSaving] = useState(false)
 
-  const handleSave = () => {
+  const handleSave = async () => {
     setIsSaving(true)
-    updateSystemParams(localParams)
-    setTimeout(() => {
-      setIsSaving(false)
+    try {
+      await updateSystemParams(localParams)
       alert('参数设置已保存')
-    }, 300)
+    } catch (e: any) {
+      alert('保存失败：' + (e?.message || '未知错误'))
+    } finally {
+      setIsSaving(false)
+    }
   }
 
   return (

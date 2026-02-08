@@ -18,6 +18,13 @@ function Header() {
   const [showUserMenu, setShowUserMenu] = useState(false)
   const [currentTenantName, setCurrentTenantName] = useState<string>('')
   const [currentTenantId, setCurrentTenantId] = useState<string>('')
+  const [fontSize, setFontSize] = useState<'small' | 'medium' | 'large'>('medium')
+  const [currentDate, setCurrentDate] = useState<string>('')
+
+  const applyFontSize = (size: 'small' | 'medium' | 'large') => {
+    const px = size === 'small' ? 14 : size === 'large' ? 18 : 16
+    document.documentElement.style.fontSize = `${px}px`
+  }
 
   useEffect(() => {
     // 从localStorage加载用户信息
@@ -40,7 +47,35 @@ function Header() {
     if (tenantName) {
       setCurrentTenantName(tenantName)
     }
+
+    const savedFontSize = localStorage.getItem('fontSize')
+    if (savedFontSize === 'small' || savedFontSize === 'medium' || savedFontSize === 'large') {
+      setFontSize(savedFontSize)
+      applyFontSize(savedFontSize)
+    } else {
+      applyFontSize('medium')
+    }
+
+    const updateDate = () => {
+      const now = new Date()
+      const yyyy = now.getFullYear()
+      const mm = String(now.getMonth() + 1).padStart(2, '0')
+      const dd = String(now.getDate()).padStart(2, '0')
+      const hh = String(now.getHours()).padStart(2, '0')
+      const mi = String(now.getMinutes()).padStart(2, '0')
+      const ss = String(now.getSeconds()).padStart(2, '0')
+      setCurrentDate(`${yyyy}-${mm}-${dd} ${hh}:${mi}:${ss}`)
+    }
+    updateDate()
+    const timer = setInterval(updateDate, 1000)
+    return () => clearInterval(timer)
   }, [])
+
+  const handleFontSizeChange = (value: 'small' | 'medium' | 'large') => {
+    setFontSize(value)
+    localStorage.setItem('fontSize', value)
+    applyFontSize(value)
+  }
 
   const handleLogout = async () => {
     try {
@@ -66,11 +101,28 @@ function Header() {
 
       {/* 右侧：用户信息和操作 */}
       <div className="flex items-center gap-4">
+        {/* 字体大小 */}
+        <div className="flex items-center gap-2 text-sm text-gray-600">
+          <span>字体</span>
+          <select
+            value={fontSize}
+            onChange={(e) => handleFontSizeChange(e.target.value as 'small' | 'medium' | 'large')}
+            className="px-2 py-1 border border-gray-200 rounded-lg text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="small">小</option>
+            <option value="medium">中</option>
+            <option value="large">大</option>
+          </select>
+        </div>
+
         {/* 租户信息 */}
         {currentTenantId && (
-          <div className="flex items-center gap-2 text-sm text-gray-600">
-            <Building2 className="w-4 h-4" />
-            <span>租户: {currentTenantName || currentTenantId}</span>
+          <div className="flex flex-col text-sm text-gray-600">
+            <div className="flex items-center gap-2">
+              <Building2 className="w-4 h-4" />
+              <span>租户: {currentTenantName || currentTenantId}</span>
+            </div>
+            <div className="text-xs text-gray-500">{currentDate || ''}</div>
           </div>
         )}
 

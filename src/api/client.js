@@ -30,8 +30,8 @@ async function publicApiRequest(endpoint, options = {}) {
       }
     }
     if (tenantId) {
-      const currentTenantId = localStorage.getItem('currentTenantId')
-      if (!currentTenantId) localStorage.setItem('currentTenantId', tenantId)
+      // 若 URL 明确带 tenantId，以其为准，避免跨租户扫码读到旧租户数据
+      localStorage.setItem('currentTenantId', tenantId)
     } else {
       tenantId = localStorage.getItem('currentTenantId')
     }
@@ -759,7 +759,7 @@ export const salesApi = {
       body: JSON.stringify(data),
     })
   },
-  /** 仅更新收款信息（已出库等非草稿订单适用；后端仅支持 PUT，若仍限制草稿则提示通过账款管理收款） */
+  /** 仅更新收款信息（已完成等非草稿订单适用；后端仅支持 PUT，若仍限制草稿则提示通过账款管理收款） */
   updatePayment: async (id, data) => {
     return apiRequest(`/sales/${id}`, {
       method: 'PUT',

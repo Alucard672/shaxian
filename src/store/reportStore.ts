@@ -44,7 +44,7 @@ export const useReportStore = create<ReportState>((set, get) => ({
     return orders
       .filter((o) => {
         const orderDate = new Date(o.salesDate)
-        return orderDate >= monthStart && orderDate <= monthEnd && (o.status === '已出库' || o.status === '已审核')
+        return orderDate >= monthStart && orderDate <= monthEnd && (o.status === '已完成' || o.status === '已审核')
       })
       .reduce((sum, o) => sum + o.totalAmount, 0)
   },
@@ -86,7 +86,7 @@ export const useReportStore = create<ReportState>((set, get) => ({
     orders
       .filter((o) => {
         const orderDate = new Date(o.salesDate)
-        return orderDate >= startDate && (o.status === '已出库' || o.status === '已审核')
+        return orderDate >= startDate && (o.status === '已完成' || o.status === '已审核')
       })
       .forEach((o) => {
         const date = o.salesDate
@@ -119,7 +119,7 @@ export const useReportStore = create<ReportState>((set, get) => ({
     }> = {}
     
     orders
-      .filter((o) => o.status === '已出库' || o.status === '已审核')
+      .filter((o) => o.status === '已完成' || o.status === '已审核')
       .forEach((order) => {
         order.items.forEach((item) => {
           if (!productSales[item.productId]) {
@@ -158,7 +158,7 @@ export const useReportStore = create<ReportState>((set, get) => ({
     }> = {}
     
     orders
-      .filter((o) => o.status === '已出库' || o.status === '已审核')
+      .filter((o) => o.status === '已完成' || o.status === '已审核')
       .forEach((order) => {
         if (!customerSales[order.customerId]) {
           customerSales[order.customerId] = {
@@ -182,7 +182,6 @@ export const useReportStore = create<ReportState>((set, get) => ({
       }))
   },
 }))
-
 
 
 

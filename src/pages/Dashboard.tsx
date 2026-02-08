@@ -125,7 +125,7 @@ function Dashboard() {
         const statusMap: Record<string, { label: string; variant: 'success' | 'warning' | 'gray' }> = {
           '待审核': { label: '待审核', variant: 'warning' },
           '已审核': { label: '已审核', variant: 'success' },
-          '已出库': { label: '已出库', variant: 'success' },
+          '已完成': { label: '已完成', variant: 'success' },
           '已入库': { label: '已入库', variant: 'success' },
           '已作废': { label: '已作废', variant: 'gray' },
         }

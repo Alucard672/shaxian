@@ -38,10 +38,17 @@ export const usePurchaseStore = create<PurchaseState>((set, get) => ({
     try {
       const raw = await purchaseApi.getAll()
       const list = Array.isArray(raw) ? raw : []
-      const orders = list.map((o: any) => ({
-        ...o,
-        status: mapPurchaseApiToZh(o.status ?? ''),
-      }))
+      const orders = list.map((o: any) => {
+        const paid = Number(o.paidAmount ?? 0)
+        const total = Number(o.totalAmount ?? 0)
+        const unpaid = Math.max(0, total - paid)
+        return {
+          ...o,
+          status: mapPurchaseApiToZh(o.status ?? ''),
+          paidAmount: paid,
+          unpaidAmount: unpaid,
+        }
+      })
       set({ orders, loading: false })
     } catch (error: any) {
       set({ error: error.message || 'Failed to load purchase orders', loading: false })
@@ -72,9 +79,16 @@ export const usePurchaseStore = create<PurchaseState>((set, get) => ({
       }
       
       const created = await purchaseApi.create(orderData)
+      const totalAmount = Number((created as any).totalAmount) || (data.items || []).reduce((s: number, it: any) => s + (Number(it?.quantity) || 0) * (Number(it?.price ?? it?.unitPrice) || 0), 0)
+      const normalizedPaid = Number((data as any).paidAmount ?? 0)
+      const apiPaid = Number((created as any).paidAmount ?? 0)
+      const paidAmount = apiPaid > 0 ? apiPaid : normalizedPaid
+      const unpaidAmount = Math.max(0, totalAmount - paidAmount)
       const newOrder = {
         ...created,
         status: mapPurchaseApiToZh((created as any).status ?? '') || status,
+        paidAmount,
+        unpaidAmount,
       }
 
       // 如果不是草稿状态，自动执行入库操作
@@ -130,6 +144,9 @@ export const usePurchaseStore = create<PurchaseState>((set, get) => ({
 
   updateOrder: async (id, data) => {
     try {
+      const current = get().orders.find((o) => String(o.id) === String(id))
+      const isDraft = current?.status === '草稿'
+      const nextStatus = data.status ?? current?.status
       const payload = data.status != null
         ? { ...data, status: mapPurchaseStatusToApi(data.status) }
         : data
@@ -137,6 +154,40 @@ export const usePurchaseStore = create<PurchaseState>((set, get) => ({
       const normalized = {
         ...updated,
         status: mapPurchaseApiToZh((updated as any).status ?? '') ?? (updated as any).status,
+      }
+      // 草稿 -> 已入库时执行入库与应付
+      if (isDraft && current && nextStatus === '已入库') {
+        const { addBatch } = useProductStore.getState()
+        const { addAccountPayable } = useAccountStore.getState()
+        const items = (data as any).items || current.items || []
+        for (const item of items) {
+          if (item.productId && item.colorId) {
+            await addBatch(item.colorId, {
+              code: item.batchCode,
+              productionDate: item.productionDate || new Date().toISOString().split('T')[0],
+              supplierId: (data as any).supplierId ?? current.supplierId,
+              supplierName: (data as any).supplierName ?? current.supplierName,
+              purchasePrice: item.price,
+              initialQuantity: item.quantity,
+              stockLocation: item.stockLocation,
+              remark: item.remark,
+            })
+          }
+        }
+        const total = Number((data as any).totalAmount ?? current.totalAmount ?? 0)
+        const paid = Number((data as any).paidAmount ?? current.paidAmount ?? 0)
+        const unpaid = Math.max(0, total - paid)
+        if (unpaid > 0) {
+          await addAccountPayable({
+            supplierId: (data as any).supplierId ?? current.supplierId,
+            supplierName: (data as any).supplierName ?? current.supplierName,
+            purchaseOrderId: current.id,
+            purchaseOrderNumber: current.orderNumber,
+            payableAmount: total,
+            paidAmount: paid,
+            accountDate: (data as any).purchaseDate ?? current.purchaseDate,
+          })
+        }
       }
       set((state) => ({
         orders: state.orders.map((o) => (o.id === id ? normalized : o))
@@ -165,6 +216,54 @@ export const usePurchaseStore = create<PurchaseState>((set, get) => ({
 
   cancelOrder: async (id) => {
     try {
+      const order = get().orders.find((o) => String(o.id) === String(id))
+      if (!order) throw new Error('订单不存在')
+      const { batches, updateBatchStock, loadBatches } = useProductStore.getState()
+      // 作废时还原库存：已入库订单曾增加库存，需扣减
+      if (order.status === '已入库' || order.status === '已审核') {
+        for (const item of order.items || []) {
+          const qty = Number(item.quantity) || 0
+          if (qty <= 0) continue
+          const batchId = (item as any).batchId
+          let batch: { id: string } | undefined
+          if (batchId) {
+            batch = batches.find((b) => String(b.id) === String(batchId))
+          }
+          if (!batch && item.colorId) {
+            try {
+              await loadBatches(String(item.colorId))
+            } catch (e) {
+              // ignore: fallback to local search below
+            }
+          }
+          if (!batch && item.colorId && item.batchCode) {
+            batch = batches.find(
+              (b) =>
+                String(b.colorId) === String(item.colorId) &&
+                String(b.code || (b as any).batchCode || '') === String(item.batchCode)
+            )
+          }
+          if (!batch && item.colorId && item.batchCode) {
+            const refreshed = useProductStore.getState().batches
+            batch = refreshed.find(
+              (b) =>
+                String(b.colorId) === String(item.colorId) &&
+                String(b.code || (b as any).batchCode || '') === String(item.batchCode)
+            )
+          }
+          if (!batch) {
+            throw new Error(`未找到缸号，无法回滚库存：${item.productName || ''} ${item.batchCode || ''}`)
+          }
+          if (batch) {
+            try {
+              await updateBatchStock(batch.id, -qty)
+            } catch (e: any) {
+              console.error('还原库存失败:', e)
+              throw new Error(`还原库存失败：${item.productName || ''} ${item.batchCode || ''}，${e?.message || '请检查缸号是否存在'}`)
+            }
+          }
+        }
+      }
       await purchaseApi.update(id, { status: mapPurchaseStatusToApi('已作废') })
       set((state) => ({
         orders: state.orders.map((o) =>

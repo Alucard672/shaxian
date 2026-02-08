@@ -5,6 +5,35 @@ import { settingsApi } from '@/api/client'
 
 const PAGE_REQUIRED_FIELDS_KEY = 'pageRequiredFields'
 const DOCUMENT_VISIBLE_COLUMNS_KEY = 'documentVisibleColumns'
+const SYSTEM_PARAMS_KEY = 'systemParams'
+
+function getSystemParamsStorageKey(): string {
+  if (typeof window === 'undefined') return SYSTEM_PARAMS_KEY
+  const tenantId = localStorage.getItem('currentTenantId')
+  return tenantId ? `${SYSTEM_PARAMS_KEY}_${tenantId}` : SYSTEM_PARAMS_KEY
+}
+
+function loadSystemParamsFromLocal(): Partial<SystemParams> | null {
+  try {
+    const key = getSystemParamsStorageKey()
+    let raw = localStorage.getItem(key)
+    if (!raw && key !== SYSTEM_PARAMS_KEY) {
+      raw = localStorage.getItem(SYSTEM_PARAMS_KEY)
+    }
+    if (raw) {
+      const parsed = JSON.parse(raw)
+      return typeof parsed === 'object' && parsed !== null ? parsed : null
+    }
+  } catch (_) {}
+  return null
+}
+
+function saveSystemParamsToLocal(params: SystemParams) {
+  try {
+    const key = getSystemParamsStorageKey()
+    localStorage.setItem(key, JSON.stringify(params))
+  } catch (_) {}
+}
 
 function loadPageRequiredFields(): PageRequiredFieldsMap {
   try {
@@ -128,6 +157,18 @@ const defaultSystemParams: SystemParams = {
   stockLocations: ['默认仓位'],
 }
 
+const getInitialSystemParams = (): SystemParams => {
+  const local = typeof window !== 'undefined' ? loadSystemParamsFromLocal() : null
+  const base = { ...defaultSystemParams, ...(local || {}) }
+  return {
+    ...base,
+    enableDyeingProcess: !!base.enableDyeingProcess,
+    allowNegativeStock: !!base.allowNegativeStock,
+    enableBatch: !!base.enableBatch,
+    enableStockLocation: !!base.enableStockLocation,
+  }
+}
+
 export const useSettingsStore = create<SettingsState>((set, get) => ({
   // 门店信息
   storeInfo: defaultStoreInfo,
@@ -135,7 +176,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   roles: [],
   customQueries: [],
   inventoryAlertSettings: defaultInventoryAlertSettings,
-  systemParams: defaultSystemParams,
+  systemParams: getInitialSystemParams(),
   systemInfo: defaultSystemInfo,
   pageRequiredFields: typeof window !== 'undefined' ? loadPageRequiredFields() : {},
   documentVisibleColumns: typeof window !== 'undefined' ? loadDocumentVisibleColumns() : {},
@@ -197,19 +238,28 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
     }
   },
 
-  // 加载系统参数（接口返回 HTML/404 等时 getParams 为 null，不覆盖默认值）
+  // 加载系统参数（API + localStorage 合并，localStorage 优先保证用户设置不丢失）
   loadSystemParams: async () => {
     try {
-      const raw = await settingsApi.getParams()
-      if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
-        set({
-          systemParams: {
-            ...defaultSystemParams,
-            ...raw,
-          },
-        })
+      let apiParams: Record<string, any> = {}
+      try {
+        const raw = await settingsApi.getParams()
+        if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
+          apiParams = raw
+        }
+      } catch (e: any) {
+        console.warn('Failed to load system params from API, using local:', e?.message)
       }
-      // null、非对象或报错时保留默认，不 set
+      const localParams = loadSystemParamsFromLocal()
+      const base = { ...defaultSystemParams, ...apiParams, ...(localParams || {}) }
+      const merged: SystemParams = {
+        ...base,
+        enableDyeingProcess: !!base.enableDyeingProcess,
+        allowNegativeStock: !!base.allowNegativeStock,
+        enableBatch: !!base.enableBatch,
+        enableStockLocation: !!base.enableStockLocation,
+      }
+      set({ systemParams: merged })
     } catch (error: any) {
       console.error('Failed to load system params:', error)
     }
@@ -381,11 +431,23 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
     return get().customQueries.find((q) => q.id === id)
   },
   
-  // 系统参数设置（合并返回值，避免部分更新时丢失其他参数）
+  // 系统参数设置（用户 params 优先，持久化到 localStorage，API 失败时仍保存本地）
   updateSystemParams: async (params) => {
     try {
-      const updated = await settingsApi.updateParams(params)
-      const merged = { ...defaultSystemParams, ...get().systemParams, ...(updated && typeof updated === 'object' ? updated : {}) }
+      try {
+        await settingsApi.updateParams(params)
+      } catch (e: any) {
+        console.warn('API update failed, saving locally:', e?.message)
+      }
+      const base = { ...defaultSystemParams, ...get().systemParams, ...params }
+      const merged: SystemParams = {
+        ...base,
+        enableDyeingProcess: params.enableDyeingProcess !== undefined ? !!params.enableDyeingProcess : base.enableDyeingProcess,
+        allowNegativeStock: params.allowNegativeStock !== undefined ? !!params.allowNegativeStock : base.allowNegativeStock,
+        enableBatch: params.enableBatch !== undefined ? !!params.enableBatch : base.enableBatch,
+        enableStockLocation: params.enableStockLocation !== undefined ? !!params.enableStockLocation : base.enableStockLocation,
+      }
+      saveSystemParamsToLocal(merged)
       set({ systemParams: merged })
     } catch (error: any) {
       console.error('Failed to update system params:', error)

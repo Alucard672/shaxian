@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { usePurchaseStore } from '@/store/purchaseStore'
 import { useContactStore } from '@/store/contactStore'
 import { usePrintStore } from '@/store/printStore'
@@ -11,7 +11,7 @@ import DateRangePicker from '@/components/ui/DateRangePicker'
 import VisibleColumnsConfigModal from '@/components/ui/VisibleColumnsConfigModal'
 import { templateApi } from '@/api/client'
 import { generatePrintContent, openPrintDialog } from '@/utils/printService'
-import { Plus, Edit, Trash2, Eye, Search, FileText, Printer, LayoutList } from 'lucide-react'
+import { Plus, Edit, Trash2, Eye, Search, FileText, Printer, LayoutList, Copy } from 'lucide-react'
 import { formatAmount } from '@/utils/formatNumber'
 import { parseISO, startOfDay, endOfDay } from 'date-fns'
 
@@ -28,8 +28,11 @@ const PURCHASE_COLUMN_OPTIONS = [
 ]
 const PURCHASE_DEFAULT_VISIBLE = PURCHASE_COLUMN_OPTIONS.map((c) => c.id)
 
+const displayStatus = (s: string) => (s === '已入库' ? '已完成' : s)
+
 function PurchaseList() {
   const navigate = useNavigate()
+  const location = useLocation()
   const { orders, loading, loadOrders, deleteOrder } = usePurchaseStore()
   const { suppliers } = useContactStore()
   const { addPrintRecord } = usePrintStore()
@@ -38,13 +41,16 @@ function PurchaseList() {
 
   const [searchKeyword, setSearchKeyword] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('全部状态')
-  const [startDate, setStartDate] = useState<string>('')
-  const [endDate, setEndDate] = useState<string>('')
+  const today = new Date().toISOString().split('T')[0]
+  const [startDate, setStartDate] = useState<string>(today)
+  const [endDate, setEndDate] = useState<string>(today)
   const [currentPage, setCurrentPage] = useState(1)
   const pageSize = 10
 
   useEffect(() => {
-    loadOrders()
+    if (!(location.state as any)?.fromCreate) {
+      loadOrders()
+    }
     useContactStore.getState().loadAll()
   }, [loadOrders])
 
@@ -97,12 +103,13 @@ function PurchaseList() {
     // 关键词搜索
     if (searchKeyword) {
       const keyword = searchKeyword.toLowerCase()
-      result = result.filter(
-        (o) =>
+      result = result.filter((o) => {
+        return (
           String(o.orderNumber ?? '').toLowerCase().includes(keyword) ||
           String(o.supplierName ?? '').toLowerCase().includes(keyword) ||
           String(o.operator ?? '').toLowerCase().includes(keyword)
-      )
+        )
+      })
     }
 
     return result.sort(
@@ -268,7 +275,7 @@ function PurchaseList() {
         <span
           className={`text-xs px-2 py-1 rounded-full ${getStatusColor(record.status)}`}
         >
-          {record.status}
+          {displayStatus(record.status)}
         </span>
       ),
     },
@@ -304,8 +311,18 @@ function PurchaseList() {
             size="sm"
             onClick={() => navigate(`/purchase/edit/${record.id}`)}
             className="p-1.5 hover:bg-gray-100 rounded-xl"
+            title="编辑详情"
           >
             <Edit className="w-4 h-4 text-gray-600" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => navigate('/purchase/create', { state: { copyFromId: record.id } })}
+            className="p-1.5 hover:bg-gray-100 rounded-xl"
+            title="复制"
+          >
+            <Copy className="w-4 h-4 text-gray-600" />
           </Button>
           <Button
             variant="ghost"
@@ -370,7 +387,7 @@ function PurchaseList() {
           <div className="text-2xl font-semibold text-yellow-600">{stats.pending}</div>
         </div>
         <div className="bg-white rounded-xl p-4 border border-gray-200">
-          <div className="text-sm text-gray-600 mb-1">已入库</div>
+          <div className="text-sm text-gray-600 mb-1">已完成</div>
           <div className="text-2xl font-semibold text-green-600">{stats.completed}</div>
         </div>
       </div>
@@ -378,8 +395,8 @@ function PurchaseList() {
       {/* 搜索和筛选 */}
       <div className="bg-white rounded-2xl p-4 border border-gray-200">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="md:col-span-2">
-            <div className="flex items-center gap-2">
+          <div className="md:col-span-1">
+            <div className="flex items-center gap-2 max-w-sm">
               <Search className="w-5 h-5 text-gray-400" />
               <input
                 type="text"
@@ -389,7 +406,7 @@ function PurchaseList() {
                   setCurrentPage(1)
                 }}
                 placeholder="搜索采购单号、供应商、经办人..."
-                className="flex-1 px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="flex-1 input-underline px-0 py-2 text-sm focus:outline-none"
               />
             </div>
           </div>
@@ -400,13 +417,13 @@ function PurchaseList() {
                 setStatusFilter(e.target.value)
                 setCurrentPage(1)
               }}
-              className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full input-underline px-0 py-2 text-sm bg-transparent focus:outline-none"
             >
               <option value="全部状态">全部状态</option>
               <option value="草稿">草稿</option>
               <option value="待审核">待审核</option>
               <option value="已审核">已审核</option>
-              <option value="已入库">已入库</option>
+              <option value="已入库">已完成</option>
               <option value="已作废">已作废</option>
             </select>
           </div>
@@ -422,7 +439,18 @@ function PurchaseList() {
                 setEndDate(value)
                 setCurrentPage(1)
               }}
+              inputClassName="input-underline w-full px-0 py-2 text-sm border-0 rounded-none"
             />
+          </div>
+          <div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => loadOrders()}
+              className="w-full h-9 rounded-none border-0 border-b border-blue-300 bg-transparent text-blue-600 text-sm"
+            >
+              查询
+            </Button>
           </div>
         </div>
       </div>

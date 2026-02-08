@@ -634,6 +634,7 @@ export const useProductStore = create<ProductState>((set, get) => ({
   },
 
   // 更新缸号库存（尊重系统参数 allowNegativeStock：启用时允许负库存）
+  // 后端 PUT 要求完整必填字段，故合并当前缸号数据再提交
   updateBatchStock: async (batchId, quantityChange) => {
     try {
       const batch = get().batches.find((b) => b.id === String(batchId))
@@ -647,9 +648,14 @@ export const useProductStore = create<ProductState>((set, get) => ({
         throw new Error('库存不足')
       }
       
-      await productApi.updateBatch(batchId, {
+      const payload = {
+        ...batch,
+        colorId: batch.colorId,
+        code: batch.code ?? (batch as any).batchCode ?? '',
+        initialQuantity: Number(batch.initialQuantity ?? 0),
         stockQuantity: newStockQuantity,
-      })
+      }
+      await productApi.updateBatch(batchId, payload)
       
       set((state) => ({
         batches: state.batches.map((b) =>

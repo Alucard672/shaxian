@@ -474,7 +474,7 @@ export const initSalesOrders = () => [
     totalAmount: 5700,
     receivedAmount: 5700,
     unpaidAmount: 0,
-    status: '已出库' as const,
+    status: '已完成' as const,
     operator: '张三',
     remark: '现货',
     createdAt: getDateTimeString(25),
@@ -507,7 +507,7 @@ export const initSalesOrders = () => [
     totalAmount: 5850,
     receivedAmount: 3000,
     unpaidAmount: 2850,
-    status: '已出库' as const,
+    status: '已完成' as const,
     operator: '李四',
     remark: '部分付款',
     createdAt: getDateTimeString(20),
@@ -1100,4 +1100,3 @@ export const initPrintTemplates = () => [
     updatedAt: '2025-11-18T11:00:00.000Z',
   },
 ]
-

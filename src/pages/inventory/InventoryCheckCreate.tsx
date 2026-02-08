@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, useLocation } from 'react-router-dom'
 import { useInventoryCheckStore } from '@/store/inventoryCheckStore'
 import { useInventoryStore } from '@/store/inventoryStore'
 import { useProductStore } from '@/store/productStore'
@@ -24,6 +24,7 @@ const WAREHOUSE_OPTIONS = [
 
 function InventoryCheckCreate() {
   const navigate = useNavigate()
+  const location = useLocation()
   const { id } = useParams<{ id: string }>()
   const { addOrder, updateOrder, getOrder, loadOrders } = useInventoryCheckStore()
   const { getInventoryDetails } = useInventoryStore()
@@ -55,6 +56,32 @@ function InventoryCheckCreate() {
   useEffect(() => {
     if (isEditMode) loadOrders()
   }, [isEditMode, loadOrders])
+
+  // 复制单据（草稿/计划中）
+  useEffect(() => {
+    const state: any = location.state
+    if (!state || state.copyFromId == null || isEditMode) return
+    const source = getOrder(String(state.copyFromId))
+    if (!source) {
+      loadOrders()
+      return
+    }
+    setName(source.name)
+    setWarehouse(source.warehouse)
+    setPlanDate(source.planDate)
+    setRemark(source.remark || '')
+    setItems(
+      source.items.map((item) => ({
+        batchId: item.batchId,
+        productName: item.productName,
+        colorName: item.colorName,
+        batchCode: item.batchCode,
+        systemQuantity: item.systemQuantity,
+        actualQuantity: item.actualQuantity,
+        unit: item.unit,
+      }))
+    )
+  }, [location.state, isEditMode, getOrder, loadOrders])
 
   // 加载编辑模式数据
   useEffect(() => {
@@ -419,4 +446,3 @@ function InventoryCheckCreate() {
 }
 
 export default InventoryCheckCreate
-

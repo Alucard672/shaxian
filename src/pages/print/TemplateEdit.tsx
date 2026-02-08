@@ -24,6 +24,7 @@ function TemplateEdit() {
       width: 210,
       height: 297,
       unit: 'mm',
+      orientation: 'portrait',
       marginTop: 10,
       marginRight: 10,
       marginBottom: 10,
@@ -123,6 +124,26 @@ function TemplateEdit() {
           width: 210,
           height: 297,
           unit: 'mm',
+          orientation: prev.pageSettings.orientation || 'portrait',
+          marginTop: 10,
+          marginRight: 10,
+          marginBottom: 10,
+          marginLeft: 10,
+        },
+      }))
+    } else if (formData.type === 'A5模板') {
+      setFormData((prev) => ({
+        ...prev,
+        pageSettings: {
+          ...prev.pageSettings,
+          width: 148,
+          height: 210,
+          unit: 'mm',
+          orientation: prev.pageSettings.orientation || 'portrait',
+          marginTop: 10,
+          marginRight: 10,
+          marginBottom: 10,
+          marginLeft: 10,
         },
       }))
     } else if (formData.type === '三联单') {
@@ -133,6 +154,11 @@ function TemplateEdit() {
           width: 9.5,
           height: 5.5,
           unit: 'inch',
+          orientation: prev.pageSettings.orientation || 'portrait',
+          marginTop: 0.2,
+          marginRight: 0.2,
+          marginBottom: 0.2,
+          marginLeft: 0.2,
         },
       }))
     }
@@ -156,20 +182,32 @@ function TemplateEdit() {
       }
       
       // 将数组转换为对象
-      const arrayToObject = (arr: string[], defaultFields: Record<string, any>): Record<string, any> => {
+      const arrayToObject = (arr: Array<string | number>, defaultFields: Record<string, any>): Record<string, any> => {
         const result: Record<string, any> = {}
         // 先设置所有默认字段为false
-        Object.keys(defaultFields).forEach(key => {
+        const keys = Object.keys(defaultFields).filter((key) => key !== 'showTable' && key !== 'textAlign')
+        keys.forEach(key => {
           if (key !== 'showTable' && key !== 'textAlign') {
             result[key] = false
           } else {
             result[key] = defaultFields[key]
           }
         })
-        // 然后根据数组中的字段名设置为true
-        arr.forEach(fieldName => {
-          const mappedName = fieldNameMap[fieldName] || fieldName
-          // 如果映射后的字段名存在于默认字段中，设置为true
+        // 如果数组是索引（数字或数字字符串），按默认字段顺序映射
+        const isIndexArray = arr.every((v) => String(v).trim() !== '' && /^\d+$/.test(String(v)))
+        if (isIndexArray) {
+          arr.forEach((v) => {
+            const idx = Number(v)
+            const key = keys[idx]
+            if (key && result.hasOwnProperty(key)) {
+              result[key] = true
+            }
+          })
+          return result
+        }
+        // 否则根据字段名映射
+        arr.forEach((fieldName) => {
+          const mappedName = fieldNameMap[String(fieldName)] || String(fieldName)
           if (result.hasOwnProperty(mappedName)) {
             result[mappedName] = true
           }
@@ -180,9 +218,23 @@ function TemplateEdit() {
       // 解析JSON字符串字段
       const parseJsonField = (field: any, defaultValue: any, isArrayField = false) => {
         if (!field) return defaultValue
+        const tryParseJson = (val: any) => {
+          if (typeof val !== 'string') return val
+          let parsed: any = val
+          for (let i = 0; i < 2; i++) {
+            if (typeof parsed === 'string') {
+              try {
+                parsed = JSON.parse(parsed)
+              } catch {
+                break
+              }
+            }
+          }
+          return parsed
+        }
         if (typeof field === 'string') {
           try {
-            const parsed = JSON.parse(field)
+            const parsed = tryParseJson(field)
             // 如果是数组字段，转换为对象
             if (isArrayField && Array.isArray(parsed)) {
               return arrayToObject(parsed, defaultValue)
@@ -198,7 +250,26 @@ function TemplateEdit() {
         }
         // 如果已经是数组，转换为对象
         if (isArrayField && Array.isArray(field)) {
-          return arrayToObject(field, defaultValue)
+          return arrayToObject(field as Array<string | number>, defaultValue)
+        }
+        // 如果是对象但键是数字索引，尝试提取值数组
+        if (isArrayField && field && typeof field === 'object' && !Array.isArray(field)) {
+          const keys = Object.keys(field)
+          const numericKeys = keys.filter((k) => /^\d+$/.test(k))
+          if (numericKeys.length === keys.length && keys.length > 0) {
+            const values = Object.values(field)
+            // 如果值是布尔，说明存的是“索引->是否勾选”，直接用索引
+            if (values.every((v) => typeof v === 'boolean')) {
+              return arrayToObject(numericKeys, defaultValue)
+            }
+            const normalized = values
+              .filter((v) => typeof v === 'string' || typeof v === 'number')
+              .map((v) => (typeof v === 'number' ? v : String(v)))
+            if (normalized.length > 0) {
+              return arrayToObject(normalized, defaultValue)
+            }
+            return defaultValue
+          }
         }
         // 如果已经是数组但不是数组字段，返回默认值
         if (Array.isArray(field)) {
@@ -210,6 +281,7 @@ function TemplateEdit() {
       // 映射 API 枚举值到前端显示值
       const mapTypeFromApi = (apiType: string) => {
         if (apiType === 'A4_TEMPLATE') return 'A4模板'
+        if (apiType === 'A5_TEMPLATE') return 'A5模板'
         if (apiType === 'TRIPLE_FORM') return '三联单'
         return apiType || 'A4模板'
       }
@@ -221,12 +293,38 @@ function TemplateEdit() {
         return apiDocType || '销售单'
       }
       
+      const normalizePageSettings = (raw: any) => {
+        const base = raw || {}
+        const width = parseFloat(base.width ?? formData.pageSettings.width) || formData.pageSettings.width
+        const height = parseFloat(base.height ?? formData.pageSettings.height) || formData.pageSettings.height
+        const unit = base.unit || formData.pageSettings.unit || 'mm'
+        const orientation = base.orientation || formData.pageSettings.orientation || 'portrait'
+        const marginTop = parseFloat(base.marginTop ?? formData.pageSettings.marginTop) || 0
+        const marginRight = parseFloat(base.marginRight ?? formData.pageSettings.marginRight) || 0
+        const marginBottom = parseFloat(base.marginBottom ?? formData.pageSettings.marginBottom) || 0
+        const marginLeft = parseFloat(base.marginLeft ?? formData.pageSettings.marginLeft) || 0
+        return {
+          width,
+          height,
+          unit,
+          orientation,
+          marginTop,
+          marginRight,
+          marginBottom,
+          marginLeft,
+        }
+      }
+
+      const parsedPageSettings = normalizePageSettings(
+        parseJsonField(data.pageSettings, formData.pageSettings)
+      )
+
       setFormData({
         name: data.name || '',
         type: mapTypeFromApi(data.type),
         documentType: mapDocumentTypeFromApi(data.documentType),
         description: data.description || '',
-        pageSettings: parseJsonField(data.pageSettings, formData.pageSettings),
+        pageSettings: parsedPageSettings,
         titleSettings: parseJsonField(data.titleSettings, formData.titleSettings),
         basicInfoFields: parseJsonField(data.basicInfoFields, formData.basicInfoFields, true),
         productFields: {
@@ -261,8 +359,13 @@ function TemplateEdit() {
       const apiData: any = {
         name: formData.name,
         description: formData.description || '',
-        // 映射模板类型：A4模板 -> A4_TEMPLATE, 三联单 -> TRIPLE_FORM
-        type: formData.type === 'A4模板' ? 'A4_TEMPLATE' : 'TRIPLE_FORM',
+        // 映射模板类型：A4模板 -> A4_TEMPLATE, A5模板 -> A5_TEMPLATE, 三联单 -> TRIPLE_FORM
+        type:
+          formData.type === 'A4模板'
+            ? 'A4_TEMPLATE'
+            : formData.type === 'A5模板'
+            ? 'A5_TEMPLATE'
+            : 'TRIPLE_FORM',
         // 映射单据类型：销售单 -> SALES_ORDER, 进货单 -> PURCHASE_ORDER, 条码打印 -> BARCODE_PRINT
         documentType: formData.documentType === '销售单' 
           ? 'SALES_ORDER' 
@@ -468,10 +571,10 @@ function TemplateEdit() {
     basicInfoFields: {
       documentNumber: '单据编号',
       documentDate: '单据日期',
-      customerName: '客户名称',
+      customerName: formData.documentType === '进货单' ? '供应商名称' : '客户名称',
       contactPerson: '联系人',
       contactPhone: '联系电话',
-      deliveryAddress: '送货地址',
+      deliveryAddress: formData.documentType === '进货单' ? '地址' : '送货地址',
       printDate: '打印日期',
     },
     productFields: {
@@ -500,7 +603,7 @@ function TemplateEdit() {
       paymentInfo: '付款信息',
       creator: '制单人',
       handler: '经手人',
-      customerSign: '客户签名',
+      customerSign: formData.documentType === '进货单' ? '供应商签名' : '客户签名',
     },
   }
 
@@ -573,6 +676,7 @@ function TemplateEdit() {
                 className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="A4模板">A4模板</option>
+                <option value="A5模板">A5模板</option>
                 <option value="三联单">三联单</option>
               </select>
             </div>
@@ -653,6 +757,25 @@ function TemplateEdit() {
               >
                 <option value="mm">毫米 (mm)</option>
                 <option value="inch">英寸 (inch)</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">方向</label>
+              <select
+                value={formData.pageSettings.orientation || 'portrait'}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    pageSettings: {
+                      ...formData.pageSettings,
+                      orientation: e.target.value as 'portrait' | 'landscape',
+                    },
+                  })
+                }
+                className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="portrait">纵向</option>
+                <option value="landscape">横向</option>
               </select>
             </div>
             <div>

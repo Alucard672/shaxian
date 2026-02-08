@@ -50,8 +50,9 @@ function ReportManagement() {
   const loadPurchaseOrders = usePurchaseStore((s) => s.loadOrders)
 
   const [dateRange, setDateRange] = useState<DateRange>('本月')
-  const [customStartDate, setCustomStartDate] = useState<string>('')
-  const [customEndDate, setCustomEndDate] = useState<string>('')
+  const today = new Date().toISOString().split('T')[0]
+  const [customStartDate, setCustomStartDate] = useState<string>(today)
+  const [customEndDate, setCustomEndDate] = useState<string>(today)
   const [chartType, setChartType] = useState<'line' | 'bar'>('line')
 
   useEffect(() => {
@@ -232,6 +233,7 @@ function ReportManagement() {
                   endDate={customEndDate}
                   onStartDateChange={setCustomStartDate}
                   onEndDateChange={setCustomEndDate}
+                  inputClassName="input-underline w-full px-0 py-2 text-sm border-0 rounded-none"
                 />
               </div>
             )}

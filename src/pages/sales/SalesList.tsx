@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { useSalesStore } from '@/store/salesStore'
 import { useContactStore } from '@/store/contactStore'
 import { usePrintStore } from '@/store/printStore'
@@ -11,7 +11,7 @@ import DateRangePicker from '@/components/ui/DateRangePicker'
 import VisibleColumnsConfigModal from '@/components/ui/VisibleColumnsConfigModal'
 import { templateApi } from '@/api/client'
 import { generatePrintContent, openPrintDialog } from '@/utils/printService'
-import { Plus, Edit, Trash2, Eye, Search, ShoppingCart, Printer, LayoutList, Undo2 } from 'lucide-react'
+import { Plus, Edit, Trash2, Eye, Search, ShoppingCart, Printer, LayoutList, Copy } from 'lucide-react'
 import { formatAmount } from '@/utils/formatNumber'
 import { getCustomerOrderNumberMap } from '@/utils/customerOrderNumber'
 import { parseISO, startOfDay, endOfDay } from 'date-fns'
@@ -30,9 +30,13 @@ const SALES_COLUMN_OPTIONS = [
 ]
 const SALES_DEFAULT_VISIBLE = SALES_COLUMN_OPTIONS.map((c) => c.id)
 
+// 状态显示：已入库/草稿 统一显示为 已完成
+const displayStatus = (s: string) => (s === '已入库' || s === '草稿' ? '已完成' : s)
+
 function SalesList() {
   const navigate = useNavigate()
-  const { orders, loading, loadOrders, deleteOrder, revertOutbound } = useSalesStore()
+  const location = useLocation()
+  const { orders, loading, loadOrders, deleteOrder } = useSalesStore()
   const { customers } = useContactStore()
   const { addPrintRecord } = usePrintStore()
   const { getDocumentVisibleColumns } = useSettingsStore()
@@ -40,13 +44,17 @@ function SalesList() {
 
   const [searchKeyword, setSearchKeyword] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('全部状态')
-  const [startDate, setStartDate] = useState<string>('')
-  const [endDate, setEndDate] = useState<string>('')
+  const today = new Date().toISOString().split('T')[0]
+  const [startDate, setStartDate] = useState<string>(today)
+  const [endDate, setEndDate] = useState<string>(today)
   const [currentPage, setCurrentPage] = useState(1)
   const pageSize = 10
 
   useEffect(() => {
-    loadOrders()
+    // 从创建页跳转而来时跳过重载，避免 API 返回的已收金额覆盖本地正确值
+    if (!(location.state as any)?.fromCreate) {
+      loadOrders()
+    }
     useContactStore.getState().loadAll()
   }, [loadOrders])
 
@@ -54,13 +62,11 @@ function SalesList() {
   const stats = useMemo(() => {
     const list = orders ?? []
     const allCount = list.length
-    const draft = list.filter((o) => o.status === '草稿').length
     const pending = list.filter((o) => o.status === '待审核').length
-    const completed = list.filter((o) => o.status === '已出库').length
+    const completed = list.filter((o) => o.status === '已完成' || o.status === '草稿').length
 
     return {
       allCount,
-      draft,
       pending,
       completed,
     }
@@ -110,7 +116,7 @@ function SalesList() {
           String(o.orderNumber ?? '').toLowerCase().includes(keyword) ||
           String(o.customerName ?? '').toLowerCase().includes(keyword) ||
           String(o.operator ?? '').toLowerCase().includes(keyword) ||
-          (custNo != null && String(custNo).includes(keyword))
+          (custNo != null && String(custNo).toLowerCase().includes(keyword))
         )
       })
     }
@@ -131,12 +137,12 @@ function SalesList() {
   const getStatusColor = (status: SalesOrderStatus) => {
     switch (status) {
       case '草稿':
-        return 'bg-gray-100 text-gray-700'
+        return 'bg-green-100 text-green-700'
       case '待审核':
         return 'bg-yellow-100 text-yellow-700'
       case '已审核':
         return 'bg-blue-100 text-blue-700'
-      case '已出库':
+      case '已完成':
         return 'bg-green-100 text-green-700'
       case '已作废':
         return 'bg-red-100 text-red-700'
@@ -155,18 +161,6 @@ function SalesList() {
       alert('销售单已删除')
     } catch (error: any) {
       alert('删除失败：' + (error.message || '未知错误'))
-    }
-  }
-
-  const handleRevertOutbound = async (id: string) => {
-    if (!confirm('确定要撤销出库吗？将恢复库存并改为草稿状态，可重新编辑明细后再出库。')) {
-      return
-    }
-    try {
-      await revertOutbound(id)
-      alert('已撤销出库，可点击编辑修改明细后重新保存并出库')
-    } catch (error: any) {
-      alert('撤销出库失败：' + (error.message || '未知错误'))
     }
   }
 
@@ -289,7 +283,9 @@ function SalesList() {
       key: 'unpaidAmount',
       title: '欠款金额',
       render: (_: any, record: SalesOrder) => (
-        <span className="text-sm text-red-600">{formatAmount(record.unpaidAmount ?? 0)}</span>
+        <span className="text-sm text-red-600">
+          {formatAmount(Math.max(0, Number(record.totalAmount ?? 0) - Number(record.paidAmount ?? 0)))}
+        </span>
       ),
     },
     {
@@ -297,7 +293,7 @@ function SalesList() {
       title: '状态',
       render: (_: any, record: SalesOrder) => (
         <span className={`text-xs px-2 py-1 rounded-full ${getStatusColor(record.status)}`}>
-          {record.status}
+          {displayStatus(record.status)}
         </span>
       ),
     },
@@ -333,21 +329,19 @@ function SalesList() {
             size="sm"
             onClick={() => navigate(`/sales/edit/${record.id}`)}
             className="p-1.5 hover:bg-gray-100 rounded-xl"
-            title="编辑"
+            title="编辑详情"
           >
             <Edit className="w-4 h-4 text-gray-600" />
           </Button>
-          {(record.status === '已出库' || record.status === '已审核') && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => handleRevertOutbound(record.id)}
-              className="p-1.5 hover:bg-amber-50 rounded-xl"
-              title="撤销出库"
-            >
-              <Undo2 className="w-4 h-4 text-amber-600" />
-            </Button>
-          )}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => navigate('/sales/create', { state: { copyFromId: record.id } })}
+            className="p-1.5 hover:bg-gray-100 rounded-xl"
+            title="复制"
+          >
+            <Copy className="w-4 h-4 text-gray-600" />
+          </Button>
           <Button
             variant="ghost"
             size="sm"
@@ -398,21 +392,17 @@ function SalesList() {
       </div>
 
       {/* 统计卡片 */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="bg-white rounded-xl p-4 border border-gray-200">
           <div className="text-sm text-gray-600 mb-1">全部销售单</div>
           <div className="text-2xl font-semibold text-gray-900">{stats.allCount}</div>
-        </div>
-        <div className="bg-white rounded-xl p-4 border border-gray-200">
-          <div className="text-sm text-gray-600 mb-1">草稿</div>
-          <div className="text-2xl font-semibold text-gray-900">{stats.draft}</div>
         </div>
         <div className="bg-white rounded-xl p-4 border border-gray-200">
           <div className="text-sm text-gray-600 mb-1">待审核</div>
           <div className="text-2xl font-semibold text-yellow-600">{stats.pending}</div>
         </div>
         <div className="bg-white rounded-xl p-4 border border-gray-200">
-          <div className="text-sm text-gray-600 mb-1">已出库</div>
+          <div className="text-sm text-gray-600 mb-1">已完成</div>
           <div className="text-2xl font-semibold text-green-600">{stats.completed}</div>
         </div>
       </div>
@@ -420,8 +410,8 @@ function SalesList() {
       {/* 搜索和筛选 */}
       <div className="bg-white rounded-2xl p-4 border border-gray-200">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="md:col-span-2">
-            <div className="flex items-center gap-2">
+          <div className="md:col-span-1">
+            <div className="flex items-center gap-2 max-w-sm">
               <Search className="w-5 h-5 text-gray-400" />
               <input
                 type="text"
@@ -431,7 +421,7 @@ function SalesList() {
                   setCurrentPage(1)
                 }}
                 placeholder="搜索销售单号、客户单号、客户、经办人..."
-                className="flex-1 px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="flex-1 input-underline px-0 py-2 text-sm focus:outline-none"
               />
             </div>
           </div>
@@ -442,13 +432,12 @@ function SalesList() {
                 setStatusFilter(e.target.value)
                 setCurrentPage(1)
               }}
-              className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full input-underline px-0 py-2 text-sm bg-transparent focus:outline-none"
             >
               <option value="全部状态">全部状态</option>
-              <option value="草稿">草稿</option>
               <option value="待审核">待审核</option>
               <option value="已审核">已审核</option>
-              <option value="已出库">已出库</option>
+              <option value="已完成">已完成</option>
               <option value="已作废">已作废</option>
             </select>
           </div>
@@ -464,7 +453,18 @@ function SalesList() {
                 setEndDate(value)
                 setCurrentPage(1)
               }}
+              inputClassName="input-underline w-full px-0 py-2 text-sm border-0 rounded-none"
             />
+          </div>
+          <div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => loadOrders()}
+              className="w-full h-9 rounded-none border-0 border-b border-blue-300 bg-transparent text-blue-600 text-sm"
+            >
+              查询
+            </Button>
           </div>
         </div>
       </div>

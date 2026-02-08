@@ -51,8 +51,9 @@ function AccountManagement() {
   const [searchKeyword, setSearchKeyword] = useState('')
   const [tabType, setTabType] = useState<AccountType>('全部')
   const [viewType, setViewType] = useState<ViewType>('流水')
-  const [startDate, setStartDate] = useState<string>('')
-  const [endDate, setEndDate] = useState<string>('')
+  const today = new Date().toISOString().split('T')[0]
+  const [startDate, setStartDate] = useState<string>(today)
+  const [endDate, setEndDate] = useState<string>(today)
   const [currentPage, setCurrentPage] = useState(1)
   const [showStatement, setShowStatement] = useState(false)
   const [showPaymentModal, setShowPaymentModal] = useState(false)
@@ -245,11 +246,12 @@ function AccountManagement() {
 
     if (searchKeyword) {
       const keyword = searchKeyword.toLowerCase()
-      result = result.filter(
-        (a) =>
+      result = result.filter((a) => {
+        return (
           String(a.counterpartyName ?? '').toLowerCase().includes(keyword) ||
           String(a.relatedDocument ?? '').toLowerCase().includes(keyword)
-      )
+        )
+      })
     }
 
     return result.sort(
@@ -271,11 +273,12 @@ function AccountManagement() {
 
     if (searchKeyword) {
       const keyword = searchKeyword.toLowerCase()
-      result = result.filter(
-        (s) =>
+      result = result.filter((s) => {
+        return (
           String(s.name ?? '').toLowerCase().includes(keyword) ||
           String(s.code ?? '').toLowerCase().includes(keyword)
-      )
+        )
+      })
     }
 
     return result.sort((a, b) => b.unpaidAmount - a.unpaidAmount)
@@ -714,17 +717,25 @@ function AccountManagement() {
                 onStartDateChange={setStartDate}
                 onEndDateChange={setEndDate}
                 placeholder="选择日期范围"
+                inputClassName="input-underline w-full px-0 py-2 text-sm border-0 rounded-none"
               />
             </div>
             <Button variant="outline" className="h-[39px] rounded-xl border-gray-200">
               <Filter className="w-4 h-4 mr-2" />
               筛选
             </Button>
+            <Button
+              variant="outline"
+              className="h-9 rounded-none border-0 border-b border-blue-300 bg-transparent text-blue-600 text-sm"
+              onClick={() => loadAll()}
+            >
+              查询
+            </Button>
           </div>
 
           {/* 第二行：搜索框 + 导出 + 收付款登记 */}
           <div className="flex items-center gap-4">
-            <div className="relative flex-1 max-w-md">
+            <div className="relative flex-1 max-w-sm">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
               <input
                 type="text"
@@ -734,7 +745,7 @@ function AccountManagement() {
                   setSearchKeyword(e.target.value)
                   setCurrentPage(1)
                 }}
-                className="w-full pl-10 pr-4 py-2 h-[39px] border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                className="w-full pl-10 pr-0 py-2 h-[39px] input-underline text-sm focus:outline-none"
               />
             </div>
             <Button variant="outline" className="h-[38px] rounded-lg border-gray-300">

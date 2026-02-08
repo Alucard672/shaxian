@@ -16,6 +16,7 @@ export interface PrintTemplate {
     width: number
     height: number
     unit?: PrintTemplateUnit
+    orientation?: 'portrait' | 'landscape'
     marginTop: number
     marginRight: number
     marginBottom: number
@@ -60,4 +61,3 @@ export interface PrintTemplate {
   // legacy compatibility (some templates may store qrcode images on root)
   qrcodeImages?: string[]
 }
-

@@ -46,7 +46,7 @@ function SalesDetail({ order, onEdit, onPrint, onClose }: SalesDetailProps) {
   const unit = order.items[0]?.unit || 'kg'
 
   // 判断是否已完成出库
-  const isCompleted = order.status === '已出库'
+  const isCompleted = order.status === '已完成'
 
   return (
     <div className="bg-white rounded-2xl shadow-xl w-[1152px] max-h-[90vh] flex flex-col">
@@ -308,4 +308,3 @@ function SalesDetail({ order, onEdit, onPrint, onClose }: SalesDetailProps) {
 }
 
 export default SalesDetail
-

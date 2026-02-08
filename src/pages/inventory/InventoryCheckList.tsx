@@ -12,6 +12,7 @@ import {
   Plus,
   Eye,
   Edit,
+  Copy,
 } from 'lucide-react'
 import { format, parseISO, startOfDay, endOfDay } from 'date-fns'
 import { InventoryCheckStatus } from '@/types/inventoryCheck'
@@ -29,8 +30,9 @@ function InventoryCheckList() {
   const [statusFilter, setStatusFilter] = useState<
     '全部状态' | '计划中' | '盘点中' | '已完成' | '已取消'
   >('全部状态')
-  const [startDate, setStartDate] = useState<string>('')
-  const [endDate, setEndDate] = useState<string>('')
+  const today = new Date().toISOString().split('T')[0]
+  const [startDate, setStartDate] = useState<string>(today)
+  const [endDate, setEndDate] = useState<string>(today)
   const [currentPage, setCurrentPage] = useState(1)
   const pageSize = 10
 
@@ -67,12 +69,13 @@ function InventoryCheckList() {
     // 关键词搜索
     if (searchKeyword) {
       const keyword = searchKeyword.toLowerCase()
-      result = result.filter(
-        (order) =>
+      result = result.filter((order) => {
+        return (
           String(order.orderNumber ?? '').toLowerCase().includes(keyword) ||
           String(order.name ?? '').toLowerCase().includes(keyword) ||
           String(order.warehouse ?? '').toLowerCase().includes(keyword)
-      )
+        )
+      })
     }
 
     return result.sort(
@@ -152,9 +155,10 @@ function InventoryCheckList() {
               setCurrentPage(1)
             }}
             className="w-full max-w-[320px]"
+            inputClassName="input-underline w-full px-0 py-2 text-sm border-0 rounded-none"
           />
           {/* 搜索框 */}
-          <div className="relative flex-1 max-w-3xl">
+          <div className="relative flex-1 max-w-sm">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
             <input
               type="text"
@@ -164,7 +168,7 @@ function InventoryCheckList() {
                 setSearchKeyword(e.target.value)
                 setCurrentPage(1)
               }}
-              className="w-full pl-10 pr-4 py-2 h-[39px] border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+              className="w-full pl-10 pr-0 py-2 h-[39px] input-underline text-sm focus:outline-none"
             />
           </div>
           {/* 状态下拉 */}
@@ -174,7 +178,7 @@ function InventoryCheckList() {
               setStatusFilter(e.target.value as typeof statusFilter)
               setCurrentPage(1)
             }}
-            className="px-4 py-2 h-[39px] border border-gray-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+            className="px-0 py-2 h-[39px] input-underline text-sm bg-transparent focus:outline-none"
           >
             <option value="全部状态">全部状态</option>
             <option value="计划中">计划中</option>
@@ -182,6 +186,14 @@ function InventoryCheckList() {
             <option value="已完成">已完成</option>
             <option value="已取消">已取消</option>
           </select>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => loadOrders()}
+            className="h-9 rounded-none border-0 border-b border-blue-300 bg-transparent text-blue-600 text-sm"
+          >
+            查询
+          </Button>
           {/* 导出按钮 */}
           <Button variant="outline" className="h-[38px] rounded-lg border-gray-300">
             <Download className="w-4 h-4 mr-2" />
@@ -269,6 +281,15 @@ function InventoryCheckList() {
                           <Button
                             variant="ghost"
                             size="sm"
+                            onClick={() => navigate('/inventory/check/create', { state: { copyFromId: order.id } })}
+                            className="p-1.5 hover:bg-gray-100 rounded-xl"
+                            title="复制"
+                          >
+                            <Copy className="w-4 h-4 text-gray-600" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
                             onClick={() => navigate(`/inventory/check/${order.id}`)}
                             className="p-1.5 hover:bg-gray-100 rounded-xl"
                             title="查看"
@@ -312,4 +333,3 @@ function InventoryCheckList() {
 }
 
 export default InventoryCheckList
-

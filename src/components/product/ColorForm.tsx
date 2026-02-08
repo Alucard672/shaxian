@@ -3,6 +3,7 @@ import { ColorFormData, ColorStatus } from '@/types/product'
 import Input from '../ui/Input'
 import Select from '../ui/Select'
 import Button from '../ui/Button'
+import ColorPicker from '../ui/ColorPicker'
 
 interface ColorFormProps {
   initialData?: Partial<ColorFormData>
@@ -53,11 +54,9 @@ function ColorForm({ initialData, onSubmit, onCancel }: ColorFormProps) {
             颜色值
           </label>
           <div className="flex items-center gap-4">
-            <input
-              type="color"
-              value={colorValue || '#000000'}
-              onChange={(e) => setValue('colorValue', e.target.value)}
-              className="w-20 h-10 border border-gray-200 rounded-lg cursor-pointer"
+            <ColorPicker
+              value={colorValue || ''}
+              onChange={(v) => setValue('colorValue', v)}
             />
             <Input
               placeholder="#87CEEB"
@@ -91,4 +90,3 @@ function ColorForm({ initialData, onSubmit, onCancel }: ColorFormProps) {
 }
 
 export default ColorForm
-

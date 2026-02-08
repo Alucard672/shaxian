@@ -7,6 +7,7 @@ import {
 } from '@/types/sales'
 import { salesApi } from '@/api/client'
 import { useProductStore } from './productStore'
+import { useSettingsStore } from './settingsStore'
 import { useAccountStore } from './accountStore'
 import { mapSalesStatusToApi, mapSalesApiToZh } from '@/utils/orderStatusMap'
 
@@ -24,7 +25,6 @@ interface SalesState {
   deleteOrder: (id: string) => Promise<void>
   getOrder: (id: string) => SalesOrder | undefined
   cancelOrder: (id: string) => Promise<void> // 作废
-  revertOutbound: (id: string) => Promise<void> // 撤销出库：恢复库存、状态改为草稿，便于修改明细
   generateOrderNumber: () => string
   checkStock: (batchId: string, quantity: number) => Promise<boolean> // 检查库存
 }
@@ -49,7 +49,7 @@ export const useSalesStore = create<SalesState>((set, get) => ({
           status: mapSalesApiToZh(o.status ?? ''),
           receivedAmount: received,
           paidAmount: received,
-          unpaidAmount: o.unpaidAmount != null ? Number(o.unpaidAmount) : unpaid,
+          unpaidAmount: unpaid,
         }
       })
       set({ orders, loading: false })
@@ -79,7 +79,7 @@ export const useSalesStore = create<SalesState>((set, get) => ({
     }
   },
 
-  addOrder: async (data, status = '草稿') => {
+  addOrder: async (data, status = '已完成') => {
     try {
       const { updateBatchStock } = useProductStore.getState()
       const { addAccountReceivable } = useAccountStore.getState()
@@ -111,6 +111,7 @@ export const useSalesStore = create<SalesState>((set, get) => ({
       }, 0)
       const unpaidAmount = Math.max(0, totalAmount - Number(normalizedReceivedAmount || 0))
 
+      const allowNegativeStock = !!useSettingsStore.getState().systemParams?.allowNegativeStock
       const orderData: any = {
         ...data,
         // 兜底：交货日期若为空，默认等于销售日期（避免后端必填校验失败）
@@ -123,22 +124,30 @@ export const useSalesStore = create<SalesState>((set, get) => ({
         items: normalizedItems,
         operator: '当前用户', // TODO: 从用户状态获取
         status: mapSalesStatusToApi(status),
+        allowNegativeStock, // 传递允许负库存，供后端校验时参考
       }
       
       const created = await salesApi.create(orderData)
+      const apiReceived = Number((created as any).receivedAmount ?? (created as any).paidAmount ?? 0)
       const newOrder = {
         ...created,
         status: mapSalesApiToZh((created as any).status ?? '') || status,
+        receivedAmount: apiReceived > 0 ? apiReceived : normalizedReceivedAmount,
+        paidAmount: apiReceived > 0 ? apiReceived : normalizedPaidAmount,
+        unpaidAmount: apiReceived > 0 ? Math.max(0, totalAmount - apiReceived) : unpaidAmount,
       }
 
-      // 如果不是草稿状态，自动执行出库操作
+      // 默认即为完成单，自动执行出库操作
       if (status !== '草稿') {
-        // 减少库存
+        // 减少库存（失败时抛出，让用户看到错误提示）
         for (const item of data.items) {
           try {
             await updateBatchStock(item.batchId, -item.quantity)
-          } catch (error) {
+          } catch (error: any) {
             console.error('Failed to update batch stock:', error)
+            const msg = error?.message || '库存更新失败'
+            const hint = allowNegativeStock ? '（后端可能未支持负库存，请联系管理员）' : '。如需允许负库存出库，请在【系统设置→参数设置】中开启「允许负库存出库」。'
+            throw new Error(/库存不足|缸号/i.test(msg) ? msg + hint : msg)
           }
         }
         
@@ -180,27 +189,69 @@ export const useSalesStore = create<SalesState>((set, get) => ({
   },
 
   updateOrder: async (id, data) => {
+    let current: any = null
+    let detail: any | null = null
     try {
-      const current = get().orders.find((o) => String(o.id) === String(id))
+      current = get().orders.find((o) => String(o.id) === String(id))
       const isDraft = current?.status === '草稿'
+      const hasInvalidItems = (items?: any[]) =>
+        !Array.isArray(items) ||
+        items.length === 0 ||
+        items.some((it) => {
+          const qty = Number(it?.quantity ?? 0)
+          const price = Number(it?.price ?? it?.unitPrice ?? 0)
+          return !it?.productId || !it?.colorId || qty <= 0 || price <= 0
+        })
+      if (!current || !current.customerId || hasInvalidItems((current as any)?.items)) {
+        try {
+          detail = await salesApi.getById(id)
+          if (detail) {
+            current = {
+              ...detail,
+              status: mapSalesApiToZh((detail as any).status ?? '') || (detail as any).status,
+            } as any
+          }
+        } catch (e) {
+          console.error('Failed to load sales order detail:', e)
+        }
+      }
+      if (!current) throw new Error('订单不存在')
+      // 允许修改明细（不再区分草稿/正式）
       const received = Number((data as any).paidAmount ?? (data as any).receivedAmount ?? 0)
-      const totalFromItems = Array.isArray((data as any).items)
-        ? (data as any).items.reduce((sum: number, it: any) => sum + (Number(it?.quantity) || 0) * (Number(it?.price ?? it?.unitPrice) || 0), 0)
-        : 0
-      const totalAmount = totalFromItems > 0 ? totalFromItems : (Number(current?.totalAmount) || 0)
+      const nextStatus = (data as any).status ?? current?.status
+      const normalizeItems = (items: any[]) =>
+        items.map((it) => ({
+          ...it,
+          price: it?.price ?? it?.unitPrice ?? 0,
+          unitPrice: it?.unitPrice ?? it?.price ?? 0,
+          batchId: it?.batchId ?? '',
+          batchCode: it?.batchCode ?? '',
+        }))
+      const nextItems = Array.isArray((data as any).items)
+        ? normalizeItems((data as any).items)
+        : normalizeItems(((detail as any)?.items ?? (current as any).items) || [])
+      const totalFromItems = nextItems.reduce((sum: number, it: any) => {
+        return sum + (Number(it?.quantity) || 0) * (Number(it?.price ?? it?.unitPrice) || 0)
+      }, 0)
+      const totalAmount = totalFromItems > 0 ? totalFromItems : (Number((current as any)?.totalAmount) || 0)
       const unpaidAmount = Math.max(0, totalAmount - received)
 
       if (!isDraft && current) {
+        const base = (detail as any) || current
         const fullPayload = {
-          ...current,
+          ...base,
           ...(data as any),
           status: mapSalesStatusToApi((current as any).status ?? ''),
           receivedAmount: received,
           paidAmount: received,
           totalAmount,
           unpaidAmount,
-          remark: (data as any).remark ?? current.remark,
-          items: Array.isArray((data as any).items) ? (data as any).items : current.items,
+          remark: (data as any).remark ?? base.remark,
+          customerId: (data as any).customerId ?? base.customerId,
+          customerName: (data as any).customerName ?? base.customerName,
+          salesDate: (data as any).salesDate ?? base.salesDate,
+          deliveryDate: (data as any).deliveryDate ?? base.deliveryDate ?? (data as any).salesDate ?? base.salesDate,
+          items: nextItems,
         }
         try {
           const updated = await salesApi.updatePayment(id, fullPayload) as any
@@ -218,10 +269,6 @@ export const useSalesStore = create<SalesState>((set, get) => ({
           }))
           return
         } catch (err: any) {
-          const msg = String(err?.message ?? '')
-          if (/只能修改草稿|仅.*草稿|draft only/i.test(msg)) {
-            throw new Error('当前后端仅允许修改草稿状态订单。已出库订单的收款请通过【账款管理】操作；或联系管理员开放已出库订单的收款更新。')
-          }
           throw err
         }
       }
@@ -230,6 +277,18 @@ export const useSalesStore = create<SalesState>((set, get) => ({
       const payload = d.status != null
         ? { ...data, status: mapSalesStatusToApi(d.status) }
         : data
+      if (!(payload as any).deliveryDate) {
+        ;(payload as any).deliveryDate = (payload as any).salesDate ?? (current as any).salesDate
+      }
+      if (!(payload as any).items) {
+        ;(payload as any).items = nextItems
+      }
+      if (!(payload as any).customerId) {
+        ;(payload as any).customerId = (detail as any)?.customerId ?? (current as any).customerId
+      }
+      if (!(payload as any).customerName) {
+        ;(payload as any).customerName = (detail as any)?.customerName ?? (current as any).customerName
+      }
       const updated = await salesApi.update(id, payload) as any
       const normalized = {
         ...updated,
@@ -239,15 +298,57 @@ export const useSalesStore = create<SalesState>((set, get) => ({
         totalAmount: totalFromItems > 0 ? totalFromItems : (Number(updated?.totalAmount) || 0),
         unpaidAmount,
       }
+      // 草稿 -> 已完成时执行出库与应收
+      if (isDraft && current && (nextStatus === '已完成' || nextStatus === '已审核')) {
+        const { updateBatchStock } = useProductStore.getState()
+        const { addAccountReceivable } = useAccountStore.getState()
+        for (const item of (normalized.items || current.items || []) as any[]) {
+          if (item?.batchId && item?.quantity) {
+            await updateBatchStock(item.batchId, -Number(item.quantity))
+          }
+        }
+        const total = Number(normalized.totalAmount ?? 0)
+        const unpaid = Math.max(0, total - received)
+        if (unpaid > 0) {
+          await addAccountReceivable({
+            customerId: (data as any).customerId ?? current.customerId,
+            customerName: (data as any).customerName ?? current.customerName,
+            salesOrderId: current.id,
+            salesOrderNumber: current.orderNumber,
+            receivableAmount: total,
+            receivedAmount: received,
+            accountDate: (data as any).salesDate ?? current.salesDate,
+          })
+        }
+      }
       set((state) => ({
         orders: state.orders.map((o) => (String(o.id) === String(id) ? normalized : o))
       }))
     } catch (error: any) {
-      console.error('Failed to update sales order:', error)
-      const msg = String(error?.message ?? '')
-      if (/只能修改草稿|仅.*草稿|draft only/i.test(msg)) {
-        throw new Error('当前后端仅允许修改草稿状态订单。已出库订单的收款请通过【账款管理】操作；或联系管理员开放已出库订单的收款更新。')
+      const msg = String(error?.message || '')
+      if (msg.includes('只能修改草稿状态')) {
+        try {
+          // 后端限制：非草稿不可直接修改 => 作废原单并重建新单
+          const base = (detail as any) || current
+          if (!base) throw error
+          const rebuiltItems = Array.isArray((data as any).items)
+            ? (data as any).items
+            : (base as any).items || []
+          const rebuiltOrder: any = {
+            ...base,
+            ...(data as any),
+            items: rebuiltItems,
+            status: '已完成',
+          }
+          await get().cancelOrder(id)
+          await get().addOrder(rebuiltOrder, '已完成')
+          return
+        } catch (e) {
+          console.error('Fallback recreate failed:', e)
+          throw error
+        }
       }
+      console.error('Failed to update sales order:', error)
       throw error
     }
   },
@@ -270,6 +371,22 @@ export const useSalesStore = create<SalesState>((set, get) => ({
 
   cancelOrder: async (id) => {
     try {
+      const order = get().orders.find((o) => String(o.id) === String(id))
+      if (!order) throw new Error('订单不存在')
+      const { updateBatchStock } = useProductStore.getState()
+      // 作废时还原库存：已完成/已审核订单曾减少库存，需加回
+      if (order.status === '已完成' || order.status === '已审核') {
+        for (const item of order.items || []) {
+          if (item.batchId && (item.quantity ?? 0) > 0) {
+            try {
+              await updateBatchStock(item.batchId, Number(item.quantity))
+            } catch (e: any) {
+              console.error('还原库存失败:', e)
+              throw new Error(`还原库存失败：${item.productName || ''} ${item.batchCode || ''}，${e?.message || '请检查缸号是否存在'}`)
+            }
+          }
+        }
+      }
       await salesApi.update(id, { status: mapSalesStatusToApi('已作废') })
       set((state) => ({
         orders: state.orders.map((o) =>
@@ -282,38 +399,4 @@ export const useSalesStore = create<SalesState>((set, get) => ({
     }
   },
 
-  revertOutbound: async (id) => {
-    const order = get().orders.find((o) => String(o.id) === String(id))
-    if (!order) throw new Error('订单不存在')
-    if (order.status !== '已出库' && order.status !== '已审核') {
-      throw new Error('只有已出库或已审核的订单可以撤销出库')
-    }
-    const { updateBatchStock } = useProductStore.getState()
-    try {
-      for (const item of order.items || []) {
-        if (item.batchId && (item.quantity ?? 0) > 0) {
-          try {
-            await updateBatchStock(item.batchId, Number(item.quantity))
-          } catch (e: any) {
-            console.error('恢复库存失败:', e)
-            throw new Error(`恢复库存失败：${item.productName || ''} ${item.batchCode || ''}，${e?.message || '请检查缸号是否存在'}`)
-          }
-        }
-      }
-      const fullPayload = {
-        ...order,
-        status: mapSalesStatusToApi('草稿'),
-        items: order.items ?? [],
-      }
-      await salesApi.update(id, fullPayload)
-      set((state) => ({
-        orders: state.orders.map((o) =>
-          String(o.id) === String(id) ? { ...o, status: '草稿' } : o
-        )
-      }))
-    } catch (error: any) {
-      console.error('Failed to revert outbound:', error)
-      throw error
-    }
-  },
 }))

@@ -373,7 +373,7 @@ const tutorialModules: TutorialModule[] = [
               '确认信息无误后，点击右上角"保存销售单"按钮',
               '系统会自动减少库存数量',
               '如果有欠款，会自动生成应收账款',
-              '销售单状态变为"已出库"'
+              '销售单状态变为"已完成"'
             ]
           }
         ]
@@ -1331,7 +1331,6 @@ function TutorialManagement() {
 }
 
 export default TutorialManagement
-
 
 
 

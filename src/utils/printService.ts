@@ -28,15 +28,18 @@ export function generatePrintContent(data: PrintData): string {
 
   const widthMm = convertToMm(template.pageSettings.width)
   const heightMm = convertToMm(template.pageSettings.height)
+  const orientation = template.pageSettings.orientation || 'portrait'
+  const effectiveWidthMm = orientation === 'landscape' ? heightMm : widthMm
+  const effectiveHeightMm = orientation === 'landscape' ? widthMm : heightMm
   const marginTopMm = convertToMm(template.pageSettings.marginTop)
   const marginRightMm = convertToMm(template.pageSettings.marginRight)
   const marginBottomMm = convertToMm(template.pageSettings.marginBottom)
   const marginLeftMm = convertToMm(template.pageSettings.marginLeft)
+  const safeMarginTopMm = Math.min(marginTopMm, effectiveHeightMm * 0.3)
+  const safeMarginRightMm = Math.min(marginRightMm, effectiveWidthMm * 0.3)
+  const safeMarginBottomMm = Math.min(marginBottomMm, effectiveHeightMm * 0.3)
+  const safeMarginLeftMm = Math.min(marginLeftMm, effectiveWidthMm * 0.3)
 
-  // 计算页面尺寸（像素）
-  const mmToPx = (mm: number) => mm * 3.779527559
-  const pageWidth = mmToPx(widthMm)
-  const pageHeight = mmToPx(heightMm)
 
   // 客户/供应商信息
   const customerName = documentType === '销售单'
@@ -71,7 +74,7 @@ export function generatePrintContent(data: PrintData): string {
       <style>
         @media print {
           @page {
-            size: ${widthMm}mm ${heightMm}mm;
+            size: ${effectiveWidthMm}mm ${effectiveHeightMm}mm;
             margin: 0;
           }
           * {
@@ -81,13 +84,13 @@ export function generatePrintContent(data: PrintData): string {
           body {
             margin: 0;
             padding: 0;
-            width: ${widthMm}mm;
-            height: ${heightMm}mm;
+            width: ${effectiveWidthMm}mm;
+            height: ${effectiveHeightMm}mm;
           }
           .print-container {
-            width: ${widthMm}mm;
-            min-height: ${heightMm}mm;
-            padding: ${marginTopMm}mm ${marginRightMm}mm ${marginBottomMm}mm ${marginLeftMm}mm;
+            width: ${effectiveWidthMm}mm;
+            min-height: ${effectiveHeightMm}mm;
+            padding: ${safeMarginTopMm}mm ${safeMarginRightMm}mm ${safeMarginBottomMm}mm ${safeMarginLeftMm}mm;
             box-sizing: border-box;
             page-break-inside: avoid;
             page-break-after: avoid;
@@ -102,8 +105,9 @@ export function generatePrintContent(data: PrintData): string {
           padding: 0;
         }
         .print-container {
-          width: ${pageWidth}px;
-          padding: ${mmToPx(marginTopMm)}px ${mmToPx(marginRightMm)}px ${mmToPx(marginBottomMm)}px ${mmToPx(marginLeftMm)}px;
+          width: ${effectiveWidthMm}mm;
+          min-height: ${effectiveHeightMm}mm;
+          padding: ${safeMarginTopMm}mm ${safeMarginRightMm}mm ${safeMarginBottomMm}mm ${safeMarginLeftMm}mm;
           box-sizing: border-box;
           page-break-inside: avoid;
         }
@@ -199,7 +203,7 @@ export function generatePrintContent(data: PrintData): string {
         .qrcode {
           width: 64px;
           height: 64px;
-          border: 2px solid #ef4444;
+          border: 0;
           display: inline-block;
         }
       </style>
@@ -533,4 +537,3 @@ export function openPrintDialog(htmlContent: string) {
     }
   }, 500)
 }
-

@@ -8,13 +8,13 @@ import Input from '@/components/ui/Input'
 import ModernTable from '@/components/ui/ModernTable'
 import BaseCard from '@/components/ui/BaseCard'
 import StatusBadge from '@/components/ui/StatusBadge'
-import ManufacturerSelect from '@/components/ui/ManufacturerSelect'
 import SelectWithAdd from '@/components/ui/SelectWithAdd'
 import { Plus, Edit, Trash2, Save, Package, Search, Palette, Upload, X, Image as ImageIcon, Barcode, Settings, LayoutList } from 'lucide-react'
 import ColorPicker from '@/components/ui/ColorPicker'
 import RequiredFieldsConfigModal from '@/components/ui/RequiredFieldsConfigModal'
 import VisibleColumnsConfigModal from '@/components/ui/VisibleColumnsConfigModal'
 import { RequiredMark } from '@/components/ui/RequiredMark'
+import { useContactStore } from '@/store/contactStore'
 
 const PRODUCT_PAGE_KEY = 'product'
 const PRODUCT_LIST_DOC_KEY = 'product-list'
@@ -55,6 +55,7 @@ function ProductManagement() {
   } = useProductStore()
   
   const { units, loadUnits, addUnit, systemParams, getPageRequiredFields, getDocumentVisibleColumns } = useSettingsStore()
+  const { suppliers, loadSuppliers, addSupplier } = useContactStore()
   const defaultRequired = systemParams?.productRequiredFields || ['name', 'code']
   const requiredFields = getPageRequiredFields(PRODUCT_PAGE_KEY, defaultRequired)
   const [showRequiredModal, setShowRequiredModal] = useState(false)
@@ -103,7 +104,8 @@ function ProductManagement() {
     loadProducts()
     loadColors()
     loadUnits()
-  }, [loadProducts, loadColors, loadUnits])
+    loadSuppliers()
+  }, [loadProducts, loadColors, loadUnits, loadSuppliers])
 
   // 当编辑商品时，加载该商品的色号
   useEffect(() => {
@@ -252,15 +254,15 @@ function ProductManagement() {
   }
 
   const handleDelete = async (id: string) => {
-    if (!confirm('确定要删除这个商品吗？删除后无法恢复。')) {
+    if (!confirm('确定要作废这个商品吗？作废后将不再用于开单。')) {
       return
     }
 
     try {
       await deleteProduct(id)
-      alert('商品已删除')
+      alert('商品已作废')
     } catch (error: any) {
-      alert('删除失败：' + (error.message || '未知错误'))
+      alert('作废失败：' + (error.message || '未知错误'))
     }
   }
 
@@ -457,6 +459,7 @@ function ProductManagement() {
             size="sm"
             onClick={() => handleDelete(record.id)}
             className="p-1.5 hover:bg-gray-100 rounded-xl"
+            title="作废"
           >
             <Trash2 className="w-4 h-4 text-red-600" />
           </Button>
@@ -533,6 +536,17 @@ function ProductManagement() {
             placeholder="搜索商品名称、编码、成分、色号..."
             className="flex-1"
           />
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              loadProducts()
+              loadColors()
+            }}
+            className="h-8 rounded-lg border-blue-200 bg-blue-50 text-blue-600 text-xs"
+          >
+            查询
+          </Button>
         </div>
       </BaseCard>
 
@@ -557,7 +571,7 @@ function ProductManagement() {
       {/* 新增/编辑商品弹窗 */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <BaseCard className="w-full max-w-2xl max-h-[90vh] overflow-y-auto" padding="lg">
+          <BaseCard className="w-full max-w-5xl max-h-[90vh] overflow-y-auto" padding="lg">
             <h2 className="text-xl font-semibold text-gray-900 mb-4">
               {editingProduct ? '编辑商品' : '新建商品'}
             </h2>
@@ -600,10 +614,40 @@ function ProductManagement() {
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     厂家 <RequiredMark required={requiredFields.includes('manufacturer')} />
                   </label>
-                  <ManufacturerSelect
+                  <SelectWithAdd
                     value={formData.manufacturer || ''}
                     onChange={(value) => setFormData({ ...formData, manufacturer: value })}
-                    placeholder="输入拼音或中文搜索厂家，支持快速新增"
+                    options={(() => {
+                      const base = suppliers.map((s) => ({
+                        value: String(s.name ?? ''),
+                        label: String(s.name ?? ''),
+                      }))
+                      if (
+                        formData.manufacturer &&
+                        !base.some((o) => o.value === String(formData.manufacturer))
+                      ) {
+                        return [{ value: String(formData.manufacturer), label: String(formData.manufacturer) }, ...base]
+                      }
+                      return base
+                    })()}
+                    onAddNew={async (name) => {
+                      const supplierCode = `SUPP-${Date.now().toString().slice(-6)}`
+                      try {
+                        await addSupplier({
+                          name: name.trim(),
+                          code: supplierCode,
+                          type: '厂家',
+                          status: '合作中',
+                          settlementCycle: '现结',
+                        })
+                        setFormData({ ...formData, manufacturer: name.trim() })
+                      } catch (error: any) {
+                        alert('添加供应商失败：' + (error.message || '未知错误'))
+                      }
+                    }}
+                    placeholder="选择或输入供应商"
+                    addText="快速添加供应商"
+                    searchable={true}
                   />
                 </div>
                 <div>

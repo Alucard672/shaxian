@@ -8,6 +8,7 @@ import {
   PaymentMethod,
 } from '@/types/account'
 import { accountApi } from '@/api/client'
+import { useSalesStore } from './salesStore'
 
 interface AccountState {
   receivables: AccountReceivable[]
@@ -182,18 +183,43 @@ export const useAccountStore = create<AccountState>((set, get) => ({
           
           const newReceivedAmount = r.receivedAmount + data.amount
           const newUnpaidAmount = r.receivableAmount - newReceivedAmount
+          const clampedUnpaidAmount = Math.max(0, newUnpaidAmount)
           
           return {
             ...r,
             receivedAmount: newReceivedAmount,
-            unpaidAmount: newUnpaidAmount,
-            status: (newUnpaidAmount <= 0 ? '已结清' : '未结清') as AccountStatus,
+            unpaidAmount: clampedUnpaidAmount,
+            status: (clampedUnpaidAmount <= 0 ? '已结清' : '未结清') as AccountStatus,
             updatedAt: new Date().toISOString(),
           }
         })
         
         return { receipts, receivables }
       })
+
+      // 同步更新销售单的收款/欠款（若存在关联）
+      try {
+        const receivable = get().receivables.find((r) => r.id === data.accountReceivableId)
+        const salesOrderId = (receivable as any)?.salesOrderId
+        if (salesOrderId) {
+          const salesStore = useSalesStore
+          salesStore.setState((s) => ({
+            orders: s.orders.map((o: any) => {
+              if (String(o.id) !== String(salesOrderId)) return o
+              const newPaid = Number(o.paidAmount || 0) + Number(data.amount || 0)
+              const total = Number(o.totalAmount || 0)
+              return {
+                ...o,
+                paidAmount: newPaid,
+                receivedAmount: newPaid,
+                unpaidAmount: Math.max(0, total - newPaid),
+              }
+            }),
+          }))
+        }
+      } catch {
+        // ignore sync errors
+      }
       
       return newReceipt
     } catch (error: any) {
@@ -245,12 +271,13 @@ export const useAccountStore = create<AccountState>((set, get) => ({
           
           const newPaidAmount = p.paidAmount + data.amount
           const newUnpaidAmount = p.payableAmount - newPaidAmount
+          const clampedUnpaidAmount = Math.max(0, newUnpaidAmount)
           
           return {
             ...p,
             paidAmount: newPaidAmount,
-            unpaidAmount: newUnpaidAmount,
-            status: (newUnpaidAmount <= 0 ? '已结清' : '未结清') as AccountStatus,
+            unpaidAmount: clampedUnpaidAmount,
+            status: (clampedUnpaidAmount <= 0 ? '已结清' : '未结清') as AccountStatus,
             updatedAt: new Date().toISOString(),
           }
         })

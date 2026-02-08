@@ -3,7 +3,7 @@ const salesToApi: Record<string, string> = {
   草稿: 'DRAFT',
   待审核: 'PENDING_REVIEW',
   已审核: 'APPROVED',
-  已出库: 'SHIPPED',
+  已完成: 'SHIPPED',
   已作废: 'CANCELLED',
 }
 
@@ -12,7 +12,7 @@ const salesApiToZh: Record<string, string> = {
   DRAFT: '草稿',
   PENDING_REVIEW: '待审核',
   APPROVED: '已审核',
-  SHIPPED: '已出库',
+  SHIPPED: '已完成',
   CANCELLED: '已作废',
 }
 

@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import React from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, useLocation } from 'react-router-dom'
 import { usePurchaseStore } from '@/store/purchaseStore'
 import { useProductStore } from '@/store/productStore'
 import { useContactStore } from '@/store/contactStore'
@@ -59,6 +59,7 @@ function mergeRemarkLine(remark: string, prefix: string, line: string | null): s
 
 function PurchaseCreate() {
   const navigate = useNavigate()
+  const location = useLocation()
   const { id } = useParams<{ id?: string }>()
   const isEdit = id !== undefined
   const { orders, addOrder, loadOrders } = usePurchaseStore()
@@ -101,9 +102,11 @@ function PurchaseCreate() {
     remark: '',
   })
 
-  const [paymentLines, setPaymentLines] = useState<PaymentLine[]>([
-    { id: makeId(), method: '现金', amount: 0 },
-  ])
+  const [paymentLines, setPaymentLines] = useState<PaymentLine[]>(
+    PAYMENT_METHODS.map((method) => ({ id: makeId('pay'), method, amount: 0 }))
+  )
+  const [forceDraftSave, setForceDraftSave] = useState(false)
+  const isCopyMode = !!(location.state as any)?.copyFromId
 
   const debugQuickAdd =
     typeof window !== 'undefined' &&
@@ -116,6 +119,47 @@ function PurchaseCreate() {
       loadOrders()
     }
   }, [loadAll, loadSuppliers, isEdit, loadOrders])
+
+  // 复制单据（草稿）
+  useEffect(() => {
+    const state: any = location.state
+    if (!state || state.copyFromId == null || isEdit) return
+    const source = orders.find((o) => String(o.id) === String(state.copyFromId))
+    if (!source) {
+      loadOrders()
+      return
+    }
+    setForceDraftSave(true)
+    setFormData({
+      supplierId: String(source.supplierId ?? ''),
+      supplierName: source.supplierName ?? '',
+      purchaseDate: source.purchaseDate,
+      expectedDate: source.expectedDate || '',
+      paidAmount: 0,
+      paymentMethod: '现金',
+      remark: source.remark || '',
+    })
+    setPaymentLines(PAYMENT_METHODS.map((method) => ({ id: makeId('pay'), method, amount: 0 })))
+    setItems(
+      (source.items || []).map((item) => ({
+        productId: item.productId,
+        productName: item.productName,
+        productCode: item.productCode || '',
+        colorId: item.colorId || '',
+        colorName: item.colorName || '',
+        colorCode: item.colorCode || '',
+        batchCode: item.batchCode || '',
+        quantity: item.quantity,
+        pieceCount: item.pieceCount || 0,
+        unitWeight: item.unitWeight || 0,
+        unit: item.unit || 'kg',
+        price: item.price || item.unitPrice || 0,
+        productionDate: item.productionDate || new Date().toISOString().split('T')[0],
+        stockLocation: item.stockLocation || '',
+        remark: item.remark || '',
+      }))
+    )
+  }, [location.state, orders, loadOrders, isEdit])
 
   // 如果是编辑模式，加载订单数据
   useEffect(() => {
@@ -131,15 +175,16 @@ function PurchaseCreate() {
           paymentMethod: (order as any).paymentMethod || '现金',
           remark: order.remark || '',
         })
-        setPaymentLines([
-          {
-            id: makeId(),
-            method: (PAYMENT_METHODS.includes(String((order as any).paymentMethod || '') as any)
-              ? (order as any).paymentMethod
-              : '现金') as PaymentLine['method'],
-            amount: Number(order.paidAmount || 0),
-          },
-        ])
+        const method = (PAYMENT_METHODS.includes(String((order as any).paymentMethod || '') as any)
+          ? (order as any).paymentMethod
+          : '现金') as PaymentLine['method']
+        setPaymentLines(
+          PAYMENT_METHODS.map((m) => ({
+            id: makeId('pay'),
+            method: m,
+            amount: m === method ? Number(order.paidAmount || 0) : 0,
+          }))
+        )
         setItems(order.items.map((item) => ({
           productId: item.productId,
           productName: item.productName,
@@ -160,6 +205,8 @@ function PurchaseCreate() {
       }
     }
   }, [isEdit, id, orders])
+
+  // 保持付款明细仅由用户输入
 
   // 多笔付款合计 -> 回填已付金额；并保留一个兼容的 paymentMethod（取第一笔）
   useEffect(() => {
@@ -214,7 +261,7 @@ function PurchaseCreate() {
       colorId: itemForm.colorId,
       colorName: itemForm.colorName,
       colorCode: itemForm.colorCode,
-      batchCode: enableBatch ? itemForm.batchCode : '默认',
+      batchCode: enableBatch ? (itemForm.batchCode || '默认') : '默认',
       quantity: itemForm.quantity,
       pieceCount: itemForm.pieceCount,
       unitWeight: itemForm.unitWeight,
@@ -279,7 +326,7 @@ function PurchaseCreate() {
       colorId: itemForm.colorId,
       colorName: itemForm.colorName,
       colorCode: itemForm.colorCode,
-      batchCode: enableBatch ? itemForm.batchCode : '默认',
+      batchCode: enableBatch ? (itemForm.batchCode || '默认') : '默认',
       quantity: itemForm.quantity,
       pieceCount: itemForm.pieceCount,
       unitWeight: itemForm.unitWeight,
@@ -373,7 +420,7 @@ function PurchaseCreate() {
     return items.reduce((sum, item) => sum + item.quantity * item.price, 0)
   }
 
-  const handleSave = async (status: '草稿' | '已入库' = '草稿') => {
+  const handleSave = async (status: '草稿' | '已入库') => {
     const missing: string[] = []
     if (requiredFields.includes('supplierId') && !formData.supplierId) missing.push('供应商')
     if (requiredFields.includes('purchaseDate') && !formData.purchaseDate) missing.push('采购日期')
@@ -402,7 +449,7 @@ function PurchaseCreate() {
       const paymentLine = parts.length ? `付款明细：${parts.join('；')}` : null
       const mergedRemark = mergeRemarkLine(formData.remark || '', '付款明细：', paymentLine)
 
-      const orderData: PurchaseOrderFormData = {
+      const orderData: PurchaseOrderFormData & { status?: string } = {
         ...formData,
         remark: mergedRemark,
         items: items.map((item) => ({
@@ -410,11 +457,12 @@ function PurchaseCreate() {
           amount: item.quantity * item.price,
           ...(!enableStockLocation && { stockLocation: defaultStockLocation }),
         })),
+        status,
       }
 
       await addOrder(orderData, status)
-      alert(status === '草稿' ? '采购单已保存为草稿' : '采购单已创建并入库')
-      navigate('/purchase')
+      alert(status === '草稿' ? '草稿已保存' : '采购单已保存')
+      navigate('/purchase', { state: { fromCreate: true } })
     } catch (error: any) {
       const msg = error?.message || '未知错误'
       const isRequiredLike = /必填|不能为空/.test(msg)
@@ -453,12 +501,22 @@ function PurchaseCreate() {
               >
                 <Settings className="w-5 h-5" />
               </button>
-              <Button variant="outline" onClick={() => handleSave('草稿')} size="sm">
+              <Button
+                onClick={() => handleSave('草稿')}
+                size="sm"
+                variant={isCopyMode || forceDraftSave ? 'primary' : 'outline'}
+                className={isCopyMode || forceDraftSave ? 'bg-blue-600 hover:bg-blue-700' : ''}
+              >
+                <Save className="w-4 h-4 mr-1.5" />
                 保存草稿
               </Button>
-              <Button onClick={() => handleSave('已入库')} size="sm" className="bg-blue-600 hover:bg-blue-700">
+              <Button
+                onClick={() => handleSave('已入库')}
+                size="sm"
+                className="bg-green-600 hover:bg-green-700"
+              >
                 <Save className="w-4 h-4 mr-1.5" />
-                保存并入库
+                保存成正式单
               </Button>
             </div>
           </div>
@@ -564,59 +622,39 @@ function PurchaseCreate() {
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1.5">付款方式</label>
                   <div className="space-y-2">
-                    {paymentLines.map((p) => {
-                      const method = PAYMENT_METHODS.includes(p.method as any) ? p.method : '现金'
-                      const Icon = PAYMENT_ICONS[method] ?? CashIcon
-                      return (
-                        <div key={p.id} className="flex items-center gap-2">
-                          <div className="w-28 flex items-center gap-2">
-                            <Icon className="w-4 h-4 flex-shrink-0" />
-                            <SelectWithAdd
-                              value={method}
-                              onChange={(v) =>
-                                setPaymentLines((prev) =>
-                                  prev.map((x) =>
-                                    x.id === p.id
-                                      ? { ...x, method: (PAYMENT_METHODS.includes(v as any) ? v : '现金') as PaymentLine['method'] }
-                                      : x
-                                  )
+                    <div className="grid grid-cols-5 gap-2">
+                      {PAYMENT_METHODS.map((method) => {
+                        const line = paymentLines.find((p) => p.method === method)
+                        return (
+                          <Input
+                            key={`pay-amt-${method}`}
+                            type="number"
+                            value={line?.amount ?? 0}
+                            onChange={(e) =>
+                              setPaymentLines((prev) =>
+                                prev.map((x) =>
+                                  x.method === method ? { ...x, amount: Number(e.target.value) || 0 } : x
                                 )
-                              }
-                              options={PAYMENT_METHODS.map((m) => ({ value: m, label: m }))}
-                              searchable={false}
-                              allowAdd={false}
-                              clearable={false}
-                              className="text-sm"
-                            />
+                              )
+                            }
+                            className="text-sm h-9"
+                            placeholder="金额"
+                          />
+                        )
+                      })}
+                    </div>
+                    <div className="grid grid-cols-5 gap-2">
+                      {PAYMENT_METHODS.map((method) => {
+                        const Icon = PAYMENT_ICONS[method] ?? CashIcon
+                        return (
+                          <div key={`pay-label-${method}`} className="flex items-center justify-center gap-1 text-xs text-gray-600">
+                            <Icon className="w-3.5 h-3.5" />
+                            <span>{method}</span>
                           </div>
-                          <div className="flex-1 min-w-0">
-                            <Input
-                              type="number"
-                              value={p.amount}
-                              onChange={(e) =>
-                                setPaymentLines((prev) =>
-                                  prev.map((x) =>
-                                    x.id === p.id ? { ...x, amount: Number(e.target.value) || 0 } : x
-                                  )
-                                )
-                              }
-                              className="text-sm h-9"
-                              placeholder="金额"
-                            />
-                          </div>
-                        </div>
-                      )
-                    })}
-                    <div className="flex items-center justify-between pt-1">
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setPaymentLines((prev) => [...prev, { id: makeId(), method: '现金', amount: 0 }])
-                        }
-                        className="text-sm text-blue-600 hover:text-blue-700 font-medium"
-                      >
-                        + 添加付款
-                      </button>
+                        )
+                      })}
+                    </div>
+                    <div className="flex items-center justify-end pt-1">
                       <div className="text-sm text-gray-700">
                         合计：<span className="font-semibold text-red-600">{formatAmount(formData.paidAmount)}</span>
                       </div>

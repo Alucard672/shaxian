@@ -55,7 +55,7 @@ function ProfitReport() {
     const { start, end } = getDateRange
     return salesOrders.filter((order) => {
       const orderDate = new Date(order.salesDate)
-      return orderDate >= start && orderDate <= end && (order.status === '已出库' || order.status === '已审核')
+      return orderDate >= start && orderDate <= end && (order.status === '已完成' || order.status === '已审核')
     })
   }, [salesOrders, getDateRange])
 
@@ -188,7 +188,6 @@ function ProfitReport() {
 }
 
 export default ProfitReport
-
 
 
 

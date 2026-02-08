@@ -39,7 +39,7 @@ const INVENTORY_COLUMN_OPTIONS_BASE = [
 function Inventory() {
   const navigate = useNavigate()
   const { getInventoryDetails } = useInventoryStore()
-  const { products, colors, batches } = useProductStore()
+  const { products, colors, batches, loadAll: loadProductsAll } = useProductStore()
   const { getDocumentVisibleColumns, systemParams } = useSettingsStore()
   const enableBatch = !!systemParams?.enableBatch
   const enableStockLocation = !!systemParams?.enableStockLocation
@@ -102,13 +102,14 @@ function Inventory() {
     // 关键词搜索
     if (searchKeyword) {
       const keyword = searchKeyword.toLowerCase()
-      result = result.filter(
-        (item) =>
+      result = result.filter((item) => {
+        return (
           String(item.productName ?? '').toLowerCase().includes(keyword) ||
           String(item.colorName ?? '').toLowerCase().includes(keyword) ||
           String(item.colorCode ?? '').toLowerCase().includes(keyword) ||
           String(item.batch?.code ?? '').toLowerCase().includes(keyword)
-      )
+        )
+      })
     }
 
     return result.sort(
@@ -390,8 +391,15 @@ function Inventory() {
               <Filter className="w-4 h-4 mr-2" />
               筛选
             </Button>
+            <Button
+              variant="outline"
+              className="h-9 rounded-none border-0 border-b border-blue-300 bg-transparent text-blue-600 text-sm"
+              onClick={() => loadProductsAll()}
+            >
+              查询
+            </Button>
             {/* 搜索框 */}
-            <div className="relative flex-1 max-w-md">
+            <div className="relative flex-1 max-w-sm">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
               <input
                 type="text"
@@ -401,7 +409,7 @@ function Inventory() {
                   setSearchKeyword(e.target.value)
                   setCurrentPage(1)
                 }}
-                className="w-full pl-10 pr-4 py-2 h-[39px] border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                className="w-full pl-10 pr-0 py-2 h-[39px] input-underline text-sm focus:outline-none"
               />
             </div>
             {/* 导出按钮 */}

@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, useLocation } from 'react-router-dom'
 import { useDyeingStore } from '@/store/dyeingStore'
 import { useProductStore } from '@/store/productStore'
 import { useContactStore } from '@/store/contactStore'
@@ -32,13 +32,16 @@ interface ColorItemForm extends Omit<DyeingOrderItem, 'id'> {
 
 function DyeingCreate() {
   const navigate = useNavigate()
+  const location = useLocation()
   const { id } = useParams<{ id?: string }>()
-  const { addOrder, updateOrder, getOrder, loadOrders } = useDyeingStore()
+  const { orders, addOrder, updateOrder, getOrder, loadOrders } = useDyeingStore()
   const { products, colors, batches, loadAll: loadProducts } = useProductStore()
   const { getSuppliers, loadAll: loadContacts, addSupplier } = useContactStore()
   const { getPageRequiredFields } = useSettingsStore()
   const [showRequiredModal, setShowRequiredModal] = useState(false)
   const requiredFields = getPageRequiredFields(DYEING_PAGE_KEY, DYEING_DEFAULT_REQUIRED)
+  const [forceDraftSave, setForceDraftSave] = useState(false)
+  const isCopyMode = !!(location.state as any)?.copyFromId
 
   const isEditMode = !!(id && id !== 'create')
   const existingOrder = isEditMode && id ? getOrder(id) : null
@@ -51,6 +54,40 @@ function DyeingCreate() {
       loadOrders()
     }
   }, [isEditMode, loadProducts, loadContacts, loadOrders])
+
+  // 复制单据（草稿）
+  useEffect(() => {
+    const state: any = location.state
+    if (!state || state.copyFromId == null || isEditMode) return
+    const source = orders.find((o) => String(o.id) === String(state.copyFromId))
+    if (!source) {
+      loadOrders()
+      return
+    }
+    setForceDraftSave(true)
+    setFormData({
+      productId: source.productId,
+      productName: source.productName,
+      greyBatchId: source.greyBatchId,
+      greyBatchCode: source.greyBatchCode,
+      factoryId: source.factoryId || '',
+      factoryName: source.factoryName || '',
+      factoryPhone: source.factoryPhone || '',
+      shipmentDate: source.shipmentDate,
+      expectedCompletionDate: source.expectedCompletionDate,
+      processingPrice: source.processingPrice,
+      remark: source.remark || '',
+    })
+    setColorItems(
+      (source.items || []).map((item) => ({
+        targetColorId: item.targetColorId,
+        targetColorCode: item.targetColorCode,
+        targetColorName: item.targetColorName,
+        targetColorValue: item.targetColorValue,
+        quantity: item.quantity,
+      }))
+    )
+  }, [location.state, orders, loadOrders, isEditMode])
 
   // 获取白坯纱线的批次
   // 白坯批次没有关联色号，colorId 为空字符串
@@ -227,7 +264,7 @@ function DyeingCreate() {
     return totalQuantity * formData.processingPrice
   }, [colorItems, formData.processingPrice])
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (status: '草稿' | '待发货' = '待发货') => {
     const missing: string[] = []
     if (requiredFields.includes('greyBatchId') && (!formData.greyBatchId || !formData.greyBatchCode)) missing.push('白坯缸号')
     if (requiredFields.includes('factoryId') && (!formData.factoryId || !formData.factoryName)) missing.push('加工厂')
@@ -258,9 +295,9 @@ function DyeingCreate() {
 
     try {
       if (isEditMode && existingOrder) {
-        await updateOrder(existingOrder.id, orderData)
+        await updateOrder(existingOrder.id, { ...orderData, status })
       } else {
-        await addOrder(orderData)
+        await addOrder(orderData, status)
       }
       navigate('/dyeing')
     } catch (error: any) {
@@ -301,10 +338,17 @@ function DyeingCreate() {
               取消
             </Button>
             <Button
-              onClick={handleSubmit}
-              className="h-9 rounded-xl bg-blue-600 hover:bg-blue-700"
+              onClick={() => handleSubmit('草稿')}
+              variant={isCopyMode || forceDraftSave ? 'primary' : 'outline'}
+              className={isCopyMode || forceDraftSave ? 'h-9 rounded-xl bg-blue-600 hover:bg-blue-700' : 'h-9 rounded-xl'}
             >
-              {isEditMode ? '保存修改' : '创建加工单'}
+              保存草稿
+            </Button>
+            <Button
+              onClick={() => handleSubmit('待发货')}
+              className="h-9 rounded-xl bg-green-600 hover:bg-green-700"
+            >
+              保存成正式单
             </Button>
             <button
               onClick={() => navigate('/dyeing')}
@@ -616,4 +660,3 @@ function DyeingCreate() {
 }
 
 export default DyeingCreate
-

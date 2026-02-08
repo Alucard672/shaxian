@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, useLocation } from 'react-router-dom'
 import { useAdjustmentStore } from '@/store/adjustmentStore'
 import { useProductStore } from '@/store/productStore'
 import { useInventoryStore } from '@/store/inventoryStore'
@@ -29,8 +29,9 @@ interface AdjustmentItemForm {
 
 function AdjustmentCreate() {
   const navigate = useNavigate()
+  const location = useLocation()
   const { id } = useParams<{ id: string }>()
-  const { addOrder, updateOrder, getOrder, completeOrder, loadOrders } = useAdjustmentStore()
+  const { orders, addOrder, updateOrder, getOrder, completeOrder, loadOrders } = useAdjustmentStore()
   const { products, colors, batches, getColorsByProduct, addColor, addBatch } = useProductStore()
   const { getInventoryDetails } = useInventoryStore()
 
@@ -94,6 +95,34 @@ function AdjustmentCreate() {
   useEffect(() => {
     if (isEditMode) loadOrders()
   }, [isEditMode, loadOrders])
+
+  // 复制单据（草稿）
+  useEffect(() => {
+    const state: any = location.state
+    if (!state || state.copyFromId == null || isEditMode) return
+    const source = orders.find((o) => String(o.id) === String(state.copyFromId))
+    if (!source) {
+      loadOrders()
+      return
+    }
+    setAdjustmentType(source.type)
+    setAdjustmentDate(source.adjustmentDate)
+    setRemark(source.remark || '')
+    setItems(
+      source.items.map(item => ({
+        batchId: item.batchId,
+        batchCode: item.batchCode,
+        productId: item.productId,
+        productName: item.productName,
+        colorId: item.colorId,
+        colorName: item.colorName,
+        colorCode: item.colorCode,
+        quantity: item.quantity,
+        unit: item.unit,
+        remark: item.remark,
+      }))
+    )
+  }, [location.state, orders, loadOrders, isEditMode])
 
   // 加载编辑模式数据
   useEffect(() => {

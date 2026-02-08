@@ -40,8 +40,9 @@ function SalesReport() {
   }, [loadOrders])
 
   const [dateRange, setDateRange] = useState<DateRange>('本月')
-  const [customStartDate, setCustomStartDate] = useState<string>('')
-  const [customEndDate, setCustomEndDate] = useState<string>('')
+  const today = new Date().toISOString().split('T')[0]
+  const [customStartDate, setCustomStartDate] = useState<string>(today)
+  const [customEndDate, setCustomEndDate] = useState<string>(today)
   const [currentPage, setCurrentPage] = useState(1)
   const pageSize = 10
 
@@ -75,7 +76,7 @@ function SalesReport() {
     const { start, end } = getDateRange
     return orders.filter((order) => {
       const orderDate = new Date(order.salesDate)
-      return orderDate >= start && orderDate <= end && (order.status === '已出库' || order.status === '已审核')
+      return orderDate >= start && orderDate <= end && (order.status === '已完成' || order.status === '已审核')
     })
   }, [orders, getDateRange])
 
@@ -278,6 +279,7 @@ function SalesReport() {
                   endDate={customEndDate}
                   onStartDateChange={setCustomStartDate}
                   onEndDateChange={setCustomEndDate}
+                  inputClassName="input-underline w-full px-0 py-2 text-sm border-0 rounded-none"
                 />
               </div>
             )}
@@ -416,9 +418,6 @@ function SalesReport() {
 }
 
 export default SalesReport
-
-
-
 
 
 
