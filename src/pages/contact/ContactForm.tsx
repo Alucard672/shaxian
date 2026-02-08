@@ -152,7 +152,9 @@ function ContactForm() {
           </button>
           <div>
             <h1 className="text-2xl font-semibold text-gray-900">
-              {isEditMode ? '编辑' : '新增'}{isCustomer ? '客户' : '供应商'}
+              {isEditMode
+                ? (existingContact?.name ? `编辑 - ${existingContact.name}` : `编辑${isCustomer ? '客户' : '供应商'}`)
+                : `新增${isCustomer ? '客户' : '供应商'}`}
             </h1>
             <p className="text-gray-600 mt-1">
               {isEditMode ? '修改' : '添加'}{isCustomer ? '客户' : '供应商'}基本信息

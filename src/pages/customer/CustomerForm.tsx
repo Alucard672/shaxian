@@ -133,7 +133,9 @@ function CustomerForm() {
                     </button>
                     <div>
                         <h1 className="text-2xl font-semibold text-gray-900">
-                            {isEditMode ? '编辑' : '新增'}客户
+                            {isEditMode
+                                ? (existingCustomer?.name ? `编辑 - ${existingCustomer.name}` : '编辑客户')
+                                : '新增客户'}
                         </h1>
                         <p className="text-gray-600 mt-1">
                             {isEditMode ? '修改' : '添加'}客户基本信息

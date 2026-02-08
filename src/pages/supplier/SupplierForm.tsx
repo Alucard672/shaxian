@@ -113,7 +113,9 @@ function SupplierForm() {
                     </button>
                     <div>
                         <h1 className="text-2xl font-semibold text-gray-900">
-                            {isEditMode ? '编辑' : '新增'}供应商
+                            {isEditMode
+                                ? (existingSupplier?.name ? `编辑 - ${existingSupplier.name}` : '编辑供应商')
+                                : '新增供应商'}
                         </h1>
                         <p className="text-gray-600 mt-1">
                             {isEditMode ? '修改' : '添加'}供应商基本信息
