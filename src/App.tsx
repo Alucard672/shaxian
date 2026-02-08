@@ -15,6 +15,7 @@ import ProductSharePage from './pages/product/ProductSharePage'
 // 往来单位
 import ContactManagement from './pages/contact/ContactManagement'
 import CustomerManagement from './pages/customer/CustomerManagement'
+import CustomerStatement from './pages/customer/CustomerStatement'
 import CustomerForm from './pages/customer/CustomerForm'
 import SupplierManagement from './pages/supplier/SupplierManagement'
 import SupplierForm from './pages/supplier/SupplierForm'
@@ -210,6 +211,14 @@ function App() {
           element={
             <ProtectedRoute>
               <CustomerManagement />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/customer/statement"
+          element={
+            <ProtectedRoute>
+              <CustomerStatement />
             </ProtectedRoute>
           }
         />

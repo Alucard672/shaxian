@@ -13,6 +13,7 @@ import {
   BarChart3,
   Settings,
   ChevronRight,
+  FileText,
 } from 'lucide-react'
 import { cn } from '@/utils/cn'
 
@@ -30,7 +31,13 @@ interface MenuItem {
 const menuItems: MenuItem[] = [
   { id: 'dashboard', label: '工作台', icon: LayoutDashboard, path: '/', iconColor: 'text-amber-500', hoverBg: 'hover:bg-amber-50' },
   { id: 'products', label: '商品管理', icon: Package, path: '/products', iconColor: 'text-violet-500', hoverBg: 'hover:bg-violet-50' },
-  { id: 'contacts', label: '往来单位', icon: Users, path: '/contacts', iconColor: 'text-emerald-500', hoverBg: 'hover:bg-emerald-50' },
+  { id: 'contacts', label: '往来单位', icon: Users, path: '/contacts', iconColor: 'text-emerald-500', hoverBg: 'hover:bg-emerald-50',
+    children: [
+      { id: 'customer', label: '客户管理', icon: Users, path: '/customer', iconColor: 'text-emerald-500', hoverBg: 'hover:bg-emerald-50' },
+      { id: 'customer-statement', label: '客户对账', icon: FileText, path: '/customer/statement', iconColor: 'text-emerald-500', hoverBg: 'hover:bg-emerald-50' },
+      { id: 'supplier', label: '供应商管理', icon: Users, path: '/supplier', iconColor: 'text-emerald-500', hoverBg: 'hover:bg-emerald-50' },
+    ]
+  },
   { id: 'purchase', label: '进货管理', icon: ShoppingCart, path: '/purchase', iconColor: 'text-sky-500', hoverBg: 'hover:bg-sky-50' },
   { id: 'sales', label: '销售管理', icon: DollarSign, path: '/sales', iconColor: 'text-blue-500', hoverBg: 'hover:bg-blue-50' },
   { id: 'dyeing', label: '染色加工', icon: Palette, path: '/dyeing', iconColor: 'text-fuchsia-500', hoverBg: 'hover:bg-fuchsia-50' },
