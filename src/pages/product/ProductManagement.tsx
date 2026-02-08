@@ -537,7 +537,7 @@ function ProductManagement() {
             value={searchKeyword}
             onChange={(e) => setSearchKeyword(e.target.value)}
             placeholder="搜索商品名称、编码、成分、色号..."
-            className="flex-1"
+            className="w-96"
           />
           <Button
             onClick={() => {
