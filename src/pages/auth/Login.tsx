@@ -78,11 +78,11 @@ function Login() {
           {/* logo */}
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-lg bg-white text-slate-900 font-bold text-xl flex items-center justify-center">
-              纺
+              织
             </div>
             <div>
-              <div className="text-lg font-semibold tracking-tight">纺云 ERP</div>
-              <div className="text-[10px] text-slate-400 font-mono tracking-[2px]">FANGYUN · SaaS</div>
+              <div className="text-lg font-semibold tracking-tight">织云 ERP</div>
+              <div className="text-[10px] text-slate-400 font-mono tracking-[2px]">ZHIYUN · SaaS</div>
             </div>
           </div>
 
@@ -119,7 +119,7 @@ function Login() {
 
           {/* 底部 */}
           <div className="text-[11px] text-slate-500 tracking-wider">
-            © 2026 纺云 ERP · v2.4 · ALL RIGHTS RESERVED
+            © 2026 织云 ERP · v2.4 · ALL RIGHTS RESERVED
           </div>
         </div>
       </div>
@@ -130,11 +130,11 @@ function Login() {
           {/* 移动端 / 小屏品牌（≤lg） */}
           <div className="lg:hidden flex items-center gap-3 mb-10">
             <div className="w-10 h-10 rounded-lg bg-slate-900 text-white font-bold text-xl flex items-center justify-center">
-              纺
+              织
             </div>
             <div>
-              <div className="text-base font-semibold text-slate-900 tracking-tight">纺云 ERP</div>
-              <div className="text-[10px] text-slate-500 font-mono tracking-[2px]">FANGYUN · SaaS</div>
+              <div className="text-base font-semibold text-slate-900 tracking-tight">织云 ERP</div>
+              <div className="text-[10px] text-slate-500 font-mono tracking-[2px]">ZHIYUN · SaaS</div>
             </div>
           </div>
 
@@ -210,7 +210,7 @@ function Login() {
 
           {/* 仅小屏底部展示 */}
           <div className="lg:hidden mt-8 text-center text-[11px] text-slate-400 tracking-wide">
-            © 2026 纺云 ERP · v2.4
+            © 2026 织云 ERP · v2.4
           </div>
         </div>
       </div>
