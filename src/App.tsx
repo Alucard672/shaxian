@@ -4,7 +4,6 @@ import { useSettingsStore } from './store/settingsStore'
 import Layout from './components/layout/Layout'
 import Dashboard from './pages/Dashboard'
 import Login from './pages/auth/Login'
-import Register from './pages/auth/Register'
 
 // 商品管理
 import ProductManagement from './pages/product/ProductManagement'
@@ -135,11 +134,8 @@ function App() {
   return (
     <BrowserRouter basename={basename}>
       <Routes>
-        {/* 登录页面 */}
+        {/* 登录页面（不开放自助注册，由平台运营开通账号） */}
         <Route path="/login" element={<Login />} />
-
-        {/* 注册页面 */}
-        <Route path="/register" element={<Register />} />
 
         {/* 租户选择页面 */}
         <Route path="/tenant/select" element={<TenantSelect />} />

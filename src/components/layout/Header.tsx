@@ -95,7 +95,7 @@ function Header() {
       <div className="flex items-center gap-4">
         <div className="flex items-center gap-2">
           <Building2 className="w-6 h-6 text-blue-600" />
-          <h1 className="text-xl font-semibold text-gray-900">沙县ERP系统</h1>
+          <h1 className="text-xl font-semibold text-gray-900">纺云 ERP</h1>
         </div>
       </div>
 
