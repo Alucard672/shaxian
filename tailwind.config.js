@@ -28,19 +28,38 @@ export default {
           600: '#dc2626',
         },
       },
+      keyframes: {
+        'card-in': {
+          '0%': { opacity: 0, transform: 'translateY(24px) scale(0.98)' },
+          '100%': { opacity: 1, transform: 'translateY(0) scale(1)' },
+        },
+        'float-slow': {
+          '0%, 100%': { transform: 'translate(0, 0) scale(1)' },
+          '33%': { transform: 'translate(40px, -30px) scale(1.05)' },
+          '66%': { transform: 'translate(-30px, 40px) scale(0.95)' },
+        },
+        'float-mid': {
+          '0%, 100%': { transform: 'translate(0, 0) scale(1)' },
+          '50%': { transform: 'translate(-30px, -40px) scale(1.06)' },
+        },
+        'float-fast': {
+          '0%, 100%': { transform: 'translate(-50%, -50%) scale(1)' },
+          '50%': { transform: 'translate(-46%, -54%) scale(1.08)' },
+        },
+        shake: {
+          '0%, 100%': { transform: 'translateX(0)' },
+          '20%, 60%': { transform: 'translateX(-6px)' },
+          '40%, 80%': { transform: 'translateX(6px)' },
+        },
+      },
+      animation: {
+        'card-in': 'card-in 0.6s cubic-bezier(0.16, 1, 0.3, 1) both',
+        'float-slow': 'float-slow 18s ease-in-out infinite',
+        'float-mid': 'float-mid 14s ease-in-out infinite -6s',
+        'float-fast': 'float-fast 10s ease-in-out infinite -12s',
+        shake: 'shake 0.4s ease-in-out',
+      },
     },
   },
   plugins: [],
 }
-
-
-
-
-
-
-
-
-
-
-
-

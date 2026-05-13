@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { LogIn, Eye, EyeOff } from 'lucide-react'
-import Button from '@/components/ui/Button'
+import { Phone, Lock, Eye, EyeOff, Loader2 } from 'lucide-react'
 
 function Login() {
   const navigate = useNavigate()
@@ -24,24 +23,20 @@ function Login() {
 
   const performLogin = useCallback(async (phoneValue: string, passwordValue: string) => {
     const { authApi } = await import('@/api/client')
-    const loginPayload = { phone: phoneValue, password: passwordValue }
-    // 不再自动注册：登录失败直接把后端错误抛给用户处理
-    // 历史上有"用户不存在自动 register"逻辑，是 SaaS 平台漏洞，已删除
-    return authApi.login(loginPayload)
+    return authApi.login({ phone: phoneValue, password: passwordValue })
   }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
     const phoneValue = phone.trim()
-    const passwordValue = password
-    if (!phoneValue || !passwordValue) {
+    if (!phoneValue || !password) {
       setError('请输入手机号和密码')
       return
     }
     setLoading(true)
     try {
-      const userData = await performLogin(phoneValue, passwordValue)
+      const userData = await performLogin(phoneValue, password)
       localStorage.setItem('user', JSON.stringify(userData))
       localStorage.setItem('isAuthenticated', 'true')
       const user = userData as any
@@ -53,99 +48,110 @@ function Login() {
       navigate('/')
     } catch (err: any) {
       const msg = err?.message || ''
-      if (msg.includes('用户不存在')) {
-        setError('该手机号未注册，请先注册账号')
-      } else if (msg.includes('租户已到期') || msg.includes('租户已停用')) {
-        setError(msg + '，请联系平台运营')
-      } else {
-        setError(msg || '登录失败，请检查网络连接')
-      }
+      if (msg.includes('用户不存在')) setError('该手机号未注册，请先注册账号')
+      else if (msg.includes('租户已到期') || msg.includes('租户已停用')) setError(msg + '，请联系平台运营')
+      else setError(msg || '登录失败，请检查网络连接')
     } finally {
       setLoading(false)
     }
   }
 
-
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 px-4">
-      <div className="w-full max-w-md">
-        {/* Logo和标题 */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-600 rounded-2xl mb-4 shadow-lg">
-            <LogIn className="w-8 h-8 text-white" />
-          </div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">沙县ERP系统</h1>
-          <p className="text-gray-600">请输入您的账号信息登录</p>
-        </div>
+    <div className="relative min-h-screen flex items-center justify-center overflow-hidden px-4">
+      {/* 渐变背景 */}
+      <div className="absolute inset-0 bg-gradient-to-br from-indigo-700 via-purple-600 to-pink-500" />
 
-        {/* 登录表单 */}
-        <div className="bg-white rounded-2xl shadow-xl p-8">
-          <form onSubmit={handleSubmit} className="space-y-6">
+      {/* 模糊光斑 */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute -top-32 -left-32 w-[480px] h-[480px] rounded-full bg-cyan-400 opacity-50 blur-[80px] animate-float-slow" />
+        <div className="absolute -bottom-24 -right-20 w-[380px] h-[380px] rounded-full bg-pink-400 opacity-50 blur-[80px] animate-float-mid" />
+        <div className="absolute top-1/2 left-1/2 w-[300px] h-[300px] rounded-full bg-violet-400 opacity-45 blur-[80px] animate-float-fast" />
+      </div>
+
+      {/* 玻璃卡片 */}
+      <div className="relative z-10 w-full max-w-md animate-card-in">
+        <div className="bg-white/75 backdrop-blur-2xl backdrop-saturate-150 rounded-3xl shadow-[0_20px_60px_rgba(30,30,70,0.25),0_4px_16px_rgba(30,30,70,0.1),inset_0_1px_0_rgba(255,255,255,0.7)] border border-white/60 p-10">
+          {/* 品牌 */}
+          <div className="flex items-center gap-3 mb-7">
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-600 to-pink-500 text-white text-2xl font-bold flex items-center justify-center shadow-lg shadow-indigo-500/30">
+              纱
+            </div>
+            <div>
+              <div className="text-lg font-semibold text-indigo-950 tracking-tight">纱线通 ERP</div>
+              <div className="text-[11px] text-indigo-600 font-mono tracking-widest mt-0.5">YARN ERP · 业务终端</div>
+            </div>
+          </div>
+
+          {/* 标题 */}
+          <div className="mb-7">
+            <h1 className="text-2xl font-semibold text-indigo-950 tracking-tight">欢迎回来</h1>
+            <p className="text-sm text-gray-500 mt-1">登录进入您的工作台</p>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-4">
             {error && (
-              <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg text-sm">
+              <div className="bg-red-50/80 backdrop-blur border border-red-200 text-red-600 px-4 py-3 rounded-xl text-sm animate-shake">
                 {error}
               </div>
             )}
 
-            {/* 手机号输入 */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                手机号
-              </label>
-              <input
-                type="tel"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                placeholder="请输入手机号"
-                disabled={loading}
-              />
+              <label className="text-[11px] font-medium text-gray-600 uppercase tracking-wider mb-1.5 block">手机号</label>
+              <div className="relative group">
+                <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-indigo-500" />
+                <input
+                  type="tel"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  maxLength={11}
+                  className="w-full h-12 pl-10 pr-4 rounded-xl bg-white/60 border border-indigo-200/40 text-[15px] text-gray-900 placeholder:text-gray-400 outline-none transition-all focus:bg-white focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/15 hover:bg-white/80"
+                  placeholder="请输入手机号"
+                  disabled={loading}
+                  autoComplete="username"
+                />
+              </div>
             </div>
 
-            {/* 密码输入 */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                密码
-              </label>
-              <div className="relative">
+              <label className="text-[11px] font-medium text-gray-600 uppercase tracking-wider mb-1.5 block">密码</label>
+              <div className="relative group">
+                <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-indigo-500" />
                 <input
                   type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="请输入密码（默认：123456）"
+                  className="w-full h-12 pl-10 pr-11 rounded-xl bg-white/60 border border-indigo-200/40 text-[15px] text-gray-900 placeholder:text-gray-400 outline-none transition-all focus:bg-white focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/15 hover:bg-white/80"
+                  placeholder="请输入密码"
                   disabled={loading}
+                  autoComplete="current-password"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-indigo-600 transition-colors"
+                  tabIndex={-1}
                 >
-                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
-              <p className="mt-1 text-xs text-gray-500">默认密码：123456</p>
             </div>
 
-            {/* 登录按钮 */}
-            <Button
+            <button
               type="submit"
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3"
               disabled={loading}
+              className="w-full h-12 mt-2 rounded-xl bg-gradient-to-r from-indigo-700 via-indigo-600 to-pink-500 text-white text-[15px] font-semibold tracking-[4px] shadow-lg shadow-indigo-500/30 transition-all hover:shadow-xl hover:shadow-indigo-500/40 hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-lg flex items-center justify-center"
             >
-              {loading ? '登录中...' : '登录'}
-            </Button>
+              {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : '登 录 进 入 系 统'}
+            </button>
           </form>
-        </div>
 
-        {/* 底部提示 */}
-        <div className="mt-6 text-center text-sm text-gray-600">
-          <p className="mb-2">首次登录请使用默认密码：123456</p>
-          <div className="flex justify-center items-center space-x-2">
+          <div className="mt-7 pt-5 border-t border-gray-200/50 flex justify-center items-center gap-2 text-xs text-gray-500">
             <span>还没有账号？</span>
-            <Link to="/register" className="text-blue-600 hover:text-blue-700 font-medium">
-              立即注册
-            </Link>
+            <Link to="/register" className="text-indigo-600 hover:text-pink-600 font-medium transition-colors">立即注册</Link>
+          </div>
+
+          <div className="mt-3 text-center text-[11px] text-gray-400 tracking-wide">
+            © 2026 纱线通 · v2.4
           </div>
         </div>
       </div>
@@ -154,5 +160,3 @@ function Login() {
 }
 
 export default Login
-
-
