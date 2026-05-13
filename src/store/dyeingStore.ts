@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { getOperatorName } from './userStore'
 import {
   DyeingOrder,
   DyeingOrderFormData,
@@ -57,7 +58,7 @@ export const useDyeingStore = create<DyeingState>((set, get) => ({
     try {
       const orderData = {
         ...data,
-        operator: '当前用户', // TODO: 从用户状态获取
+        operator: getOperatorName(),
         status,
       }
       

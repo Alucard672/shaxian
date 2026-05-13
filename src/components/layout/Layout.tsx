@@ -2,6 +2,7 @@ import { ReactNode, useEffect } from 'react'
 import Header from './Header'
 import Sidebar from './Sidebar'
 import TabBar from './TabBar'
+import ExpiryBanner from './ExpiryBanner'
 
 import { useSettingsStore } from '@/store/settingsStore'
 
@@ -17,9 +18,10 @@ function Layout({ children }: LayoutProps) {
   }, [loadSystemParams])
 
   return (
-    <div className="h-screen bg-[#F2F3F5]">
+    <div className="h-screen bg-[#F2F3F5] flex flex-col">
+      <ExpiryBanner />
       <Header />
-      <div className="flex h-[calc(100vh-4rem)]">
+      <div className="flex flex-1 min-h-0">
         <Sidebar />
         <div className="flex-1 flex flex-col overflow-hidden">
           <TabBar />

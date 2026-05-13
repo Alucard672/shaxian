@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { getOperatorName } from './userStore'
 import {
   AdjustmentOrder,
   AdjustmentOrderFormData,
@@ -54,7 +55,7 @@ export const useAdjustmentStore = create<AdjustmentState>((set, get) => ({
     try {
       const orderData = {
         ...data,
-        operator: '管理员', // TODO: 从用户上下文获取
+        operator: getOperatorName(),
         status,
       }
       

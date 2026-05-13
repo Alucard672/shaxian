@@ -1,11 +1,7 @@
-import { useState, useCallback } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { LogIn, Eye, EyeOff } from 'lucide-react'
 import Button from '@/components/ui/Button'
-import { getApiBaseUrl, setApiBaseOverride } from '@/api/apiBase'
-
-const API_DEFAULT = 'http://t.jiyizhiyun.com/biz/api'
-const API_ALT = 'http://t.jiyizhiyun.com/api'
 
 function Login() {
   const navigate = useNavigate()
@@ -14,24 +10,24 @@ function Login() {
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
-  const [apiBase, setApiBase] = useState(() => getApiBaseUrl())
+
+  // 进入登录页时，读取上一次 401 的原因（顶号 / 到期 / 停用 / 普通过期）展示
+  useEffect(() => {
+    try {
+      const reason = sessionStorage.getItem('logoutReason')
+      if (reason) {
+        setError(reason)
+        sessionStorage.removeItem('logoutReason')
+      }
+    } catch {/* ignore */}
+  }, [])
 
   const performLogin = useCallback(async (phoneValue: string, passwordValue: string) => {
     const { authApi } = await import('@/api/client')
     const loginPayload = { phone: phoneValue, password: passwordValue }
-    let userData
-    try {
-      userData = await authApi.login(loginPayload)
-    } catch (err: any) {
-      const msg = err?.message || ''
-      if (msg.includes('用户不存在')) {
-        await authApi.register(loginPayload)
-        userData = await authApi.login(loginPayload)
-      } else {
-        throw err
-      }
-    }
-    return userData
+    // 不再自动注册：登录失败直接把后端错误抛给用户处理
+    // 历史上有"用户不存在自动 register"逻辑，是 SaaS 平台漏洞，已删除
+    return authApi.login(loginPayload)
   }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -56,38 +52,19 @@ function Login() {
       }
       navigate('/')
     } catch (err: any) {
-      setError(err?.message || '登录失败，请检查网络连接')
+      const msg = err?.message || ''
+      if (msg.includes('用户不存在')) {
+        setError('该手机号未注册，请先注册账号')
+      } else if (msg.includes('租户已到期') || msg.includes('租户已停用')) {
+        setError(msg + '，请联系平台运营')
+      } else {
+        setError(msg || '登录失败，请检查网络连接')
+      }
     } finally {
       setLoading(false)
     }
   }
 
-  const switchApiAndRetry = (targetBase: string) => {
-    setApiBaseOverride(targetBase)
-    setApiBase(getApiBaseUrl()) // 立即刷新显示
-    setError('')
-    const phoneValue = phone.trim()
-    const passwordValue = password
-    if (!phoneValue || !passwordValue) {
-      setError('请先输入手机号和密码')
-      return
-    }
-    setLoading(true)
-    performLogin(phoneValue, passwordValue)
-      .then((userData) => {
-        localStorage.setItem('user', JSON.stringify(userData))
-        localStorage.setItem('isAuthenticated', 'true')
-        const user = userData as any
-        if (user?.tenantId != null) {
-          localStorage.setItem('currentTenantId', String(user.tenantId))
-          if (user.tenantName) localStorage.setItem('currentTenantName', user.tenantName)
-          if (user.tenantCode) localStorage.setItem('currentTenantCode', user.tenantCode)
-        }
-        navigate('/')
-      })
-      .catch((err: any) => setError(err?.message || '登录失败，请检查网络连接'))
-      .finally(() => setLoading(false))
-  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 px-4">
@@ -105,28 +82,8 @@ function Login() {
         <div className="bg-white rounded-2xl shadow-xl p-8">
           <form onSubmit={handleSubmit} className="space-y-6">
             {error && (
-              <div className="space-y-2">
-                <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg text-sm">
-                  {error}
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    onClick={() => switchApiAndRetry(API_ALT)}
-                    disabled={loading}
-                    className="text-xs px-3 py-1.5 rounded-lg border border-blue-300 bg-blue-50 text-blue-700 hover:bg-blue-100 disabled:opacity-50"
-                  >
-                    使用 /api 登录
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => switchApiAndRetry(API_DEFAULT)}
-                    disabled={loading}
-                    className="text-xs px-3 py-1.5 rounded-lg border border-blue-300 bg-blue-50 text-blue-700 hover:bg-blue-100 disabled:opacity-50"
-                  >
-                    使用 /biz/api 登录
-                  </button>
-                </div>
+              <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg text-sm">
+                {error}
               </div>
             )}
 
@@ -190,7 +147,6 @@ function Login() {
               立即注册
             </Link>
           </div>
-          <p className="mt-3 text-xs text-gray-400">当前接口：{apiBase}</p>
         </div>
       </div>
     </div>

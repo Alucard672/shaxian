@@ -177,19 +177,41 @@ async function apiRequest(endpoint, options = {}) {
     }
   }
 
-  // 获取租户ID：优先 currentTenantId，其次从 user.tenantId 兜底（避免某些页面漏设置导致请求没带 tenantId）
+  // 获取租户ID：优先 currentTenantId；缺失时从 user.tenantId 兜底
+  // 安全要求：兜底前必须校验"currentTenantId 缺失"是临时丢失还是被篡改
+  // - 如果 currentTenantId 存在但跟 user.tenantId 不一致 → 不允许（强制重登）
+  // - 如果 currentTenantId 缺失且 user.tenantId 存在 → 兜底 + warn
   let tenantId = localStorage.getItem('currentTenantId')
-  if (!tenantId && userStr) {
+  let userTenantId = null
+  if (userStr) {
     try {
       const user = JSON.parse(userStr)
       if (user && user.tenantId !== null && user.tenantId !== undefined) {
-        tenantId = String(user.tenantId)
-        // 写回，后续请求就不会漏
-        localStorage.setItem('currentTenantId', tenantId)
+        userTenantId = String(user.tenantId)
       }
     } catch {
       // ignore
     }
+  }
+  if (tenantId && userTenantId && tenantId !== userTenantId) {
+    console.error(
+      '[安全] currentTenantId 与 user.tenantId 不一致，清登录态强制重登',
+      { currentTenantId: tenantId, userTenantId }
+    )
+    localStorage.removeItem('isAuthenticated')
+    localStorage.removeItem('user')
+    localStorage.removeItem('currentTenantId')
+    localStorage.removeItem('currentTenantName')
+    localStorage.removeItem('currentTenantCode')
+    const baseUrl = import.meta.env.BASE_URL || '/'
+    const basename = baseUrl === '/' ? '' : baseUrl.replace(/\/$/, '')
+    window.location.href = `${basename}/login`
+    return
+  }
+  if (!tenantId && userTenantId) {
+    console.warn('[兜底] currentTenantId 丢失，回退到 user.tenantId =', userTenantId)
+    tenantId = userTenantId
+    localStorage.setItem('currentTenantId', tenantId)
   }
 
   // 构建带sessionId和tenantId的URL
@@ -238,25 +260,34 @@ async function apiRequest(endpoint, options = {}) {
     const response = await fetch(url, config)
 
     if (!response.ok) {
-      // 处理 401 未授权错误 - 会话过期，跳转到登录页
+      // 处理 401 未授权错误 - 会话过期 / 顶号 / 租户停用到期，跳转到登录页
       if (response.status === 401) {
+        // 读后端 message 决定 toast 文案（区分 4 类原因，避免用户云里雾里）
+        let reason = '会话已过期'
+        try {
+          const data = await response.clone().json().catch(() => null)
+          const msg = data?.message || ''
+          if (msg.includes('租户已停用')) reason = '租户已停用，请联系平台运营'
+          else if (msg.includes('租户已到期')) reason = '租户已到期，请联系平台运营续费'
+          else if (msg.includes('账号已在其它地方登录') || msg.includes('已在其它地方登录')) reason = '账号已在其它设备登录，本次会话失效'
+          else if (msg) reason = msg
+        } catch { /* ignore */ }
+
+        // 在 sessionStorage 记下跳转原因，登录页可读取展示
+        try { sessionStorage.setItem('logoutReason', reason) } catch {}
+
         localStorage.removeItem('isAuthenticated')
         localStorage.removeItem('user')
         localStorage.removeItem('currentTenantId')
         localStorage.removeItem('currentTenantName')
         localStorage.removeItem('currentTenantCode')
-        
-        // 获取当前路径的 basename
+
         const baseUrl = import.meta.env.BASE_URL || '/'
         const basename = baseUrl === '/' ? '' : baseUrl.replace(/\/$/, '')
-        
-        // 跳转到登录页
-        const loginPath = `${basename}/login`
-        console.warn('会话已过期，正在跳转到登录页...')
-        
-        // 使用 window.location 进行完整页面跳转，确保清除所有状态
-        window.location.href = loginPath
-        return // 不再继续执行
+
+        console.warn('[401]', reason, '→ 跳登录')
+        window.location.href = `${basename}/login`
+        return
       }
 
       const contentType = response.headers.get('content-type') || ''
@@ -769,6 +800,12 @@ export const salesApi = {
   delete: async (id) => {
     return apiRequest(`/sales/${id}`, {
       method: 'DELETE',
+    })
+  },
+  /** 作废销售单：后端事务处理（还库存 + 冲销关联未收款应收 + 状态置 CANCELLED） */
+  cancel: async (id) => {
+    return apiRequest(`/sales/${id}/cancel`, {
+      method: 'POST',
     })
   },
   checkStock: async (batchId, quantity) => {

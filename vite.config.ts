@@ -31,6 +31,12 @@ export default defineConfig(({ mode }) => {
     server: {
       port: 5173,
       proxy: {
+        // dev 模式下：前端调 /biz/api/* 自动转给后端 8080
+        '/biz/api': {
+          target: 'http://localhost:8080',
+          changeOrigin: true,
+        },
+        // 兼容旧逻辑（如果还有代码走 /api 前缀的，转到 mock 后端 3000）
         '/api': {
           target: 'http://localhost:3000',
           changeOrigin: true,

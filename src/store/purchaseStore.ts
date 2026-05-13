@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { getOperatorName } from './userStore'
 import {
   PurchaseOrder,
   PurchaseOrderItem,
@@ -74,7 +75,7 @@ export const usePurchaseStore = create<PurchaseState>((set, get) => ({
       // 准备提交数据（后端使用英文枚举 DRAFT/RECEIVED 等）
       const orderData = {
         ...data,
-        operator: '当前用户', // TODO: 从用户状态获取
+        operator: getOperatorName(),
         status: mapPurchaseStatusToApi(status),
       }
       

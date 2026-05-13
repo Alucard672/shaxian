@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { getOperatorName } from './userStore'
 import {
   InventoryCheckOrder,
   InventoryCheckOrderFormData,
@@ -56,7 +57,7 @@ export const useInventoryCheckStore = create<InventoryCheckState>((set, get) => 
     try {
       const orderData = {
         ...data,
-        operator: '管理员', // TODO: 从用户上下文获取
+        operator: getOperatorName(),
         status: '计划中',
       }
       

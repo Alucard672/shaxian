@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { getOperatorName } from './userStore'
 import {
   SalesOrder,
   SalesOrderItem,
@@ -122,7 +123,7 @@ export const useSalesStore = create<SalesState>((set, get) => ({
         totalAmount,
         unpaidAmount,
         items: normalizedItems,
-        operator: '当前用户', // TODO: 从用户状态获取
+        operator: getOperatorName(),
         status: mapSalesStatusToApi(status),
         allowNegativeStock, // 传递允许负库存，供后端校验时参考
       }
@@ -327,26 +328,14 @@ export const useSalesStore = create<SalesState>((set, get) => ({
     } catch (error: any) {
       const msg = String(error?.message || '')
       if (msg.includes('只能修改草稿状态')) {
-        try {
-          // 后端限制：非草稿不可直接修改 => 作废原单并重建新单
-          const base = (detail as any) || current
-          if (!base) throw error
-          const rebuiltItems = Array.isArray((data as any).items)
-            ? (data as any).items
-            : (base as any).items || []
-          const rebuiltOrder: any = {
-            ...base,
-            ...(data as any),
-            items: rebuiltItems,
-            status: '已完成',
-          }
-          await get().cancelOrder(id)
-          await get().addOrder(rebuiltOrder, '已完成')
-          return
-        } catch (e) {
-          console.error('Fallback recreate failed:', e)
-          throw error
-        }
+        // 历史实现：自动 cancel + 重建。但作废 + 重建会改变订单 ID，
+        // 跟应收账款关联断链，且金额已收时会被后端拒绝。
+        // 现在改为抛错给 UI 层，由 UI 层弹确认对话框（并提示风险）。
+        const explainErr = new Error(
+          '该订单已审核，不能直接修改。如需修改请先作废原单（自动还库存 + 冲销未收应收）后重新开单。'
+        )
+        ;(explainErr as any).code = 'NON_DRAFT_NOT_EDITABLE'
+        throw explainErr
       }
       console.error('Failed to update sales order:', error)
       throw error
@@ -371,28 +360,21 @@ export const useSalesStore = create<SalesState>((set, get) => ({
 
   cancelOrder: async (id) => {
     try {
-      const order = get().orders.find((o) => String(o.id) === String(id))
-      if (!order) throw new Error('订单不存在')
-      const { updateBatchStock } = useProductStore.getState()
-      // 作废时还原库存：已完成/已审核订单曾减少库存，需加回
-      if (order.status === '已完成' || order.status === '已审核') {
-        for (const item of order.items || []) {
-          if (item.batchId && (item.quantity ?? 0) > 0) {
-            try {
-              await updateBatchStock(item.batchId, Number(item.quantity))
-            } catch (e: any) {
-              console.error('还原库存失败:', e)
-              throw new Error(`还原库存失败：${item.productName || ''} ${item.batchCode || ''}，${e?.message || '请检查缸号是否存在'}`)
-            }
-          }
-        }
-      }
-      await salesApi.update(id, { status: mapSalesStatusToApi('已作废') })
+      // 调用后端事务化 cancel 接口：还库存 + 冲销未收款应收 + 改状态。
+      // 历史前端实现是 update + 手动 updateBatchStock，但 PUT /sales 限草稿，作废其实是失败的；同时无应收冲销。
+      await salesApi.cancel(id)
       set((state) => ({
         orders: state.orders.map((o) =>
           String(o.id) === String(id) ? { ...o, status: '已作废' } : o
         )
       }))
+      // 后端已经把关联应收设为 VOIDED，前端账款 store 同步刷新
+      try {
+        const { useAccountStore } = await import('./accountStore')
+        await useAccountStore.getState().loadReceivables()
+      } catch (e) {
+        console.warn('账款列表刷新失败（不影响作废）:', e)
+      }
     } catch (error: any) {
       console.error('Failed to cancel sales order:', error)
       throw error

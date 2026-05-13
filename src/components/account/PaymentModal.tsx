@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { getOperatorName } from '@/store/userStore'
 import { useAccountStore } from '@/store/accountStore'
 import { PaymentMethod } from '@/types/account'
 import Button from '../ui/Button'
@@ -34,7 +35,7 @@ function PaymentModal({
     amount: unpaidAmount.toString(),
     paymentMethod: '转账' as PaymentMethod,
     paymentDate: format(new Date(), 'yyyy-MM-dd'),
-    operator: '管理员',
+    operator: getOperatorName(),
     remark: '',
   })
 
